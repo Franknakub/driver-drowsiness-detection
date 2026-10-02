@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Build Guide + LCSC — Group 17</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e14;--panel:#11161f;--panel2:#161c27;--line:#222b3a;--line2:#2e3a4e;
+--txt:#dde3ec;--muted:#7e8aa0;--dim:#56627a;
+--pwr:#f59e0b;--mcu:#5eb3ff;--cam:#9a7dff;--i2c:#06b6d4;--out:#f43f5e;--ir:#f97316;--ok:#3ddc97;--r:12px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans Thai',sans-serif;
+line-height:1.6;padding:26px 16px 60px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto}
+.tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ok);
+letter-spacing:3px;text-transform:uppercase;display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.tag::before{content:"";width:26px;height:1px;background:var(--ok)}
+h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(23px,5vw,36px);font-weight:700;letter-spacing:-1px;margin-bottom:6px}
+.lead{color:var(--muted);font-size:14px;margin-bottom:16px;max-width:700px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:5px 13px;font-size:11.5px;color:var(--muted)}
+.chip b{color:var(--txt)}
+
+/* BLOCK */
+.blk{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+margin-bottom:18px;overflow:hidden;border-top:3px solid var(--ac)}
+.blk-h{padding:16px 20px 12px;display:flex;align-items:flex-start;gap:14px}
+.blk-n{flex-shrink:0;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:17px;
+background:color-mix(in srgb,var(--ac) 14%,transparent);color:var(--ac);
+border:1px solid color-mix(in srgb,var(--ac) 35%,transparent)}
+.blk-t{flex:1}
+.blk-t h2{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;color:var(--ac)}
+.blk-t .d{font-size:12.5px;color:var(--muted);margin-top:2px}
+.blk-b{padding:0 20px 20px}
+@media(max-width:560px){.blk-h{padding:14px 14px 10px}.blk-b{padding:0 14px 16px}}
+
+.lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;
+color:var(--dim);text-transform:uppercase;margin:14px 0 7px;font-weight:700}
+
+/* PART TABLE */
+.pt{width:100%;border-collapse:collapse;font-size:12.5px}
+.pt thead tr{background:var(--panel2)}
+.pt th{color:var(--muted);font-weight:600;padding:8px 10px;text-align:left;
+border-bottom:1px solid var(--line2);font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.5px;white-space:nowrap}
+.pt td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.pt tr:last-child td{border-bottom:none}
+.pt tr:hover td{background:rgba(255,255,255,.02)}
+.lcsc{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;color:var(--ok);
+background:color-mix(in srgb,var(--ok) 10%,transparent);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);
+padding:2px 7px;border-radius:5px;cursor:pointer;white-space:nowrap;display:inline-block}
+.lcsc:hover{background:color-mix(in srgb,var(--ok) 22%,transparent)}
+.lcsc.cp{background:var(--ok);color:#06281b}
+.srch{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--pwr);
+background:color-mix(in srgb,var(--pwr) 10%,transparent);border:1px dashed color-mix(in srgb,var(--pwr) 35%,transparent);
+padding:2px 7px;border-radius:5px;white-space:nowrap;display:inline-block}
+.ref{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--mcu);font-weight:700}
+.q{font-family:'JetBrains Mono',monospace;text-align:center;font-size:11.5px;font-weight:700}
+.bp{font-size:9px;font-family:'JetBrains Mono',monospace;padding:1px 6px;border-radius:99px;border:1px solid;white-space:nowrap}
+.bp-b{color:#3ddc97;border-color:#1d6b4a;background:#0d2e1a}
+.bp-e{color:#f59e0b;border-color:#7a5310;background:#3d2200}
+.bp-x{color:#f43f5e;border-color:#7a1226;background:#3d0d1d}
+
+/* WIRING */
+.wire{background:#060a0f;border:1px solid var(--line);border-radius:10px;padding:14px 16px;
+font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;overflow-x:auto;white-space:pre}
+.cg{color:#3ddc97}.cy{color:#ffd84d}.cb{color:#5eb3ff}.cr{color:#f43f5e}
+.cd{color:#56627a}.co{color:#f97316}.cp2{color:#a78bfa}.cc{color:#06b6d4}.cw{color:#dde3ec}
+
+.note{border-radius:9px;padding:10px 14px;font-size:12.5px;margin:10px 0}
+.n-w{background:color-mix(in srgb,var(--pwr) 8%,transparent);border:1px solid color-mix(in srgb,var(--pwr) 28%,transparent);color:#e8c87a}
+.n-o{background:color-mix(in srgb,var(--ok) 7%,transparent);border:1px solid color-mix(in srgb,var(--ok) 25%,transparent);color:#aef0d4}
+.n-d{background:color-mix(in srgb,var(--out) 8%,transparent);border:1px solid color-mix(in srgb,var(--out) 28%,transparent);color:#ffb3bf}
+
+.sec{display:flex;align-items:center;gap:12px;margin:34px 0 10px}
+.sec-n{font-family:'JetBrains Mono',monospace;font-size:11px;border:1px solid var(--line2);
+border-radius:6px;padding:3px 9px;letter-spacing:1px}
+.sec h2{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600}
+.steps{counter-reset:s}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 16px 13px 50px;
+position:relative;margin-bottom:9px;border-left:3px solid var(--sc)}
+.step::before{counter-increment:s;content:counter(s);position:absolute;left:13px;top:13px;
+width:25px;height:25px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:12.5px;
+background:color-mix(in srgb,var(--sc) 15%,transparent);color:var(--sc);border:1px solid color-mix(in srgb,var(--sc) 35%,transparent)}
+.step b{font-family:'Space Grotesk',sans-serif;font-size:13.5px;display:block;margin-bottom:2px}
+.step span{font-size:12.5px;color:var(--muted)}
+.step code{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--panel2);
+border:1px solid var(--line2);padding:1px 5px;border-radius:4px;color:var(--ok)}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font-size:11.5px;text-align:center}
+.hint{position:fixed;bottom:18px;right:18px;background:var(--panel);border:1px solid var(--line2);
+color:var(--muted);border-radius:99px;padding:7px 15px;font-size:11px;
+font-family:'JetBrains Mono',monospace;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+@media(max-width:700px){.pt th:nth-child(6),.pt td:nth-child(6){display:none}.hint{display:none}}
+</style></head>
+<body><div class="wrap">
+
+<div class="tag">Group 17 · Build Guide</div>
+<h1>🔧 คู่มือประกอบ + LCSC Part</h1>
+<p class="lead">Driver Drowsiness Detection · ESP32-S3 + OV5640 · แต่ละบล็อกมีทั้ง <b>รายการอุปกรณ์ (พร้อมรหัส LCSC)</b> และ <b>ผังต่อสาย</b> อยู่ด้วยกัน — วาดใน EasyEDA ตามได้เลยทีละบล็อก</p>
+<div class="chips">
+  <span class="chip">PCB <b>80×70mm</b></span>
+  <span class="chip">2-Layer <b>FR4</b></span>
+  <span class="chip">6 บล็อก <b>~37 parts</b></span>
+  <span class="chip">Trace <b>12mil (0.30mm)</b></span>
+  <span class="chip">🖱️ <b>คลิกรหัส C… = copy</b></span>
+</div>
+
+<div class="note n-d">🔴 <b>อ่านก่อนเริ่ม:</b> รหัส LCSC ด้านล่างเป็นรหัสที่ใช้กันทั่วไป แต่ <b>stock เปลี่ยนตลอด</b> — ก่อนสั่งจริงให้เข้า <b>jlcpcb.com/parts</b> ค้นทีละรหัสยืนยันว่า Stock &gt; 0<br>
+ช่องที่เป็น <span class="srch">ค้นด้วยชื่อ</span> คือ part ที่รหัสไม่นิ่ง ให้พิมพ์ชื่อค้นใน EasyEDA แทน</div>
+
+<div class="note n-o">🏷️ <b>ป้ายกำกับ:</b> <span class="bp bp-b">Basic</span> ฟรีค่า setup · <span class="bp bp-e">Extended</span> มีค่า setup ~$3/ตัว · <span class="bp bp-x">ซื้อแยก</span> JLCPCB ไม่มี ต้องบัดกรีเอง</div>
+
+<!-- ══ BLOCK 1: POWER ══ -->
+<div class="blk" style="--ac:var(--pwr)">
+<div class="blk-h">
+  <div class="blk-n">1</div>
+  <div class="blk-t"><h2>⚡ Power Supply</h2><div class="d">12V จากรถ → 5V → 3.3V · <b>วาดบล็อกนี้ก่อนเสมอ</b> ถ้าผิดทั้งบอร์ดใช้ไม่ได้</div></div>
+</div>
+<div class="blk-b">
+
+<div class="lbl">อุปกรณ์ที่ต้องใช้</div>
+<table class="pt">
+<thead><tr><th>REF</th><th>LCSC</th><th>ชื่อ Part</th><th>QTY</th><th>ประเภท</th><th>หน้าที่</th></tr></thead>
+<tbody>
+<tr><td class="ref">J1</td><td><span class="srch">DC Jack 5.5 2.1</span></td><td>DC Barrel Jack</td><td class="q">1</td><td><span class="bp bp-x">ซื้อแยก</span></td><td>รับไฟ 12V</td></tr>
+<tr><td class="ref">D1</td><td><span class="srch">SMBJ15A</span></td><td>TVS Diode 15V</td><td class="q">1</td><td><span class="bp bp-e">Extended</span></td><td>ป้องกัน surge</td></tr>
+<tr><td class="ref">U1</td><td><span class="lcsc">C133974</span></td><td>MP1584EN</td><td class="q">1</td><td><span class="bp bp-e">Extended</span></td><td>Buck 12V→5V 3A</td></tr>
+<tr><td class="ref">L1</td><td><span class="srch">4.7uH 3A inductor</span></td><td>Power Inductor 4.7µH</td><td class="q">1</td><td><span class="bp bp-e">Extended</span></td><td>Isat ต้อง &gt; 3A</td></tr>
+<tr><td class="ref">D2</td><td><span class="lcsc">C8678</span></td><td>SS34 Schottky 40V 3A</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>Freewheeling</td></tr>
+<tr><td class="ref">U2</td><td><span class="lcsc">C6186</span></td><td>AMS1117-3.3</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>LDO 5V→3.3V</td></tr>
+<tr><td class="ref">R1</td><td><span class="lcsc">C25741</span></td><td>Resistor 100kΩ 0402</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>FB divider บน</td></tr>
+<tr><td class="ref">R2</td><td><span class="lcsc">C25768</span></td><td>Resistor 22kΩ 0402</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>FB divider ล่าง → 5V</td></tr>
+<tr><td class="ref">C1,C2</td><td><span class="lcsc">C16780</span></td><td>Cap 100µF 25V</td><td class="q">2</td><td><span class="bp bp-e">Extended</span></td><td>Bulk in/out</td></tr>
+<tr><td class="ref">C3–C6</td><td><span class="lcsc">C15850</span></td><td>Cap 10µF 25V 0805</td><td class="q">4</td><td><span class="bp bp-b">Basic</span></td><td>Bypass ทุก rail</td></tr>
+<tr><td class="ref">C7</td><td><span class="lcsc">C1548</span></td><td>Cap 3.3nF 0402</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>MP1584 COMP</td></tr>
+</tbody></table>
+
+<div class="lbl">ผังต่อสาย</div>
+<div class="wire"><span class="cy">J1 (12V IN)</span>
+  │
+  ├──<span class="co">[D1 TVS]</span>──<span class="cd">GND</span>          <span class="cd">← ขนานกับไฟเข้า</span>
+  ├──<span class="co">[C1 100µF]</span>──<span class="cd">GND</span>
+  │
+  └──► <span class="cy">U1 MP1584EN</span>
+         <span class="cw">VIN</span>  ── 12V
+         <span class="cw">EN</span>   ── 12V          <span class="cd">← เปิดตลอด</span>
+         <span class="cw">SW</span>   ──┬──<span class="co">[L1 4.7µH]</span>──┬──► <span class="cg">+5V</span>
+                 │                │
+                 └──<span class="co">[D2 SS34]</span>─── <span class="cd">GND</span>
+                    <span class="cd">(cathode ชี้ไป SW)</span>
+         <span class="cw">FB</span>   ──<span class="co">[R1 100k]</span>── <span class="cg">+5V</span>
+              └───<span class="co">[R2 22k]</span>─── <span class="cd">GND</span>
+         <span class="cw">COMP</span> ──<span class="co">[C7 3.3nF]</span>── <span class="cd">GND</span>
+         <span class="cw">GND</span>  ── <span class="cd">GND</span>
+
+  <span class="cg">+5V</span> ──<span class="co">[C2 100µF]</span>──<span class="cd">GND</span>
+  <span class="cg">+5V</span> ──<span class="co">[C3 10µF]</span>───<span class="cd">GND</span>
+       │
+       └──► <span class="cb">U2 AMS1117-3.3</span>
+              <span class="cw">IN</span>  ── <span class="cg">+5V</span> ──<span class="co">[C4 10µF]</span>──<span class="cd">GND</span>
+              <span class="cw">OUT</span> ── <span class="cb">+3.3V</span> ──<span class="co">[C5 10µF]</span>──<span class="cd">GND</span>
+              <span class="cw">GND</span> ── <span class="cd">GND</span>
+
+<span class="cd">─────────── ไฟไปไหนบ้าง ───────────</span>
+<span class="cg">+5V</span>   ──► Buzzer, IR LED, OV5640 module
+<span class="cb">+3.3V</span> ──► ESP32-S3, OLED, LDR</div>
+
+<div class="note n-w">⚠️ <b>สูตรคำนวณ output voltage:</b> Vout = 0.8 × (1 + R1/R2) = 0.8 × (1 + 100k/22k) ≈ <b>4.44V</b> — ถ้าอยากได้ 5V เป๊ะให้ใช้ R1=100k, R2=19.1k หรือ R1=105k, R2=20k</div>
+</div></div>
+
+<!-- ══ BLOCK 2: MCU ══ -->
+<div class="blk" style="--ac:var(--mcu)">
+<div class="blk-h">
+  <div class="blk-n">2</div>
+  <div class="blk-t"><h2>🧠 MCU — ESP32-S3</h2><div class="d">สมองของระบบ + วงจร reset/boot + decoupling</div></div>
+</div>
+<div class="blk-b">
+
+<div class="lbl">อุปกรณ์ที่ต้องใช้</div>
+<table class="pt">
+<thead><tr><th>REF</th><th>LCSC</th><th>ชื่อ Part</th><th>QTY</th><th>ประเภท</th><th>หน้าที่</th></tr></thead>
+<tbody>
+<tr><td class="ref">U3</td><td><span class="lcsc">C2913202</span></td><td>ESP32-S3-WROOM-1-N16R8</td><td class="q">1</td><td><span class="bp bp-e">Extended</span></td><td>⭐ MCU หลัก ✅ยืนยันแล้ว</td></tr>
+<tr><td class="ref">R3–R5</td><td><span class="lcsc">C25744</span></td><td>Resistor 10kΩ 0402</td><td class="q">3</td><td><span class="bp bp-b">Basic</span></td><td>EN + BOOT pull-up</td></tr>
+<tr><td class="ref">C8</td><td><span class="lcsc">C15850</span></td><td>Cap 10µF 0805</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>EN reset delay</td></tr>
+<tr><td class="ref">C9–C11</td><td><span class="lcsc">C1525</span></td><td>Cap 100nF 0402</td><td class="q">20</td><td><span class="bp bp-b">Basic</span></td><td>⭐ Decoupling ทุก VCC</td></tr>
+<tr><td class="ref">SW1,SW2</td><td><span class="lcsc">C318884</span></td><td>Tact Switch 6×6mm</td><td class="q">2</td><td><span class="bp bp-b">Basic</span></td><td>RESET + BOOT</td></tr>
+</tbody></table>
+
+<div class="lbl">ผังต่อสาย</div>
+<div class="wire"><span class="cb">U3 ESP32-S3-WROOM-1-N16R8</span>
+
+  <span class="cw">3V3</span> ──┬── <span class="cb">+3.3V</span>
+         ├──<span class="co">[C9 100nF]</span>──<span class="cd">GND</span>  <span class="cr">← วางติด pin ห่างไม่เกิน 2mm!</span>
+         ├──<span class="co">[C10 100nF]</span>─<span class="cd">GND</span>
+         └──<span class="co">[C11 10µF]</span>──<span class="cd">GND</span>
+
+  <span class="cw">EN</span>  ──┬──<span class="co">[R3 10k]</span>── <span class="cb">+3.3V</span>
+         ├──<span class="co">[C8 10µF]</span>── <span class="cd">GND</span>   <span class="cd">← หน่วงเวลา reset</span>
+         └──<span class="co">[SW1 RESET]</span>─ <span class="cd">GND</span>
+
+  <span class="cw">GPIO0</span> ┬──<span class="co">[R4 10k]</span>── <span class="cb">+3.3V</span>
+         └──<span class="co">[SW2 BOOT]</span>── <span class="cd">GND</span>
+
+  <span class="cw">GND</span> ── <span class="cd">GND plane (ต่อทุก GND pin + thermal pad ใต้ module)</span></div>
+
+<div class="note n-d">🚫 <b>GPIO ห้ามใช้เด็ดขาด: 26–37</b><br>
+GPIO 26–32 = SPI Flash ภายใน · GPIO 33–37 = Octal PSRAM ของรุ่น R8<br>
+ถ้าต่ออะไรเข้าไป <b>บอร์ดจะ boot ไม่ขึ้น</b> — ในตาราง pinout บล็อกถัดไปผมเลี่ยงให้หมดแล้ว</div>
+</div></div>
+
+<!-- ══ BLOCK 3: CAMERA ══ -->
+<div class="blk" style="--ac:var(--cam)">
+<div class="blk-h">
+  <div class="blk-n">3</div>
+  <div class="blk-t"><h2>📷 Camera — OV5640</h2><div class="d">5MP Autofocus · DVP 8-bit interface · FPC 24-pin</div></div>
+</div>
+<div class="blk-b">
+
+<div class="note n-d">🔴 <b>จุดที่พลาดกันมากที่สุด!</b><br>
+OV5640 sensor เปล่าต้องการ <b>3 แรงดัน</b>: AVDD 2.8V + DOVDD 1.8V + DVDD 1.5V → ต้องออกแบบ LDO เพิ่ม 3 ตัว<br>
+👉 <b>ทางแก้ที่แนะนำ:</b> ซื้อ <b>OV5640 module ที่มี LDO onboard มาแล้ว</b> — จ่ายแค่ 3.3V เข้าไปพอ ประหยัดเวลาไปเยอะมาก</div>
+
+<div class="lbl">อุปกรณ์ที่ต้องใช้</div>
+<table class="pt">
+<thead><tr><th>REF</th><th>LCSC</th><th>ชื่อ Part</th><th>QTY</th><th>ประเภท</th><th>หน้าที่</th></tr></thead>
+<tbody>
+<tr><td class="ref">CAM1</td><td><span class="srch">OV5640 DVP module</span></td><td>OV5640 Camera Module</td><td class="q">1</td><td><span class="bp bp-x">ซื้อแยก</span></td><td>⭐ เลือกแบบมี LDO onboard</td></tr>
+<tr><td class="ref">J2</td><td><span class="srch">FPC 24P 0.5mm</span></td><td>FFC/FPC Connector 24P ZIF</td><td class="q">1</td><td><span class="bp bp-e">Extended</span></td><td>⚠️ เช็ค top/bottom contact</td></tr>
+<tr><td class="ref">R6,R7</td><td><span class="lcsc">C25900</span></td><td>Resistor 4.7kΩ 0402</td><td class="q">2</td><td><span class="bp bp-b">Basic</span></td><td>SCCB pull-up</td></tr>
+<tr><td class="ref">C12–C16</td><td><span class="lcsc">C52923</span></td><td>Cap 1µF 0402</td><td class="q">5</td><td><span class="bp bp-b">Basic</span></td><td>Bypass camera rail</td></tr>
+<tr><td class="ref">FB1,FB2</td><td><span class="srch">ferrite bead 600R 0402</span></td><td>Ferrite Bead 600Ω</td><td class="q">2</td><td><span class="bp bp-b">Basic</span></td><td>กรอง noise เข้ากล้อง</td></tr>
+</tbody></table>
+
+<div class="lbl">ตารางต่อสาย FPC → ESP32-S3</div>
+<table class="pt">
+<thead><tr><th>FPC PIN</th><th>สัญญาณ</th><th>→ GPIO</th><th>ทิศทาง</th><th>หมายเหตุ</th><th>Net Name</th></tr></thead>
+<tbody>
+<tr><td class="q">9</td><td>XCLK</td><td class="ref">GPIO 15</td><td>OUT</td><td>Clock 20MHz ป้อนกล้อง</td><td class="ref">CAM_XCLK</td></tr>
+<tr><td class="q">19</td><td>PCLK</td><td class="ref">GPIO 13</td><td>IN</td><td>Pixel clock</td><td class="ref">CAM_PCLK</td></tr>
+<tr><td class="q">21</td><td>VSYNC</td><td class="ref">GPIO 6</td><td>IN</td><td>Frame sync</td><td class="ref">CAM_VSYNC</td></tr>
+<tr><td class="q">20</td><td>HREF</td><td class="ref">GPIO 7</td><td>IN</td><td>Line valid</td><td class="ref">CAM_HREF</td></tr>
+<tr><td class="q">11</td><td>Y2 (D0)</td><td class="ref">GPIO 11</td><td>IN</td><td>Data bit 0</td><td class="ref">CAM_D0</td></tr>
+<tr><td class="q">12</td><td>Y3 (D1)</td><td class="ref">GPIO 9</td><td>IN</td><td>Data bit 1</td><td class="ref">CAM_D1</td></tr>
+<tr><td class="q">13</td><td>Y4 (D2)</td><td class="ref">GPIO 8</td><td>IN</td><td>Data bit 2</td><td class="ref">CAM_D2</td></tr>
+<tr><td class="q">14</td><td>Y5 (D3)</td><td class="ref">GPIO 10</td><td>IN</td><td>Data bit 3</td><td class="ref">CAM_D3</td></tr>
+<tr><td class="q">15</td><td>Y6 (D4)</td><td class="ref">GPIO 12</td><td>IN</td><td>Data bit 4</td><td class="ref">CAM_D4</td></tr>
+<tr><td class="q">16</td><td>Y7 (D5)</td><td class="ref">GPIO 18</td><td>IN</td><td>Data bit 5</td><td class="ref">CAM_D5</td></tr>
+<tr><td class="q">17</td><td>Y8 (D6)</td><td class="ref">GPIO 17</td><td>IN</td><td>Data bit 6</td><td class="ref">CAM_D6</td></tr>
+<tr><td class="q">18</td><td>Y9 (D7)</td><td class="ref">GPIO 16</td><td>IN</td><td>Data bit 7</td><td class="ref">CAM_D7</td></tr>
+<tr><td class="q">3</td><td>SIOD (SDA)</td><td class="ref">GPIO 4</td><td>I/O</td><td>+ pull-up 4.7k</td><td class="ref">CAM_SDA</td></tr>
+<tr><td class="q">4</td><td>SIOC (SCL)</td><td class="ref">GPIO 5</td><td>OUT</td><td>+ pull-up 4.7k</td><td class="ref">CAM_SCL</td></tr>
+<tr><td class="q">8</td><td>PWDN</td><td class="ref">GPIO 21</td><td>OUT</td><td>Power down control</td><td class="ref">CAM_PWDN</td></tr>
+<tr><td class="q">6</td><td>RESET</td><td>+3.3V</td><td>—</td><td>ผ่าน R 10k + C 100nF</td><td class="ref">CAM_RST</td></tr>
+<tr><td class="q">1,10,22–24</td><td>GND</td><td>GND</td><td>—</td><td>ต่อ ground plane</td><td class="ref">GND</td></tr>
+<tr><td class="q">2,5,7</td><td>VDD rails</td><td>+3.3V</td><td>—</td><td>ถ้า module มี LDO onboard</td><td class="ref">+3V3</td></tr>
+</tbody></table>
+
+<div class="note n-w">⚠️ <b>ก่อนวาดจริง:</b> pinout FPC ต่างกันตามผู้ผลิต module — ต้องหา <b>datasheet ของ module ที่จะซื้อจริง</b> มายืนยันก่อนเสมอ ตารางนี้เป็น pinout มาตรฐาน OV5640</div>
+</div></div>
+
+<!-- ══ BLOCK 4: I2C ══ -->
+<div class="blk" style="--ac:var(--i2c)">
+<div class="blk-h">
+  <div class="blk-n">4</div>
+  <div class="blk-t"><h2>🖥️ I2C Bus — OLED + LDR</h2><div class="d">OLED แสดงผล · LDR วัดแสงคุม IR LED · <b>ไม่ใช้ IMU</b></div></div>
+</div>
+<div class="blk-b">
+
+<div class="lbl">อุปกรณ์ที่ต้องใช้</div>
+<table class="pt">
+<thead><tr><th>REF</th><th>LCSC</th><th>ชื่อ Part</th><th>QTY</th><th>ประเภท</th><th>หน้าที่</th></tr></thead>
+<tbody>
+<tr><td class="ref">R8,R9</td><td><span class="lcsc">C25900</span></td><td>Resistor 4.7kΩ 0402</td><td class="q">2</td><td><span class="bp bp-b">Basic</span></td><td>I2C pull-up สำหรับ OLED</td></tr>
+<tr><td class="ref">J3</td><td><span class="lcsc">C2337</span></td><td>Pin Header 2.54mm 1×4</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>ต่อ OLED module</td></tr>
+<tr><td class="ref">OLED1</td><td><span class="srch">OLED 0.96 I2C SSD1306</span></td><td>OLED 128×64</td><td class="q">1</td><td><span class="bp bp-x">ซื้อแยก</span></td><td>แสดงผล (addr 0x3C)</td></tr>
+<tr><td class="ref">LDR1</td><td><span class="srch">GL5528</span></td><td>LDR Photoresistor</td><td class="q">1</td><td><span class="bp bp-x">ซื้อแยก</span></td><td>วัดระดับแสง</td></tr>
+<tr><td class="ref">R10</td><td><span class="lcsc">C25744</span></td><td>Resistor 10kΩ 0402</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>LDR voltage divider</td></tr>
+</tbody></table>
+
+<div class="lbl">ผังต่อสาย</div>
+<div class="wire"><span class="cb">+3.3V</span>
+  ├──<span class="co">[R8 4.7k]</span>──┬──► <span class="cc">I2C_SDA</span> ──► <span class="cb">GPIO 1</span>
+  ├──<span class="co">[R9 4.7k]</span>──┼──► <span class="cc">I2C_SCL</span> ──► <span class="cb">GPIO 2</span>
+  │                │
+  │                └──► <span class="cc">J3 Header → OLED</span>  <span class="cd">addr 0x3C</span>
+  │                       <span class="cw">1</span> VCC ─ <span class="cb">+3.3V</span>
+  │                       <span class="cw">2</span> GND ─ <span class="cd">GND</span>
+  │                       <span class="cw">3</span> SDA ─ <span class="cc">I2C_SDA</span>
+  │                       <span class="cw">4</span> SCL ─ <span class="cc">I2C_SCL</span>
+  │
+<span class="cd">GND</span>
+
+<span class="cd">──────────── LDR วัดแสง ────────────</span>
+<span class="cb">+3.3V</span> ──<span class="co">[LDR1]</span>──┬──► <span class="cb">GPIO 3</span> <span class="cd">(ADC1_CH2)</span>
+                  │
+             <span class="co">[R10 10k]</span>
+                  │
+                <span class="cd">GND</span>
+
+<span class="cd">มืด  → LDR ต้านทานสูง → ADC ต่ำ  → เปิด IR LED</span>
+<span class="cd">สว่าง → LDR ต้านทานต่ำ → ADC สูง → ปิด IR LED</span></div>
+
+<div class="note n-w">⚠️ <b>ตัด IMU ออกแล้ว</b> — GPIO 21, 22 ที่เคยจอง I2C ไว้ตอนนี้ว่างขึ้น เอาไปใช้กับอย่างอื่นได้ (เช่น vibration motor หรือ SD card)<br>ระบบตรวจจับความง่วงจาก<b>กล้องอย่างเดียว</b> ผ่าน EAR + PERCLOS + blink rate + การหาว</div>
+</div></div>
+
+<!-- ══ BLOCK 5: OUTPUT ══ -->
+<div class="blk" style="--ac:var(--out)">
+<div class="blk-h">
+  <div class="blk-n">5</div>
+  <div class="blk-t"><h2>🔔 Output — Buzzer + LED + IR</h2><div class="d">แจ้งเตือนเมื่อตรวจพบง่วง + ไฟส่องกลางคืน</div></div>
+</div>
+<div class="blk-b">
+
+<div class="lbl">อุปกรณ์ที่ต้องใช้</div>
+<table class="pt">
+<thead><tr><th>REF</th><th>LCSC</th><th>ชื่อ Part</th><th>QTY</th><th>ประเภท</th><th>หน้าที่</th></tr></thead>
+<tbody>
+<tr><td class="ref">BZ1</td><td><span class="srch">active buzzer 5V</span></td><td>Active Buzzer 5V</td><td class="q">1</td><td><span class="bp bp-x">ซื้อแยก</span></td><td>⚠️ ต้อง Active ไม่ใช่ Passive</td></tr>
+<tr><td class="ref">Q1</td><td><span class="lcsc">C20917</span></td><td>AO3400A N-MOSFET</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>สวิตช์ Buzzer</td></tr>
+<tr><td class="ref">Q2</td><td><span class="lcsc">C2150</span></td><td>S8050 NPN 500mA</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>สวิตช์ IR LED array</td></tr>
+<tr><td class="ref">R11,R12</td><td><span class="lcsc">C25744</span></td><td>Resistor 10kΩ 0402</td><td class="q">2</td><td><span class="bp bp-b">Basic</span></td><td>Gate + pull-down</td></tr>
+<tr><td class="ref">R13</td><td><span class="lcsc">C11702</span></td><td>Resistor 1kΩ 0402</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>NPN base resistor</td></tr>
+<tr><td class="ref">D3</td><td><span class="lcsc">C2297</span></td><td>LED Green 0805</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>สถานะ Alert (ตื่น)</td></tr>
+<tr><td class="ref">D4</td><td><span class="lcsc">C2286</span></td><td>LED Red 0805</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>สถานะ Drowsy (ง่วง)</td></tr>
+<tr><td class="ref">R14,R15</td><td><span class="lcsc">C25117</span></td><td>Resistor 220Ω 0402</td><td class="q">2</td><td><span class="bp bp-b">Basic</span></td><td>LED current limit</td></tr>
+<tr><td class="ref">IR1–IR4</td><td><span class="srch">TSAL6200</span></td><td>IR LED 850nm</td><td class="q">4</td><td><span class="bp bp-e">Extended</span></td><td>ส่องหน้ากลางคืน</td></tr>
+<tr><td class="ref">R16–R19</td><td><span class="lcsc">C25076</span></td><td>Resistor 100Ω 0402</td><td class="q">4</td><td><span class="bp bp-b">Basic</span></td><td>IR LED current limit</td></tr>
+</tbody></table>
+
+<div class="lbl">ผังต่อสาย</div>
+<div class="wire"><span class="cr">━━━━━━ BUZZER ━━━━━━</span>
+<span class="cg">+5V</span> ──► <span class="cr">BZ1(+)</span>
+          <span class="cr">BZ1(−)</span> ──► <span class="cw">Drain</span> <span class="co">Q1 AO3400A</span>
+                        <span class="cw">Source</span> ── <span class="cd">GND</span>
+                        <span class="cw">Gate</span> ──<span class="co">[R11 10k]</span>── <span class="cb">GPIO 14</span>
+                        <span class="cw">Gate</span> ──<span class="co">[R12 10k]</span>── <span class="cd">GND</span>
+<span class="cd">↑ R12 pull-down กัน buzzer ดังตอน boot</span>
+
+<span class="cr">━━━━━━ LED สถานะ ━━━━━━</span>
+<span class="cb">GPIO 47</span> ──<span class="co">[R14 220Ω]</span>──►|── <span class="cd">GND</span>   <span class="cg">D3 เขียว (Alert)</span>
+<span class="cb">GPIO 48</span> ──<span class="co">[R15 220Ω]</span>──►|── <span class="cd">GND</span>   <span class="cr">D4 แดง (Drowsy)</span>
+
+<span class="co">━━━━━━ IR LED ARRAY ━━━━━━</span>
+<span class="cg">+5V</span> ──┬──<span class="co">[R16 100Ω]</span>──►|── ┐  <span class="co">IR1</span>
+       ├──<span class="co">[R17 100Ω]</span>──►|── ┤  <span class="co">IR2</span>
+       ├──<span class="co">[R18 100Ω]</span>──►|── ┤  <span class="co">IR3</span>
+       └──<span class="co">[R19 100Ω]</span>──►|── ┘  <span class="co">IR4</span>
+                              │
+                        <span class="cw">Collector</span> <span class="co">Q2 S8050</span>
+                        <span class="cw">Emitter</span> ── <span class="cd">GND</span>
+                        <span class="cw">Base</span> ──<span class="co">[R13 1k]</span>── <span class="cb">GPIO 42</span>
+
+<span class="cd">กระแสรวม IR = 4 × ~30mA = 120mA</span>
+<span class="cd">S8050 รับได้ 500mA ✓ เหลือเฟือ</span></div>
+</div></div>
+
+<!-- ══ BLOCK 6: USB ══ -->
+<div class="blk" style="--ac:var(--ok)">
+<div class="blk-h">
+  <div class="blk-n">6</div>
+  <div class="blk-t"><h2>🔌 USB-C + ปุ่มกด</h2><div class="d">Programming, debug และปุ่มควบคุม</div></div>
+</div>
+<div class="blk-b">
+
+<div class="lbl">อุปกรณ์ที่ต้องใช้</div>
+<table class="pt">
+<thead><tr><th>REF</th><th>LCSC</th><th>ชื่อ Part</th><th>QTY</th><th>ประเภท</th><th>หน้าที่</th></tr></thead>
+<tbody>
+<tr><td class="ref">J4</td><td><span class="lcsc">C165948</span></td><td>USB-C Receptacle 16P</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>Programming + Debug</td></tr>
+<tr><td class="ref">U5</td><td><span class="lcsc">C2827693</span></td><td>USBLC6-2SC6</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>ESD protection</td></tr>
+<tr><td class="ref">R20,R21</td><td><span class="lcsc">C25905</span></td><td>Resistor 5.1kΩ 0402</td><td class="q">2</td><td><span class="bp bp-b">Basic</span></td><td>⚠️ CC1/CC2 ขาดไม่ได้!</td></tr>
+<tr><td class="ref">D5</td><td><span class="lcsc">C8678</span></td><td>SS34 Schottky</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>กัน backfeed จาก USB</td></tr>
+<tr><td class="ref">SW3</td><td><span class="lcsc">C318884</span></td><td>Tact Switch 6×6mm</td><td class="q">1</td><td><span class="bp bp-b">Basic</span></td><td>ปุ่ม USER (เปิด/ปิด)</td></tr>
+<tr><td class="ref">J5,J6</td><td><span class="lcsc">C124378</span></td><td>Pin Header 2.54mm 1×8</td><td class="q">2</td><td><span class="bp bp-b">Basic</span></td><td>Debug / Test point</td></tr>
+</tbody></table>
+
+<div class="lbl">ผังต่อสาย</div>
+<div class="wire"><span class="cg">J4 USB-C Receptacle (16P)</span>
+  <span class="cw">VBUS</span>  ──<span class="co">[D5 SS34]</span>──► <span class="cg">+5V</span>  <span class="cd">← กัน backfeed</span>
+  <span class="cw">GND</span>   ──► <span class="cd">GND</span>
+  <span class="cr">CC1</span>   ──<span class="co">[R20 5.1k]</span>── <span class="cd">GND</span>  <span class="cr">← ขาดไม่ได้!</span>
+  <span class="cr">CC2</span>   ──<span class="co">[R21 5.1k]</span>── <span class="cd">GND</span>  <span class="cr">← ขาดไม่ได้!</span>
+  <span class="cw">D−</span>    ──► <span class="cg">U5 USBLC6</span> ──► <span class="cb">GPIO 19</span>
+  <span class="cw">D+</span>    ──► <span class="cg">U5 USBLC6</span> ──► <span class="cb">GPIO 20</span>
+  <span class="cw">SHIELD</span>──<span class="co">[C 100nF]</span>── <span class="cd">GND</span>
+
+<span class="cd">━━━━━━ ปุ่มกด 3 ตัว ━━━━━━</span>
+<span class="cg">SW1 RESET</span> ── <span class="cb">EN</span>      ── <span class="cd">GND</span>
+<span class="cg">SW2 BOOT</span>  ── <span class="cb">GPIO 0</span>  ── <span class="cd">GND</span>
+<span class="cg">SW3 USER</span>  ── <span class="cb">GPIO 41</span> ── <span class="cd">GND</span>  <span class="cd">(pull-up internal)</span></div>
+
+<div class="note n-d">🔴 <b>R 5.1kΩ ที่ CC1/CC2 = จุดพลาดอันดับ 1 ของมือใหม่</b><br>
+ถ้าลืมใส่ 2 ตัวนี้ USB-C charger/คอมจะ<b>ไม่จ่ายไฟให้บอร์ดเลย</b> เพราะไม่รู้ว่ามีอุปกรณ์ต่ออยู่ — เช็คให้ดีก่อนสั่ง PCB</div>
+</div></div>
+
+<!-- LAYOUT -->
+<div class="sec"><span class="sec-n" style="color:var(--cam);border-color:var(--cam)">07</span><h2 style="color:var(--cam)">📐 ผังวาง PCB (80×70mm)</h2></div>
+<div class="wire"><span class="cd">     ◄─────────────── 80 mm ───────────────►</span>
+<span class="cd">   ┌──────────────────────────────────────────┐  ▲</span>
+<span class="cd">   │</span> <span class="cy">╔══════════╗</span>                            <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">║ ANTENNA  ║</span>   <span class="cp2">┌────────────────┐</span>       <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">║ KEEPOUT  ║</span>   <span class="cp2">│ J2 FPC 24P     │</span>       <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">║ ห้ามมี   ║</span>   <span class="cp2">│ → OV5640       │</span>       <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">║ copper!  ║</span>   <span class="cp2">└────────────────┘</span>       <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">╚══════════╝</span>                            <span class="cd">│  │</span>
+<span class="cd">   │</span>   <span class="cb">┌──────────────────┐</span>  <span class="co">◉  ◉  ◉  ◉</span>     <span class="cd">│</span> 70
+<span class="cd">   │</span>   <span class="cb">│ U3 ESP32-S3      │</span>  <span class="co">IR1 IR2 IR3 IR4</span> <span class="cd">│</span> mm
+<span class="cd">   │</span>   <span class="cb">│ WROOM-1 N16R8    │</span>                  <span class="cd">│  │</span>
+<span class="cd">   │</span>   <span class="cb">│                  │</span>  <span class="cc">┌──────────┐</span>     <span class="cd">│  │</span>
+<span class="cd">   │</span>   <span class="cb">└──────────────────┘</span>  <span class="co">🌗 LDR1</span>        <span class="cd">│  │</span>
+<span class="cd">   │</span>                        <span class="cc">└──────────┘</span>     <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">┌────────────┐</span>  <span class="cr">🔔BZ1</span>  <span class="cc">┌────────────┐</span>  <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">│ POWER      │</span>        <span class="cc">│ J3 → OLED  │</span>  <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">│ U1 MP1584  │</span>        <span class="cc">└────────────┘</span>  <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">│ U2 AMS1117 │</span> <span class="cg">●● </span> <span class="cg">[SW1][SW2][SW3]</span> <span class="cd">│  │</span>
+<span class="cd">   │</span> <span class="cy">└────────────┘</span> <span class="cg">D3D4</span>                 <span class="cd">│  │</span>
+<span class="cd">   │</span>  <span class="cy">[J1 DC]</span>              <span class="cg">[J4 USB-C]</span>      <span class="cd">│  ▼</span>
+<span class="cd">   └──────────────────────────────────────────┘</span>
+<span class="cd">      ↑ 12V เข้า            ↑ programming</span></div>
+
+<!-- DRC RULES -->
+<div class="sec"><span class="sec-n" style="color:var(--ir);border-color:var(--ir)">08</span><h2 style="color:var(--ir)">📏 Design Rules (ตามที่อาจารย์กำหนด)</h2></div>
+
+<div class="note n-d">🔴 <b>อาจารย์กำหนดเข้มกว่า JLCPCB minimum</b><br>
+JLCPCB ทำได้ต่ำสุด 4mil (0.10mm) แต่อาจารย์เขียนโน้ตไว้ว่า <b>6mil = ขั้นต่ำที่ยอมรับ</b> และ <b>12mil ++ = ค่าที่ควรใช้จริง</b><br>
+เหตุผล: track width tolerance ของโรงงานคือ <b>±20%</b> — ถ้าออกแบบ 4mil อาจได้จริงแค่ 3.2mil เส้นบางเกินไป เสี่ยงขาด/กระแสไม่พอ</div>
+
+<div class="lbl" style="margin-top:18px">ตารางเทียบ — ค่าที่เราต้องใช้</div>
+<table class="pt">
+<thead><tr><th>รายการ</th><th>JLCPCB MIN</th><th>อาจารย์กำหนด</th><th>ที่เราใช้</th><th>= mil</th><th>สถานะ</th></tr></thead>
+<tbody>
+<tr><td>Signal trace ทั่วไป</td><td>0.10mm (4mil)</td><td class="ref">12 mil ++</td><td class="ref">0.30 mm</td><td class="q">11.8</td><td><span class="bp bp-b">✅ ผ่าน</span></td></tr>
+<tr><td>Clearance (ระยะห่าง)</td><td>0.10mm (4mil)</td><td class="ref">6 mil ขั้นต่ำ</td><td class="ref">0.20 mm</td><td class="q">7.9</td><td><span class="bp bp-b">✅ ผ่าน</span></td></tr>
+<tr><td>Power trace 3.3V</td><td>0.10mm</td><td class="ref">12 mil ++</td><td class="ref">0.50 mm</td><td class="q">19.7</td><td><span class="bp bp-b">✅ ผ่าน</span></td></tr>
+<tr><td>Power trace 5V / 12V</td><td>0.10mm</td><td class="ref">12 mil ++</td><td class="ref">0.80 mm</td><td class="q">31.5</td><td><span class="bp bp-b">✅ ผ่าน</span></td></tr>
+<tr><td>PTH Annular Ring</td><td>≥0.20mm</td><td class="ref">≥0.20mm</td><td class="ref">0.25 mm</td><td class="q">9.8</td><td><span class="bp bp-b">✅ เผื่อแล้ว</span></td></tr>
+<tr><td>Drill Diameter (via)</td><td>0.15mm</td><td class="ref">ยิ่งใหญ่ยิ่งถูก</td><td class="ref">0.30 mm</td><td class="q">11.8</td><td><span class="bp bp-b">✅ ถูกกว่า</span></td></tr>
+<tr><td>Via Diameter (pad)</td><td>—</td><td class="ref">drill + 2×ring</td><td class="ref">0.60 mm</td><td class="q">23.6</td><td><span class="bp bp-b">✅ ผ่าน</span></td></tr>
+<tr><td>FPC 0.5mm pitch zone</td><td>0.10mm</td><td class="ref">6 mil ขั้นต่ำ</td><td class="ref">0.15 mm</td><td class="q">5.9</td><td><span class="bp bp-e">⚠️ เฉพาะจุด</span></td></tr>
+</tbody></table>
+
+<div class="note n-w">⚠️ <b>ข้อยกเว้นเดียว — FPC Connector</b><br>
+FPC 24-pin pitch 0.5mm มี pin ห่างกันแค่ 0.5mm → route ด้วย 0.30mm ไม่ได้ ต้องใช้ <b>0.15mm เฉพาะช่วงสั้นๆ</b> ใกล้ connector แล้วขยายเป็น 0.30mm ทันทีที่พ้นออกมา<br>
+👉 วิธีทำ: ตั้ง <b>Net Class</b> แยกใน EasyEDA (ดูขั้นตอนด้านล่าง)</div>
+
+<div class="lbl" style="margin-top:18px">ค่าที่ต้องตั้งใน EasyEDA</div>
+<div class="wire"><span class="cg">Design → Design Rule → Rule Setting</span>
+
+<span class="cy">━━ Default Rule (ใช้กับ net ทั่วไป) ━━</span>
+  <span class="cw">Track Width</span> .............. <span class="cg">0.30 mm</span>   <span class="cd">(12 mil)</span>
+  <span class="cw">Clearance</span> ................ <span class="cg">0.20 mm</span>   <span class="cd">(8 mil)</span>
+  <span class="cw">Via Diameter</span> ............. <span class="cg">0.60 mm</span>
+  <span class="cw">Via Drill Diameter</span> ....... <span class="cg">0.30 mm</span>
+  <span class="cw">Hole to Hole Clearance</span> ... <span class="cg">0.50 mm</span>
+  <span class="cw">Track to Hole</span> ............ <span class="cg">0.25 mm</span>
+
+<span class="cy">━━ Net Class: POWER ━━</span>
+  <span class="cd">(กำหนดให้ net: +12V, +5V, +3V3, GND)</span>
+  <span class="cw">Track Width</span> .............. <span class="cg">0.80 mm</span>   <span class="cd">(31 mil)</span>
+  <span class="cw">Clearance</span> ................ <span class="cg">0.25 mm</span>
+
+<span class="cy">━━ Net Class: FPC_CAM ━━</span>
+  <span class="cd">(กำหนดให้ net: CAM_D0–D7, CAM_PCLK, CAM_XCLK,</span>
+  <span class="cd"> CAM_VSYNC, CAM_HREF, CAM_SDA, CAM_SCL)</span>
+  <span class="cw">Track Width</span> .............. <span class="cg">0.15 mm</span>   <span class="cd">(6 mil — ขั้นต่ำ)</span>
+  <span class="cw">Clearance</span> ................ <span class="cg">0.15 mm</span>
+  <span class="cr">⚠️ ใช้เฉพาะช่วงใกล้ connector เท่านั้น</span>
+  <span class="cr">   พ้นออกมาแล้วขยายเป็น 0.30 mm ทันที</span></div>
+
+<div class="lbl" style="margin-top:18px">วิธีตั้ง Net Class ใน EasyEDA</div>
+<div class="steps">
+<div class="step" style="--sc:#f97316"><b>เปิด Design Rule Manager</b><span>เมนู <code>Design → Design Rule</code> → จะเห็นแท็บ Rule / Net Class</span></div>
+<div class="step" style="--sc:#f59e0b"><b>สร้าง Rule ใหม่ 2 อัน</b><span>กด <code>+</code> เพิ่ม rule ชื่อ <b>POWER</b> และ <b>FPC_CAM</b> แล้วใส่ค่าตามตารางด้านบน</span></div>
+<div class="step" style="--sc:#5eb3ff"><b>สร้าง Net Class แล้วผูกกับ Rule</b><span>แท็บ Net Class → สร้าง class ชื่อเดียวกัน → ลาก net ที่เกี่ยวข้องเข้าไป → เลือก Rule ที่ตรงกัน</span></div>
+<div class="step" style="--sc:#3ddc97"><b>รัน DRC ตรวจสอบ</b><span><code>Ctrl+Shift+D</code> หรือ <code>Design → Check DRC</code> — ต้องได้ <b>0 error</b> ก่อนส่ง Gerber</span></div>
+</div>
+
+<!-- LAYOUT RULES -->
+<div class="sec"><span class="sec-n" style="color:var(--pwr);border-color:var(--pwr)">09</span><h2 style="color:var(--pwr)">⚠️ กฎ Layout ที่ห้ามพลาด</h2></div>
+<div class="steps">
+<div class="step" style="--sc:#f43f5e"><b>Antenna Keepout — พลาดแล้ว WiFi ตาย</b><span>เว้นพื้นที่ใต้และรอบเสาอากาศ ESP32-S3 อย่างน้อย <b>3mm</b> ห้ามมี copper pour / trace / via ทั้ง top และ bottom layer</span></div>
+<div class="step" style="--sc:#f59e0b"><b>Decoupling cap ต้องติดชิด pin</b><span>C 100nF ห่างจาก VCC pin <b>ไม่เกิน 2mm</b> — ถ้าวางไกลจะไม่มีผลเลย</span></div>
+<div class="step" style="--sc:#9a7dff"><b>Camera DVP ความยาวใกล้เคียงกัน</b><span>เส้น D0–D7 + PCLK ควรยาวต่างกันไม่เกิน ±5mm กัน timing skew</span></div>
+<div class="step" style="--sc:#5eb3ff"><b>GND Plane เต็ม bottom layer</b><span>เท copper pour GND ทั้งชั้นล่าง + โรย via stitching ทุกๆ 5–10mm (via 0.6/0.3mm)</span></div>
+<div class="step" style="--sc:#f97316"><b>Power trace ใช้ Net Class POWER</b><span>12V/5V/3.3V/GND ตั้งเป็น <b>0.80mm</b> ผ่าน Net Class — อย่า route ด้วยค่า default</span></div>
+<div class="step" style="--sc:#06b6d4"><b>Switching loop ของ DC-DC ให้เล็ก</b><span>วง VIN → SW → L1 → C2 ให้สั้นที่สุด และวางห่างจาก ESP32 กับกล้อง</span></div>
+<div class="step" style="--sc:#3ddc97"><b>USB D+/D− เป็น differential pair</b><span>วางขนานกัน ระยะห่างคงที่ ความยาวเท่ากัน (90Ω differential)</span></div>
+</div>
+
+<!-- WORKFLOW -->
+<div class="sec"><span class="sec-n" style="color:var(--ok);border-color:var(--ok)">10</span><h2 style="color:var(--ok)">🚀 ลำดับการทำใน EasyEDA</h2></div>
+<div class="steps">
+<div class="step" style="--sc:#3ddc97"><b>เช็ค stock ทุก part ก่อน</b><span>เข้า <code>jlcpcb.com/parts</code> ค้นทีละรหัส ดู Stock &gt; 0 — ถ้าหมดต้องหาตัวแทน<b>ตั้งแต่ตอนนี้</b> ไม่ใช่ตอน order</span></div>
+<div class="step" style="--sc:#5eb3ff"><b>สร้าง Project + เปิด Library แท็บ LCSC</b><span>easyeda.com → New Project → New Schematic → กด <code>Shift+F</code> → เลือกแท็บ <b>LCSC</b> (สำคัญ! จะได้ symbol + footprint + part number ครบ)</span></div>
+<div class="step" style="--sc:#f59e0b"><b>วาด Block 1 (Power) ให้เสร็จก่อน</b><span>ตรวจ 2 รอบก่อนไปต่อ ถ้า power ผิดทั้งบอร์ดใช้ไม่ได้</span></div>
+<div class="step" style="--sc:#9a7dff"><b>วาด Block 2–6 ตามลำดับ</b><span>ใช้ <b>Net Label</b> (กด <code>N</code>) แทนลากสายยาว — ชื่อเดียวกันเชื่อมกันอัตโนมัติ อ่านง่ายกว่ามาก</span></div>
+<div class="step" style="--sc:#06b6d4"><b>รัน ERC ให้ได้ 0 error</b><span>Design → Check ERC — warning พอรับได้ แต่ error ต้องเป็น 0</span></div>
+<div class="step" style="--sc:#f43f5e"><b>Convert to PCB + ตั้ง Design Rule ก่อน route</b><span>ตั้ง board outline <b>80×70mm</b> → <b>ตั้ง Design Rule ตามตารางข้อ 08 ก่อน</b> → วางตามผัง → route ด้วยมือ (<b>อย่าใช้ auto-route</b>)</span></div>
+<div class="step" style="--sc:#f97316"><b>DRC → Export Gerber + BOM + CPL → JLCPCB</b><span>One-click order จาก EasyEDA ได้เลย เลือก PCBA assembly</span></div>
+</div>
+
+<div class="note n-o">✅ <b>ทางลัดที่แนะนำมาก:</b> เปิด <b>ESP32-S3-EYE schematic</b> ของ Espressif ควบคู่ไปด้วย (github.com/espressif/esp-who) — เป็น reference design ที่ผ่านการทดสอบจริงแล้วสำหรับ ESP32-S3 + camera โดยเฉพาะ</div>
+
+<footer>Group 17 · Driver Drowsiness Detection · Build Guide v1.0 · ตรวจ stock ที่ jlcpcb.com/parts ก่อนสั่งทุกครั้ง</footer>
+</div>
+
+<div class="hint">💡 คลิกรหัส C… เพื่อ copy</div>
+<script>
+document.querySelectorAll('.lcsc').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const t=el.textContent;
+    navigator.clipboard.writeText(t).then(()=>{
+      el.classList.add('cp');const o=el.textContent;el.textContent='✓';
+      setTimeout(()=>{el.textContent=o;el.classList.remove('cp')},1000);
+    });
+  });
+});
+</script>
+</body></html>

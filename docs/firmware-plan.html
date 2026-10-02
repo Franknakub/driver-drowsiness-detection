@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แผน Firmware ตรวจจับความง่วง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single reading column, wide tables scroll in place; solder-mask green + copper drawn from the PCB itself */
+:root {
+  --bg: #f5f7f4;
+  --surface: #ffffff;
+  --fg: #1c2420;
+  --muted: #5a6760;
+  --line: #d8e0da;
+  --mask: #1f6b4a;      /* solder mask green — accent */
+  --mask-soft: #e3efe8;
+  --copper: #a85a22;    /* copper — "ต้องแก้" */
+  --copper-soft: #f6e9de;
+  --warn: #b3261e;
+  --warn-soft: #fbe7e5;
+  --code-bg: #eef2ef;
+  --f-display: "Bai Jamjuree", "IBM Plex Sans Thai", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111613; --surface: #18201b; --fg: #e3ebe5; --muted: #98a69d; --line: #2c3730;
+    --mask: #5fc293; --mask-soft: #1b3226; --copper: #e2955a; --copper-soft: #3a2617;
+    --warn: #ff8a80; --warn-soft: #3d1b19; --code-bg: #1f2923; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111613; --surface: #18201b; --fg: #e3ebe5; --muted: #98a69d; --line: #2c3730;
+  --mask: #5fc293; --mask-soft: #1b3226; --copper: #e2955a; --copper-soft: #3a2617;
+  --warn: #ff8a80; --warn-soft: #3d1b19; --code-bg: #1f2923; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15.5px; line-height: 1.7; }
+.wrap { max-width: 920px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: grid; gap: 44px; }
+header { display: grid; gap: 10px; border-bottom: 2px solid var(--mask); padding-bottom: 24px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--mask); }
+h1 { font-family: var(--f-display); font-size: clamp(28px, 5vw, 40px); line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--f-display); font-size: 23px; margin: 0; text-wrap: balance; display: flex; gap: 12px; align-items: baseline; }
+h2 .n { font-family: var(--f-mono); font-size: 14px; color: var(--mask); font-weight: 500; }
+h3 { font-family: var(--f-display); font-size: 17px; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--muted); max-width: 68ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13.5px; color: var(--muted); }
+.meta b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+section { display: grid; gap: 16px; min-width: 0; }
+ul, ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 72ch; }
+code { font-family: var(--f-mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { margin: 0; font-family: var(--f-mono); font-size: 13px; line-height: 1.55; background: var(--code-bg); padding: 16px 18px; border-radius: 8px; overflow-x: auto; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--line); text-align: center; }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 620px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--f-display); font-weight: 600; font-size: 13.5px; background: var(--mask-soft); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.pill { display: inline-block; font-family: var(--f-mono); font-size: 11.5px; padding: 1px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.rec { background: var(--mask-soft); color: var(--mask); }
+.pill.fix { background: var(--copper-soft); color: var(--copper); }
+.pill.gate { background: var(--mask); color: var(--surface); }
+.callout { border: 1px solid var(--line); border-left: 4px solid var(--copper); background: var(--copper-soft); padding: 14px 18px; border-radius: 6px; display: grid; gap: 6px; }
+.callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+.callout.ok { border-left-color: var(--mask); background: var(--mask-soft); }
+.callout strong { font-family: var(--f-display); }
+.files { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 24px; font-size: 14px; }
+.files div { display: grid; grid-template-columns: 9.5em 1fr; gap: 8px; border-bottom: 1px dashed var(--line); padding-block: 5px; min-width: 0; }
+.files code { background: none; padding: 0; color: var(--mask); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.cols > div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.decide { counter-reset: d; list-style: none; padding: 0; display: grid; gap: 10px; }
+.decide li { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px 12px 52px; position: relative; }
+.decide li::before { counter-increment: d; content: counter(d); position: absolute; left: 16px; top: 12px; width: 24px; height: 24px; border-radius: 50%; background: var(--mask); color: var(--surface); font-family: var(--f-mono); font-size: 13px; display: grid; place-items: center; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+@media (max-width: 520px) { .files div { grid-template-columns: 1fr; gap: 0; } }
+</style>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"; mermaid.initialize({ startOnLoad: true });</script>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Embedded System 03603323 · กลุ่ม 17 · ESP32-S3 N16R8 + OV5640</div>
+  <h1>แผน Firmware ระบบตรวจจับความง่วงของคนขับ</h1>
+  <p class="lede">ตอนนี้เหลือเวลาราว 4.5 สัปดาห์ แผนนี้เลยให้ทำระบบให้ครบวงจรแบบหยาบก่อน แล้วค่อยเพิ่มความแม่นทีหลัง งานแบ่งเป็น 2 สายให้ทำขนานกัน สายแรกคือ ML สายที่สองคือ firmware กับเว็บ</p>
+  <div class="meta">
+    <span>อัปเดต <b>2 ต.ค. 2026</b></span>
+    <span>ส่งงาน <b>3–5 พ.ย. 2026</b></span>
+    <span>Core <b>esp32 3.3.12</b></span>
+    <span>Partition <b>app3M_fat9M_16MB</b></span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="n">1</span>โครงสร้าง firmware</h2>
+  <p>งานแยกตาม core ของ ESP32-S3 ฝั่ง Core 1 ทำงานภาพกับ ML ฝั่ง Core 0 ซึ่งมี WiFi stack อยู่แล้วให้ดูแลเว็บและการแจ้งเตือน ทั้งสองฝั่งคุยกันผ่าน struct สถานะกลางที่ล็อกด้วย mutex</p>
+<pre class="mermaid">
+flowchart LR
+  subgraph C1["Core 1 · vision_task"]
+    CAM["กล้อง OV5640<br/>grayscale SVGA"] --> EYE["หาตา<br/>crop 96×96"] --> ML["โมเดล<br/>P(ตาปิด)"] --> SM["state machine<br/>ระดับ 0–3"]
+  end
+  SM --> ST[("shared_state<br/>+ mutex")]
+  ST --> AL["alert_task<br/>buzzer · LED · OLED"]
+  ST --> WEB["web_task (Core 0)<br/>WebSocket · stream · OTA"]
+  ST --> NT["notify_task (Core 0)<br/>แจ้งเตือนมือถือ"]
+  LDR["sensor_task<br/>LDR ทุก 500 ms"] --> IR["IR LED<br/>เปิด/ปิด ผ่าน Q3"]
+</pre>
+  <h3>ไฟล์ในสเก็ตช์ <code>DrowsyFW/</code></h3>
+  <div class="files">
+    <div><code>DrowsyFW.ino</code><span>setup() สร้าง task อย่างเดียว</span></div>
+    <div><code>config.h/.cpp</code><span>ขา GPIO, ค่า default, NVS</span></div>
+    <div><code>shared_state.h</code><span>struct สถานะกลาง + mutex</span></div>
+    <div><code>camera.cpp</code><span>init กล้อง, ล็อก/ปลด AEC</span></div>
+    <div><code>eye_locator.cpp</code><span>หาตำแหน่งตา (ข้อ 2)</span></div>
+    <div><code>ml_inference.cpp</code><span>ให้ค่า P(closed)</span></div>
+    <div><code>drowsiness.cpp</code><span>smoothing, PERCLOS, ระดับเตือน</span></div>
+    <div><code>alert.cpp</code><span>buzzer, LED, OLED</span></div>
+    <div><code>ir_light.cpp</code><span>LDR + คุม IR</span></div>
+    <div><code>web_server.cpp</code><span>HTTP, WebSocket, stream, OTA</span></div>
+    <div><code>notify.cpp</code><span>ส่งแจ้งเตือนผ่านเน็ต</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">2</span>ML: ยังขาดขั้นตอนหาตา</h2>
+  <p>โมเดลรับภาพตาขนาด 96×96 แต่กล้องส่งมาทั้งเฟรม เอกสารเดิมยังไม่ได้บอกว่าจะ crop ตาออกมาอย่างไร มี 3 ทางให้เลือก</p>
+  <div class="scroll"><table>
+    <thead><tr><th>ทาง</th><th>วิธี</th><th>ข้อดี</th><th>ความเสี่ยง</th></tr></thead>
+    <tbody>
+      <tr><td>A <span class="pill rec">MVP</span></td><td>กรอบตาคงที่ ตั้งครั้งเดียวจากหน้าเว็บ</td><td>ง่ายที่สุด ใช้ MRL train ได้เลย</td><td>ถ้าขยับหัว ตาจะหลุดกรอบ</td></tr>
+      <tr><td>B <span class="pill rec">อัปเกรด</span></td><td>ใช้ face detection ของ ESP-DL ซึ่งให้จุดตำแหน่งตา แล้วค่อย crop</td><td>แม่นที่สุด ยังใช้ MRL ได้</td><td>ไม่มี ESP-DL มากับ core 3.3.12 อาจต้องย้ายไป PlatformIO/ESP-IDF</td></tr>
+      <tr><td>C</td><td>Edge Impulse FOMO ตรวจ <code>eye_open</code>/<code>eye_closed</code> จากทั้งเฟรม</td><td>อยู่ใน Arduino ได้ ใช้โมเดลเดียว</td><td>ต้องถ่ายและ label ภาพเองหลายร้อยรูป ตาเล็กมากเมื่อเทียบกับ grid</td></tr>
+    </tbody>
+  </table></div>
+  <div class="cols">
+    <div>
+      <h3>Train</h3>
+      <ul>
+        <li>ใช้ MRL Eye dataset (grayscale มีภาพ IR) แยก 2 class คือตาเปิดกับตาปิด</li>
+        <li>MobileNetV2 96×96 grayscale INT8 บน Edge Impulse แล้ว export เป็น Arduino library</li>
+        <li>สัปดาห์ 1 ต้องเช็คว่า library ที่ได้ compile กับ core 3.3.12 ผ่าน</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Fine-tune ด้วยภาพจริง</h3>
+      <ul>
+        <li>ภาพ MRL ต่างจากภาพ OV5640 + IR ของเรา ถ้าไม่ fine-tune โมเดลมักแม่นบน PC แต่พังบนบอร์ด</li>
+        <li>เก็บภาพผ่านโหมดเก็บข้อมูลบนเว็บ (ข้อ 4)</li>
+        <li>วัดผลด้วยภาพของเราเอง และทั้ง pipeline ต้องได้อย่างน้อย 5 fps</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">3</span>Logic ความง่วงที่ต้องแก้จากเอกสารเดิม</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>เอกสารเดิม</th><th>ปัญหา</th><th>เปลี่ยนเป็น</th></tr></thead>
+    <tbody>
+      <tr><td>EAR &lt; 0.20</td><td>EAR ต้องใช้ landmark 6 จุดต่อตา แต่ classifier ไม่ให้ค่านี้</td><td><span class="pill fix">แก้</span> ใช้ P(closed) + EMA + hysteresis (เกิน 0.6 = ปิด, ต่ำกว่า 0.4 = เปิด)</td></tr>
+      <tr><td>45 / 90 / 150 frames</td><td>fps จริงได้แค่ 5–15</td><td><span class="pill fix">แก้</span> นับเป็น 1.5 / 3 / 5 วินาที ด้วย <code>millis()</code></td></tr>
+      <tr><td>PERCLOS &gt; 80%</td><td>80% มาจากนิยาม P80 (เปลือกตาปิดอย่างน้อย 80%) ไม่ใช่เกณฑ์สัดส่วนเวลา เกณฑ์ในงานวิจัยต่ำกว่านี้มาก</td><td><span class="pill fix">แก้</span> ใช้ sliding window 60 วินาทีตามเวลาจริง ปรับค่าได้จากเว็บ และอ้างอิงเปเปอร์ในรายงาน</td></tr>
+      <tr><td>Blink rate</td><td>การกระพริบตาใช้เวลา 100–400 ms ที่ 5 fps จับได้แค่ 0–2 เฟรม</td><td>แสดงในเว็บอย่างเดียว ไม่ใช้ตัดสินความง่วง</td></tr>
+      <tr><td>การหาว</td><td>โมเดลดูแค่ตา</td><td>ตัดออก</td></tr>
+      <tr><td>(ไม่มี)</td><td>ยังไม่มีกรณีที่หาตาไม่เจอ</td><td><span class="pill fix">เพิ่ม</span> สถานะ <code>NO_FACE</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">4</span>เว็บบนตัวบอร์ด</h2>
+  <p>ESP32 เป็นเว็บเซิร์ฟเวอร์เอง เพราะในรถไม่มีเน็ตบ้าน บอร์ดจะต่อ hotspot มือถือก่อน ถ้าต่อไม่ได้ภายใน 10 วินาทีจะเปิด AP ของตัวเองชื่อ <code>Drowsy-XXXX</code> ทั้งสองแบบเข้าผ่าน <code>drowsy.local</code> ได้</p>
+  <div class="scroll"><table>
+    <thead><tr><th>หน้า</th><th>มีอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>Dashboard</td><td>ระดับเตือน, กราฟ P(closed), PERCLOS, fps, ค่าแสง, สถานะ IR อัปเดตสดผ่าน WebSocket</td></tr>
+      <tr><td>Live view</td><td>ภาพสดพร้อมกรอบตา เปิดเฉพาะตอนกดดู เพราะกิน CPU</td></tr>
+      <tr><td>Settings</td><td>เกณฑ์เวลาเตือน, เปิด/ปิด buzzer, โหมด IR, เกณฑ์ LDR, WiFi, token แจ้งเตือน บันทึกลง NVS</td></tr>
+      <tr><td>Calibrate &amp; Data</td><td>ตั้งกรอบตา (ทาง A) และปุ่ม "ตาเปิด" / "ตาปิด" สำหรับเก็บภาพ crop ไปใช้ fine-tune</td></tr>
+      <tr><td>Event log</td><td>ประวัติการเตือน ใช้เวลาจาก NTP</td></tr>
+      <tr><td>OTA <span class="pill rec">ทำก่อน</span></td><td>อัปโหลด <code>.bin</code> ผ่านเว็บได้ ไม่ต้องกด BOOT/RST ทุกครั้งอีก ตรวจแล้วว่า partition มี <code>ota_0</code>/<code>ota_1</code> อยู่แล้ว</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>Library:</b> <code>ESP32Async/ESPAsyncWebServer</code> + <code>AsyncTCP</code> ซึ่งเป็นตัวที่ยังมีคนดูแลอยู่</li>
+    <li><b>ไฟล์หน้าเว็บ:</b> gzip ฝังใน firmware หรือเก็บใน FFat (partition นี้เป็น FAT 9.9 MB ไม่ใช่ LittleFS)</li>
+    <li><b>Stream:</b> ให้กล้องส่ง grayscale ตามที่ ML ต้องการ แล้วใช้ <code>frame2jpg()</code> แปลงเฉพาะเฟรมที่จะส่ง ที่ 2–5 fps ขนาด QVGA ไม่ควรให้กล้องส่ง JPEG มาตรงๆ เพราะ ML ต้อง decode กลับอีกรอบ และให้คัดลอกเฟรมที่ย่อแล้วไว้ใน buffer กลาง ไม่ส่ง <code>fb</code> ข้าม core</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">5</span>แจ้งเตือนเข้ามือถือ</h2>
+  <div class="callout warn"><strong>LINE Notify ปิดบริการไปแล้วตั้งแต่ มี.ค. 2025</strong><p>แต่เอกสารเดิมยังเขียนว่าจะใช้ ต้องเลือกช่องทางใหม่</p></div>
+  <ul>
+    <li><b>Telegram Bot</b> <span class="pill rec">แนะนำ</span> ฟรี ส่งด้วย HTTPS POST ครั้งเดียว</li>
+    <li><b>LINE Messaging API</b> ต้องสร้าง Official Account และมีโควตาฟรีจำกัด</li>
+    <li>ต้องต่อ hotspot ถึงจะส่งได้ ถ้าอยู่โหมด AP ให้เก็บคิวไว้ส่งทีหลัง</li>
+    <li>ต้องส่งจาก task แยก เพราะ HTTPS ใช้เวลา 1–2 วินาที จะไปบล็อก vision loop</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">6</span>IR LED</h2>
+  <ul>
+    <li><b>ทดสอบ IR filter ให้จบก่อนอย่างอื่น</b> ถ้ากล้องมีแผ่นกรอง IR โหมดกลางคืนทั้งหมดจะใช้ไม่ได้</li>
+    <li><b>R16–R19 ไม่เกินพิกัด</b> BOM ชุดที่สั่งผลิตใช้ 120Ω ขนาด 1206 (0.25 W) กระแสดวงละ ~29 mA ทำให้ตัวต้านทานรับแค่ ~0.1 W เปิด IR ค้างได้ ไม่ต้องจำกัด duty</li>
+    <li><b>LDR:</b> ใส่ hysteresis กัน IR กระพริบตอนแสงก้ำกึ่ง และต้องคาลิเบรต ADC ใหม่ เพราะ R1 ย้ายไปต่อ 3V3 แล้ว</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">7</span>Timeline</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>สัปดาห์</th><th>Firmware + Web</th><th>ML</th><th>กล่อง 3D</th><th>เป้าที่ต้องผ่าน</th></tr></thead>
+    <tbody>
+      <tr><td>1 · 2–8 ต.ค.</td><td>ทดสอบ IR filter, โครง task, alert / OLED / LDR / IR, dashboard + OTA</td><td>train baseline จาก MRL, ลอง compile กับ core 3.3.12</td><td>export STEP จาก EasyEDA, วัดขนาดบอร์ดและ dev board จริง</td><td>OTA ใช้ได้ และรู้ผลเรื่อง IR filter</td></tr>
+      <tr><td>2 · 9–15 ต.ค.</td><td>camera pipeline, กรอบตา (ทาง A), โหมดเก็บข้อมูล, state machine</td><td>เอาโมเดลลงบอร์ด, เก็บภาพตัวเองทั้งกลางวันและกลางคืน</td><td>CAD v1 ฝาหน้า + ฐาน</td><td><span class="pill gate">MVP</span> หลับตา 3 วิแล้ว buzzer ดัง</td></tr>
+      <tr><td>3 · 16–22 ต.ค.</td><td>settings / NVS, event log, แจ้งเตือน, stream</td><td>fine-tune, ลองทาง B</td><td>ปริ้นทดลองด้วย PLA, เช็คแสง IR รั่วเข้ากล้อง</td><td>ความแม่นบนภาพจริงผ่านเกณฑ์</td></tr>
+      <tr><td>4 · 23–29 ต.ค.</td><td>ประกอบลง PCB, ทดสอบในรถ, เช็คว่า power bank ตัดไฟเองไหม, ความร้อน</td><td>อัปเกรดวิธีหาตาถ้าทัน</td><td>ปริ้นตัวจริงด้วย PETG / ASA แล้วติดในรถ</td><td>ทดสอบในรถผ่าน</td></tr>
+      <tr><td>5 · 30 ต.ค.–2 พ.ย.</td><td>หยุดเพิ่ม feature, แก้บั๊ก, ถ่ายวิดีโอเดโม, เขียนรายงาน</td><td></td><td></td><td>ส่งงาน</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">8</span>กล่อง 3D</h2>
+  <p>ข้อมูลตำแหน่งชิ้นส่วนในหัวข้อนี้มาจาก Gerber และ PickAndPlace ชุดที่สั่งผลิตจริง (<code>FinalV1/</code>, 31 ส.ค.) พิกัดเป็นมิลลิเมตรตามระบบของ EasyEDA</p>
+  <div class="callout warn">
+    <strong>ไฟล์ผลิตจริงไม่ตรงกับเอกสาร 2 จุด</strong>
+    <ul>
+      <li>เส้นขอบบอร์ดใน <code>Gerber_BoardOutlineLayer.GKO</code> ได้ขนาด <b>58.5 × 65.7 มม.</b> ไม่ใช่ 80 × 70 ตามที่ PROJECT_STATUS เขียน ควรวัดบอร์ดจริงยืนยันอีกที</li>
+      <li><b>บอร์ดไม่มีรูน็อต M3</b> มีรูเดียวคือ MOUNT1 ขนาด Ø7.5 มม. ที่ (33.4, −75.9) ซึ่งเป็นรูสำหรับขาตั้งกระจก กล่องต้องจับบอร์ดด้วยร่องรางที่ขอบหรือตัวล็อก snap หรือออกแบบให้ใช้รู MOUNT1 ยึด</li>
+    </ul>
+  </div>
+  <h3>ชิ้นส่วนที่กล่องต้องเว้นช่อง</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>ชิ้น</th><th>ตำแหน่ง</th><th>ต้องเว้นอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>กล้อง</td><td>บน dev board ต้องวัดจากของจริง</td><td>ช่องเปิดตรงๆ <b>ห้ามมีแผ่นใสบัง</b> เพราะจะสะท้อนแสง IR</td></tr>
+      <tr><td>IR1–IR4</td><td>ขอบขวา x = 61, y = −28 / −42 / −56 / −70</td><td>รู Ø5.2 จำนวน 4 รู และ<b>ผนังกั้นระหว่าง IR กับกล้อง</b> ไม่ให้แสงรั่วเข้าเลนส์</td></tr>
+      <tr><td>LDR (R2)</td><td>(12.8, −46.9)</td><td>รูให้แสงเข้า</td></tr>
+      <tr><td>LED1 / LED2</td><td>(48.4, −73.5) / (53.7, −73.4)</td><td>light pipe หรือรูเล็ก</td></tr>
+      <tr><td>USB1 (USB-C รับไฟ)</td><td>ขอบซ้าย (10.9, −32.9)</td><td>ช่องเสียบสาย และตัวกันสายโยก</td></tr>
+      <tr><td>SW1</td><td>(14.7, −78)</td><td>สไลด์สวิตช์ SS-12D01 สำหรับเปิด/ปิดไฟทั้งบอร์ด ต้องเว้นช่องให้นิ้วเลื่อนได้</td></tr>
+      <tr><td>H1 OLED / H2 buzzer</td><td>(12.6, −57.5) / (12.4, −22.7)</td><td>หน้าต่าง OLED หันหาคนขับ และรูให้เสียงออก</td></tr>
+      <tr><td>USB ของ dev board</td><td>ต้องวัดจากของจริง</td><td>ช่องเสียบไว้ใช้ฉุกเฉิน งานปกติใช้ OTA</td></tr>
+      <tr><td>Dev board บน header 2×20</td><td>U5 x = 21.6, U6 x = 49.5 (ห่างกัน 27.94)</td><td>กล่องต้องสูงพอให้ header ตัวเมีย + dev board + โมดูลกล้องซ้อนกันได้</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <strong>ห้ามใช้ PLA กับตัวจริง</strong>
+    <p>PLA เริ่มนิ่มที่ประมาณ 55–60°C แต่ในรถกลางแดดร้อนได้ถึง 70–80°C กล่องจะบิดจนกล้องเปลี่ยนมุม ขั้นต่ำให้ใช้ PETG ซึ่งทนได้ราว 80°C และปริ้นง่ายพอๆ กับ PLA ถ้ามี ASA จะดีกว่าเพราะทนร้อนและทน UV ได้ดีกว่า PLA ใช้ได้เฉพาะชิ้นทดลองเช็คขนาด</p>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>ขั้น</th><th>งาน</th><th>ช่วงเวลา</th></tr></thead>
+    <tbody>
+      <tr><td>1. เก็บขนาด</td><td>export โมเดล 3D ของบอร์ดเป็น STEP จาก EasyEDA (Export → 3D File) แล้ววัดของที่ไม่มีในโมเดล: dev board, ตำแหน่งกล้อง, OLED, โมดูล buzzer</td><td>สัปดาห์ 1–2</td></tr>
+      <tr><td>2. CAD v1</td><td>ใช้ Fusion 360 (มี license การศึกษาฟรี) หรือ Onshape ทำกล่อง 2 ชิ้น ฝาหน้ากับฐาน ล็อกด้วย snap หรือน็อต M3 กับ heat-set insert เผื่อระยะ 0.3 มม.</td><td>สัปดาห์ 2</td></tr>
+      <tr><td>3. ปริ้นทดลอง</td><td>ใช้ PLA ปริ้นเฉพาะส่วนที่ต้องพอดี เช่น รางรับบอร์ด ช่อง USB-C แนวรู IR</td><td>สัปดาห์ 3</td></tr>
+      <tr><td>4. ทดสอบรวม</td><td>เช็คว่ากล้องไม่เห็นแสง IR รั่ว, ความร้อนข้างใน, มุมกล้องมองเห็นหน้าคนขับ</td><td>สัปดาห์ 3</td></tr>
+      <tr><td>5. ตัวจริง</td><td>ปริ้นด้วย PETG / ASA แล้วติดตั้งในรถ</td><td>สัปดาห์ 4</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>ส่วนติดตั้งในรถ:</b> ฝังน็อตเกลียว 1/4"-20 (เกลียวขาตั้งกล้อง) หรือทำขาแบบ GoPro ไว้ที่ฐาน จะใช้กับขาจับมือถือในรถที่มีขายทั่วไปได้ และปรับมุมได้โดยไม่ต้องออกแบบข้อต่อเอง</li>
+    <li><b>ระบายความร้อน:</b> ทำช่องระบายอากาศด้านล่างกับด้านบน ไม่ต้องใส่พัดลม</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">9</span>เรื่องที่ต้องตัดสินใจก่อนเริ่ม</h2>
+  <ol class="decide">
+    <li><b>วิธีหาตา:</b> A แล้วค่อย B <span class="pill rec">แนะนำ</span> หรือไป C เลย</li>
+    <li><b>เครื่องมือ:</b> ใช้ Arduino IDE ต่อ หรือย้ายไป PlatformIO / ESP-IDF ขึ้นกับข้อ 1 ถ้าเลือก B น่าจะต้องย้าย</li>
+    <li><b>ช่องทางแจ้งเตือน:</b> Telegram <span class="pill rec">แนะนำ</span> / LINE Messaging API / ไม่ทำ</li>
+    <li><b>ขอบเขตเว็บ:</b> อยู่บนบอร์ดอย่างเดียว <span class="pill rec">แนะนำ</span> หรืออยากมี cloud เก็บประวัติด้วย</li>
+    <li><b>PCB จาก JLCPCB มาถึงหรือยัง:</b> ถ้ายัง สัปดาห์ 1–3 ทำบน dev board + breadboard ไปก่อนได้</li>
+    <li><b>เครื่องปริ้น 3D:</b> มีเครื่องเองหรือต้องส่งร้าน และมีเส้น PETG หรือ ASA ไหม</li>
+    <li><b>ตำแหน่งติดตั้งในรถ:</b> บนคอนโซลหน้า, กระจกหน้า หรือเสา A</li>
+    <li><b>จอ OLED:</b> ต้องหันหาคนขับในด้านเดียวกับกล้องใช่ไหม</li>  </ol>
+</section>
+
+<footer>อ้างอิงสเปกจาก PROJECT_STATUS.md, ไฟล์ผลิต FinalV1 (31 ส.ค. 2026) และค่าที่วัดจากบอร์ดจริงเมื่อ 1 ต.ค. 2026 (ESP32-S3 rev2, Flash 16 MB, PSRAM 8 MB, เซนเซอร์ OV5640)</footer>
+</div>
+</body>
+</html>

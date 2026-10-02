@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Input / Output — Driver Drowsiness Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e14;--panel:#11161f;--panel2:#161c27;
+    --line:#222b3a;--line2:#2e3a4e;
+    --txt:#dde3ec;--muted:#7e8aa0;--dim:#56627a;
+    --cam:#5eb3ff;--imu:#9a7dff;--ir:#f97316;--sw:#22c55e;--pwr:#f59e0b;
+    --buz:#f43f5e;--led:#ffd84d;--oled:#06b6d4;--wifi:#a78bfa;
+    --ok:#3ddc97;--warn:#f59e0b;--danger:#f43f5e;--r:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--txt);
+    font-family:'IBM Plex Sans Thai',sans-serif;
+    line-height:1.65;padding:32px 20px 60px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1020px;margin:0 auto}
+
+  /* HERO */
+  .hero-tag{font-family:'JetBrains Mono',monospace;font-size:11px;
+    color:var(--cam);letter-spacing:3px;text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .hero-tag::before{content:"";width:28px;height:1px;background:var(--cam)}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(26px,5vw,42px);
+    font-weight:700;letter-spacing:-1px;margin-bottom:8px}
+  .lead{color:var(--muted);font-size:15px;margin-bottom:32px;max-width:640px}
+
+  /* SECTION */
+  .sec{display:flex;align-items:center;gap:12px;margin:40px 0 14px}
+  .sec-num{font-family:'JetBrains Mono',monospace;font-size:11px;
+    color:var(--led);border:1px solid var(--line2);border-radius:6px;
+    padding:3px 9px;letter-spacing:1px}
+  .sec h2{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:600}
+
+  /* PIPELINE */
+  .pipe{display:flex;align-items:stretch;gap:0;margin:8px 0 4px;flex-wrap:wrap}
+  .pnode{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:14px 12px;text-align:center;flex:1;min-width:110px}
+  .pnode .ic{font-size:22px;display:block;margin-bottom:6px}
+  .pnode .pt{font-size:12px;font-weight:600}
+  .pnode .ps{font-size:10px;color:var(--dim);margin-top:3px}
+  .parr{color:var(--line2);font-size:20px;padding:0 4px;
+    display:flex;align-items:center;font-family:'Space Grotesk',sans-serif;flex-shrink:0}
+  @media(max-width:600px){.pipe{flex-direction:column}.parr{transform:rotate(90deg);justify-content:center}}
+
+  /* GRID */
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:8px}
+  @media(max-width:720px){.g2,.g3{grid-template-columns:1fr}}
+
+  /* CARD */
+  .card{background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);padding:18px 20px;border-top:3px solid var(--ac,var(--line))}
+  .card h3{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;
+    display:flex;align-items:center;gap:7px;margin-bottom:3px}
+  .card .cs{font-size:11.5px;color:var(--dim);margin-bottom:12px}
+  .row{display:flex;gap:10px;padding:7px 0;border-top:1px dashed var(--line);font-size:13px;align-items:flex-start}
+  .row:first-of-type{border-top:none}
+  .rk{color:var(--muted);min-width:86px;flex-shrink:0;font-size:11.5px}
+  .rv{color:var(--txt);font-size:13px}
+  .tag{font-size:10px;font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:99px;
+    border:1px solid;display:inline-block;margin:2px 2px 0 0}
+  .t-ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,transparent);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+  .t-w{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 35%,transparent);background:color-mix(in srgb,var(--warn) 9%,transparent)}
+  .t-d{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 35%,transparent);background:color-mix(in srgb,var(--danger) 9%,transparent)}
+  .t-b{color:var(--cam);border-color:color-mix(in srgb,var(--cam) 35%,transparent);background:color-mix(in srgb,var(--cam) 9%,transparent)}
+
+  /* FORMULA */
+  .formula{background:#060a0f;border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;font-family:'JetBrains Mono',monospace;font-size:12.5px;
+    line-height:2;overflow-x:auto;margin:8px 0}
+  .cg{color:#3ddc97}.cy{color:#ffd84d}.cb{color:#5eb3ff}
+  .cr{color:#f43f5e}.cp{color:#a78bfa}.cdim{color:#56627a}
+  .co{color:#f97316}.cw{color:#dde3ec}
+
+  /* TABLE */
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0}
+  .tbl th{background:var(--panel2);color:var(--muted);font-weight:600;
+    padding:10px 12px;text-align:left;border-bottom:2px solid var(--line2);
+    font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px}
+  .tbl td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr:hover td{background:rgba(255,255,255,.015)}
+
+  /* ALERT LEVELS */
+  .levels{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:8px 0}
+  @media(max-width:700px){.levels{grid-template-columns:1fr 1fr}}
+  @media(max-width:400px){.levels{grid-template-columns:1fr}}
+  .lv{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:16px;border-left:4px solid var(--lc,var(--line))}
+  .lv .ld{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--lc);margin-bottom:4px}
+  .lv .ln{font-size:12.5px;font-weight:600;margin-bottom:8px}
+  .lv .li{font-size:11.5px;color:var(--muted);line-height:1.8}
+
+  /* NOTE */
+  .note{background:color-mix(in srgb,var(--warn) 8%,transparent);
+    border:1px solid color-mix(in srgb,var(--warn) 28%,transparent);
+    border-radius:8px;padding:11px 14px;font-size:13px;color:#e8c87a;margin:10px 0}
+
+  /* OV5640 highlight box */
+  .hbox{background:color-mix(in srgb,var(--cam) 7%,transparent);
+    border:1px solid color-mix(in srgb,var(--cam) 30%,transparent);
+    border-radius:10px;padding:14px 18px;margin:8px 0;font-size:13px}
+  .hbox b{color:var(--cam)}
+
+  footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--dim);font-size:12px;text-align:center}
+</style>
+</head>
+<body><div class="wrap">
+
+<!-- HERO -->
+<div class="hero-tag">Group 17 · Embedded System 2026</div>
+<h1>Input / Output — System Logic</h1>
+<p class="lead">Driver Drowsiness Detection · OV5640 + ESP32-S3 + TinyML<br>ระบบตรวจจับจาก<b>กล้องอย่างเดียว</b> (ไม่ใช้ IMU) — วิธีที่ Input แต่ละตัวส่งผลต่อ Output</p>
+
+<!-- OV5640 NOTE -->
+<div class="hbox">
+  <b>📷 Project นี้ใช้ OV5640 (5MP + Autofocus)</b> ทั้ง prototype และ PCB จริง<br>
+  Prototype: ESP32-S3 CAM N16R8 (OV5640 onboard, เสียบ pin header)<br>
+  PCB จริง: DevKit เสียบ female header บน custom carrier board<br>
+  <b>⚠️ ไม่ใช้ IMU</b> — ตรวจจับจากกล้องอย่างเดียว
+</div>
+
+<!-- 01 PIPELINE -->
+<div class="sec"><span class="sec-num">01</span><h2>ภาพรวมการทำงาน</h2></div>
+<div class="pipe">
+  <div class="pnode"><span class="ic">📷</span><div class="pt">OV5640</div><div class="ps">ถ่ายภาพ 30fps</div></div>
+  <div class="parr">›</div>
+  <div class="pnode"><span class="ic">✂️</span><div class="pt">Crop ตา</div><div class="ps">ตัด ROI ดวงตา</div></div>
+  <div class="parr">›</div>
+  <div class="pnode"><span class="ic">🧠</span><div class="pt">TinyML</div><div class="ps">Inference 96×96</div></div>
+  <div class="parr">›</div>
+  <div class="pnode"><span class="ic">📐</span><div class="pt">EAR + PERCLOS</div><div class="ps">คำนวณ threshold</div></div>
+  <div class="parr">›</div>
+  <div class="pnode"><span class="ic">⚖️</span><div class="pt">ตัดสิน</div><div class="ps">Level 0–3</div></div>
+  <div class="parr">›</div>
+  <div class="pnode"><span class="ic">🔔</span><div class="pt">Alert</div><div class="ps">Buzzer+LED+OLED</div></div>
+</div>
+
+<!-- 02 INPUTS -->
+<div class="sec"><span class="sec-num">02</span><h2>📥 INPUT — ทุกตัว</h2></div>
+<div class="g2">
+
+  <div class="card" style="--ac:var(--cam)">
+    <h3>📷 OV5640 Camera (5MP + AF)</h3>
+    <div class="cs">Input หลัก — ถ่ายภาพใบหน้าแบบ real-time</div>
+    <div class="row"><span class="rk">ความละเอียด</span><span class="rv">5MP (2592×1944) — crop เหลือ 96×96 px ส่ง model</span></div>
+    <div class="row"><span class="rk">Autofocus</span><span class="rv">✅ โฟกัสอัตโนมัติ — ชัดแม้คนขับขยับหัว</span></div>
+    <div class="row"><span class="rk">FPS</span><span class="rv">30fps (ดีกว่า OV2640 ที่ทำได้แค่ 15fps)</span></div>
+    <div class="row"><span class="rk">Interface</span><span class="rv">DVP 8-bit parallel → ESP32-S3 GPIO</span></div>
+    <div class="row"><span class="rk">ตรวจจาก</span><span class="rv">
+      <span class="tag t-ok">ตาเปิด (Alert)</span>
+      <span class="tag t-d">ตาหลับ (Drowsy)</span>
+      <span class="tag t-w">หาว (Yawning)</span>
+    </span></div>
+    <div class="row"><span class="rk">Output ที่ให้</span><span class="rv">ค่า EAR (Eye Aspect Ratio) 0.0–1.0</span></div>
+  </div>
+
+  <div class="card" style="--ac:var(--imu)">
+    <h3>🌗 LDR Light Sensor</h3>
+    <div class="cs">Input เสริม — วัดระดับแสงในรถ</div>
+    <div class="row"><span class="rk">วัดอะไร</span><span class="rv">ความสว่างรอบตัวคนขับ (ambient light)</span></div>
+    <div class="row"><span class="rk">Interface</span><span class="rv">ADC → GPIO 3 (ADC1_CH2)</span></div>
+    <div class="row"><span class="rk">อ่านทุก</span><span class="rv">500ms (ไม่ต้องเร็ว แสงเปลี่ยนช้า)</span></div>
+    <div class="row"><span class="rk">แสงน้อย</span><span class="rv">ADC &lt; 300 → เปิด IR LED อัตโนมัติ</span></div>
+    <div class="row"><span class="rk">แสงพอ</span><span class="rv">ADC ≥ 300 → ปิด IR LED ประหยัดไฟ</span></div>
+    <div class="row"><span class="rk">Output ที่ให้</span><span class="rv">
+      <span class="tag t-ok">BRIGHT</span>
+      <span class="tag t-w">DIM</span>
+      <span class="tag t-d">DARK</span>
+    </span></div>
+  </div>
+
+  <div class="card" style="--ac:var(--ir)">
+    <h3>💡 IR LED Array (850nm) ×4</h3>
+    <div class="cs">Input เสริมกล้อง — แก้ปัญหาแสงน้อยในรถกลางคืน</div>
+    <div class="row"><span class="rk">ทำงานเมื่อ</span><span class="rv">ระดับแสง < threshold (ตรวจจาก LDR sensor)</span></div>
+    <div class="row"><span class="rk">เปิดอัตโนมัติ</span><span class="rv">กลางคืน / อุโมงค์ / ในจอดรถ</span></div>
+    <div class="row"><span class="rk">ผลต่อกล้อง</span><span class="rv">OV5640 เห็นตาชัดขึ้นแม้ไม่มีแสง</span></div>
+    <div class="row"><span class="rk">ควบคุม</span><span class="rv">GPIO 25 → NPN transistor → IR LED ×4</span></div>
+    <div class="row"><span class="rk">หมายเหตุ</span><span class="rv">OV5640 low-light ดีกว่า OV2640 อยู่แล้ว + IR = ดีมาก</span></div>
+  </div>
+
+  <div class="card" style="--ac:var(--sw)">
+    <h3>🔘 Tact Switch + Power Input</h3>
+    <div class="cs">Input ควบคุม + จ่ายไฟ</div>
+    <div class="row"><span class="rk">กด 1 ครั้ง</span><span class="rv">เปิด / ปิดระบบ (toggle)</span></div>
+    <div class="row"><span class="rk">กดค้าง 3s</span><span class="rv">รีเซ็ต alert + ปิดเสียง Buzzer</span></div>
+    <div class="row"><span class="rk">GPIO</span><span class="rv">GPIO 34, pull-up internal, debounce 50ms</span></div>
+    <div class="row"><span class="rk">Power Input</span><span class="rv">12V (รถ) → TVS → MP1584 → 5V/2A</span></div>
+    <div class="row"><span class="rk">หมายเหตุ</span><span class="rv">OV5640 ใช้ไฟ ~250mA (เผื่อใน power budget)</span></div>
+  </div>
+
+</div>
+
+<!-- 03 OUTPUTS -->
+<div class="sec"><span class="sec-num">03</span><h2>📤 OUTPUT — ทุกตัว</h2></div>
+<div class="g2">
+
+  <div class="card" style="--ac:var(--buz)">
+    <h3>🔔 Active Buzzer 5V</h3>
+    <div class="cs">Output เตือนหลัก — ปลุกคนขับทันที</div>
+    <div class="row"><span class="rk">ต่อยังไง</span><span class="rv">GPIO 14 → MOSFET → Buzzer 5V</span></div>
+    <div class="row"><span class="rk">Level 1</span><span class="rv">บีบ×2 สั้น (ตาหลับ 1.5s)</span></div>
+    <div class="row"><span class="rk">Level 2</span><span class="rv">บีบ×3 ดัง (ตาหลับ 3s / PERCLOS &gt; 80%)</span></div>
+    <div class="row"><span class="rk">Level 3</span><span class="rv">ต่อเนื่อง!!! (ตาหลับ 5s ขึ้นไป)</span></div>
+    <div class="row"><span class="rk">รีเซ็ต</span><span class="rv">กดปุ่มค้าง 3s หรือตาเปิดนาน > 2s</span></div>
+  </div>
+
+  <div class="card" style="--ac:var(--led)">
+    <h3>💡 LED Indicator ×2</h3>
+    <div class="cs">Output แสดงสถานะระบบ</div>
+    <div class="row"><span class="rk">LED1 🟢</span><span class="rv">ระบบพร้อม / ตื่น — ติดค้าง</span></div>
+    <div class="row"><span class="rk">LED2 🔴</span><span class="rv">ตรวจพบง่วง — กะพริบตามระดับ</span></div>
+    <div class="row"><span class="rk">เปิดระบบ</span><span class="rv">🟢 กะพริบ 3× แล้วติดค้าง</span></div>
+    <div class="row"><span class="rk">Level 1</span><span class="rv">🔴 กะพริบช้า (0.5Hz)</span></div>
+    <div class="row"><span class="rk">Level 2-3</span><span class="rv">🔴 กะพริบเร็ว (2Hz) / ติดค้าง</span></div>
+    <div class="row"><span class="rk">GPIO</span><span class="rv">GPIO 26 (เขียว), GPIO 27 (แดง) + R 220Ω</span></div>
+  </div>
+
+  <div class="card" style="--ac:var(--oled)">
+    <h3>🖥️ OLED Display (0.96")</h3>
+    <div class="cs">Output แสดงผล real-time บนบอร์ด</div>
+    <div class="row"><span class="rk">Interface</span><span class="rv">I2C → SDA GPIO 1, SCL GPIO 2 (bus แยกจากกล้อง)</span></div>
+    <div class="row"><span class="rk">แสดงผล</span><span class="rv">STATUS / EAR value / PERCLOS / เวลาที่ง่วง</span></div>
+    <div class="row"><span class="rk">หน้าจอปกติ</span><span class="rv">STATUS: ALERT | EAR: 0.31 | PERCLOS: 12%</span></div>
+    <div class="row"><span class="rk">หน้าจอง่วง</span><span class="rv">STATUS: DROWSY | EAR: 0.14 | TIME: 00:03</span></div>
+    <div class="row"><span class="rk">หน้าจออันตราย</span><span class="rv">⚠️ DANGER!!! | EYES CLOSED 5s</span></div>
+  </div>
+
+  <div class="card" style="--ac:var(--wifi)">
+    <h3>📱 WiFi Alert → Line Notify</h3>
+    <div class="cs">Output เสริม — แจ้งเตือนมือถือ (Level 3 เท่านั้น)</div>
+    <div class="row"><span class="rk">ส่งเมื่อ</span><span class="rv">Level 3 เท่านั้น (อันตราย)</span></div>
+    <div class="row"><span class="rk">ข้อความ</span><span class="rv">"⚠️ DANGER! ตรวจพบง่วงมาก — เวลา 23:45"</span></div>
+    <div class="row"><span class="rk">วิธี</span><span class="rv">ESP32-S3 WiFi → HTTP POST → Line Notify API</span></div>
+    <div class="row"><span class="rk">ต้องการ</span><span class="rv">WiFi hotspot ในรถ หรือ mobile hotspot</span></div>
+  </div>
+
+</div>
+
+<!-- 04 EAR FORMULA -->
+<div class="sec"><span class="sec-num">04</span><h2>สูตร EAR — ตัดสินว่าตาหลับไหม</h2></div>
+<div class="formula">
+<span class="cdim">// Eye Aspect Ratio (EAR) ────────────────────────────</span>
+<br>EAR = ( ||p2−p6|| + ||p3−p5|| ) / ( 2 × ||p1−p4|| )
+<br>
+<br><span class="cdim">// p1–p6 = จุด landmark รอบดวงตา 6 จุด (จาก TinyML)</span>
+<br><span class="cdim">// ตาเปิด  → EAR ≈ 0.25 – 0.35</span>
+<br><span class="cdim">// ตาหลับ  → EAR &lt; 0.20  ← threshold</span>
+<br>
+<br><span class="cy">if</span> EAR &lt; <span class="cg">0.20</span>:
+<br>  eye_closed_frames += <span class="cg">1</span>   <span class="cdim">// นับ frame ที่หลับ</span>
+<br><span class="cy">else</span>:
+<br>  eye_closed_frames = <span class="cg">0</span>    <span class="cdim">// reset ทันทีที่ตาเปิด</span>
+<br>
+<br><span class="cdim">// OV5640 30fps → 1s = 30 frames (แม่นกว่า OV2640 ที่ 15fps)</span>
+<br><span class="cy">if</span>   eye_closed_frames >= <span class="cg">45</span>:  level = <span class="cr">3</span>  <span class="cdim">// หลับ 1.5s</span>
+<br><span class="cy">elif</span> eye_closed_frames >= <span class="cg">90</span>:  level = <span class="cr">2</span>  <span class="cdim">// หลับ 3s</span>
+<br><span class="cy">elif</span> eye_closed_frames >= <span class="cg">150</span>: level = <span class="cr">1</span>  <span class="cdim">// หลับ 5s</span>
+</div>
+
+<!-- 05 ALERT LEVELS -->
+<div class="sec"><span class="sec-num">05</span><h2>ระดับความง่วง 4 ระดับ</h2></div>
+<div class="levels">
+  <div class="lv" style="--lc:#3ddc97">
+    <div class="ld">Lv 0</div>
+    <div class="ln">✅ ปกติ</div>
+    <div class="li">EAR > 0.20<br>ตาเปิดปกติ<br>กะพริบปกติ<br><br>🟢 LED ติด<br>🔕 Buzzer ปิด<br>📺 ALERT</div>
+  </div>
+  <div class="lv" style="--lc:#f59e0b">
+    <div class="ld">Lv 1</div>
+    <div class="ln">⚠️ เริ่มง่วง</div>
+    <div class="li">ตาหลับ 1.5s<br>หรือหาว 1 ครั้ง<br><br>🟡 กะพริบช้า<br>🔔 บีบ×2<br>📺 DROWSY L1</div>
+  </div>
+  <div class="lv" style="--lc:#f97316">
+    <div class="ld">Lv 2</div>
+    <div class="ln">🟠 ง่วงมาก</div>
+    <div class="li">ตาหลับ 3s<br>หรือ PERCLOS&gt;80%<br>หรือหาว 2×<br><br>🔴 กะพริบเร็ว<br>🔔 บีบ×3 ดัง<br>📺 DROWSY L2</div>
+  </div>
+  <div class="lv" style="--lc:#f43f5e">
+    <div class="ld">Lv 3</div>
+    <div class="ln">🚨 อันตราย!</div>
+    <div class="li">ตาหลับ 5s+<br>ต่อเนื่อง<br><br>🔴 ติดค้าง<br>🔔 ต่อเนื่อง!!!<br>📱 Line Notify<br>📺 DANGER!!!</div>
+  </div>
+</div>
+
+<!-- 06 MAPPING TABLE -->
+<div class="sec"><span class="sec-num">06</span><h2>Input → Output Mapping (ตารางครบ)</h2></div>
+<table class="tbl">
+  <tr>
+    <th>INPUT EVENT</th><th>CONDITION</th>
+    <th>BUZZER</th><th>LED</th><th>OLED</th><th>WiFi</th>
+  </tr>
+  <tr><td>🟢 ตาเปิดปกติ</td><td>EAR > 0.20</td><td>ปิด</td><td>🟢 ติดค้าง</td><td>ALERT | EAR value</td><td>—</td></tr>
+  <tr><td>🟡 ตาหลับ 1.5s</td><td>45 frames @30fps</td><td>บีบ×2 สั้น</td><td>🟡 กะพริบช้า</td><td>DROWSY L1</td><td>—</td></tr>
+  <tr><td>🟠 ตาหลับ 3s</td><td>90 frames @30fps</td><td>บีบ×3 ดัง</td><td>🔴 กะพริบเร็ว</td><td>DROWSY L2</td><td>—</td></tr>
+  <tr><td>🔴 ตาหลับ 5s+</td><td>150 frames @30fps</td><td>ต่อเนื่อง!!!</td><td>🔴 ติดค้าง</td><td>DANGER!!!</td><td>✅ Line Notify</td></tr>
+  <tr><td>👁️ กะพริบถี่</td><td>&gt; 25 ครั้ง/นาที</td><td>บีบ×2</td><td>🟡 กะพริบช้า</td><td>HIGH BLINK RATE</td><td>—</td></tr>
+  <tr><td>📊 PERCLOS สูง</td><td>ตาปิด &gt; 80% ใน 1 นาที</td><td>บีบ×3 ดัง</td><td>🔴 กะพริบเร็ว</td><td>PERCLOS 85%</td><td>—</td></tr>
+  <tr><td>🌙 แสงน้อย</td><td>LDR < 300 lux</td><td>—</td><td>—</td><td>IR: ON</td><td>—</td></tr>
+  <tr><td>😮 หาว</td><td>model: YAWNING > 80%</td><td>บีบ×1</td><td>🟡 กะพริบ</td><td>YAWN DETECTED</td><td>—</td></tr>
+  <tr><td>🔘 กดปุ่มค้าง 3s</td><td>Button hold 3000ms</td><td>ปิดทันที</td><td>🟢 กลับปกติ</td><td>RESET OK</td><td>—</td></tr>
+  <tr><td>🔌 เปิดระบบ</td><td>Power on</td><td>บีบ 1 ครั้ง</td><td>🟢 กะพริบ 3× แล้วติด</td><td>SYSTEM READY</td><td>—</td></tr>
+</table>
+
+<!-- 07 SENSOR FUSION -->
+<div class="sec"><span class="sec-num">07</span><h2>Multi-Signal Logic — ตรวจ 3 สัญญาณจากกล้อง</h2></div>
+<div class="note">💡 ระบบนี้ใช้กล้องอย่างเดียว (ไม่มี IMU) จึงต้องดึงสัญญาณหลายตัวจากภาพเดียวกัน เพื่อลด false positive</div>
+<div class="formula">
+<span class="cdim">// ดึง 3 สัญญาณจากกล้อง OV5640 ──────────────────────</span>
+<br>ear         = <span class="cb">eye_inference</span>()      <span class="cdim">// ตาหลับไหม</span>
+<br>blink_rate  = <span class="cb">count_blinks</span>()       <span class="cdim">// กะพริบถี่ไหม (ครั้ง/นาที)</span>
+<br>yawn        = <span class="cb">yawn_inference</span>()     <span class="cdim">// หาวไหม</span>
+<br>
+<br><span class="cdim">// ── สัญญาณ 1: PERCLOS (น้ำหนักมากสุด) ──────────────</span>
+<br><span class="cy">if</span> ear &lt; <span class="cg">0.20</span>:
+<br>  eye_closed_frames += <span class="cg">1</span>
+<br><span class="cy">else</span>:
+<br>  eye_closed_frames = <span class="cg">0</span>
+<br>
+<br>perclos = eye_closed_frames / total_frames_1min × <span class="cg">100</span>
+<br>
+<br><span class="cdim">// ── สัญญาณ 2: อัตราการกะพริบ ───────────────────────</span>
+<br><span class="cdim">// ปกติ 15-20 ครั้ง/นาที · ง่วง &gt; 25 ครั้ง/นาที</span>
+<br><span class="cy">if</span> blink_rate &gt; <span class="cg">25</span>:  drowsy_signals += <span class="cg">1</span>
+<br>
+<br><span class="cdim">// ── สัญญาณ 3: การหาว ───────────────────────────────</span>
+<br><span class="cy">if</span> yawn_count_5min &gt;= <span class="cg">2</span>:  drowsy_signals += <span class="cg">1</span>
+<br>
+<br><span class="cdim">// ── รวมผล ──────────────────────────────────────────</span>
+<br><span class="cy">if</span>   eye_closed_frames &gt;= <span class="cg">150</span>: level = <span class="cr">3</span>  <span class="cdim">// หลับ 5s = อันตราย</span>
+<br><span class="cy">elif</span> eye_closed_frames &gt;= <span class="cg">90</span>:  level = <span class="cr">2</span>  <span class="cdim">// หลับ 3s</span>
+<br><span class="cy">elif</span> eye_closed_frames &gt;= <span class="cg">45</span>:  level = <span class="cy">1</span>  <span class="cdim">// หลับ 1.5s</span>
+<br><span class="cy">elif</span> perclos &gt; <span class="cg">80</span>:            level = <span class="cr">2</span>  <span class="cdim">// ตาปิดเกิน 80% ของเวลา</span>
+<br><span class="cy">elif</span> drowsy_signals &gt;= <span class="cg">2</span>:      level = <span class="cy">1</span>  <span class="cdim">// กะพริบถี่ + หาว</span>
+<br><span class="cy">else</span>:                          level = <span class="cg">0</span>
+</div>
+
+<div class="g2" style="margin-top:8px">
+  <div class="card" style="--ac:var(--ok)">
+    <h3>✅ ตาเปิด + กะพริบปกติ</h3>
+    <div class="cs">คนขับตื่นเต็มที่</div>
+    <div class="row"><span class="rk">EAR</span><span class="rv">&gt; 0.20 ต่อเนื่อง</span></div>
+    <div class="row"><span class="rk">blink rate</span><span class="rv">15–20 ครั้ง/นาที</span></div>
+    <div class="row"><span class="rk">output</span><span class="rv">🟢 LED, Buzzer ปิด, OLED: ALERT</span></div>
+  </div>
+  <div class="card" style="--ac:var(--warn)">
+    <h3>⚠️ กะพริบถี่ + หาว</h3>
+    <div class="cs">สัญญาณเตือนล่วงหน้า ยังไม่หลับ</div>
+    <div class="row"><span class="rk">blink rate</span><span class="rv">&gt; 25 ครั้ง/นาที</span></div>
+    <div class="row"><span class="rk">yawn</span><span class="rv">≥ 2 ครั้งใน 5 นาที</span></div>
+    <div class="row"><span class="rk">output</span><span class="rv">Level 1 — เตือนเบาๆ ก่อนหลับจริง</span></div>
+  </div>
+  <div class="card" style="--ac:var(--ir)">
+    <h3>🟠 PERCLOS สูง</h3>
+    <div class="cs">ตาปิดเกิน 80% ของเวลาใน 1 นาที</div>
+    <div class="row"><span class="rk">perclos</span><span class="rv">&gt; 80%</span></div>
+    <div class="row"><span class="rk">ความหมาย</span><span class="rv">ง่วงสะสม แม้ไม่ได้หลับยาวครั้งเดียว</span></div>
+    <div class="row"><span class="rk">output</span><span class="rv">Level 2 — เตือนแรงขึ้น</span></div>
+  </div>
+  <div class="card" style="--ac:var(--danger)">
+    <h3>🚨 ตาหลับต่อเนื่อง 5 วินาที</h3>
+    <div class="cs">อันตรายที่สุด — หลับคาพวงมาลัย</div>
+    <div class="row"><span class="rk">frames</span><span class="rv">≥ 150 frames @30fps</span></div>
+    <div class="row"><span class="rk">output</span><span class="rv">Level 3 + Line Notify ทันที!</span></div>
+  </div>
+</div>
+
+<div class="note" style="margin-top:12px">⚠️ <b>ข้อจำกัดที่ต้องรู้:</b> ระบบนี้ตรวจจาก<b>ดวงตาเท่านั้น</b> — ถ้าคนขับหลับแบบตายังลืมครึ่งตา หรือใส่แว่นกันแดดที่บังตา ระบบอาจตรวจไม่ทัน ต้องระบุข้อจำกัดนี้ในเอกสาร project ด้วย</div>
+
+<!-- 08 SUMMARY -->
+<div class="sec"><span class="sec-num">08</span><h2>สรุปรวม Input / Output</h2></div>
+<table class="tbl">
+  <tr><th colspan="3">INPUT</th></tr>
+  <tr><td>📷 OV5640 Camera (5MP+AF)</td><td>DVP 8-bit → ESP32-S3</td><td>ตรวจดวงตา เปิด/หลับ/หาว</td></tr>
+  <tr><td>🌗 LDR Light Sensor</td><td>ADC → GPIO 3</td><td>วัดแสง → คุม IR LED</td></tr>
+  <tr><td>💡 IR LED 850nm ×4</td><td>GPIO 25 → NPN → LED</td><td>ส่องหน้าตอนกลางคืน</td></tr>
+  <tr><td>🔘 Tact Switch</td><td>GPIO 34 pull-up</td><td>เปิด/ปิด/รีเซ็ตระบบ</td></tr>
+  <tr><td>🔌 Power 12V (รถ)</td><td>MP1584 → 5V → AMS1117 → 3.3V</td><td>จ่ายไฟทั้งระบบ</td></tr>
+  <tr><th colspan="3">OUTPUT</th></tr>
+  <tr><td>🔔 Active Buzzer 5V</td><td>GPIO 14 → MOSFET</td><td>เตือนเสียงตามระดับ 1-3</td></tr>
+  <tr><td>💡 LED ×2 (เขียว/แดง)</td><td>GPIO 26,27 → R 220Ω</td><td>แสดงสถานะ ตื่น/ง่วง</td></tr>
+  <tr><td>🖥️ OLED 0.96" (I2C)</td><td>I2C → GPIO 1, 2</td><td>แสดง EAR, PERCLOS, STATUS</td></tr>
+  <tr><td>📱 WiFi → Line Notify</td><td>ESP32-S3 WiFi</td><td>แจ้งเตือนมือถือ (Level 3)</td></tr>
+</table>
+
+<footer>Group 17 · Driver Drowsiness Detection with TinyML · OV5640 + ESP32-S3 · Kasetsart University Sriracha</footer>
+</div></body></html>

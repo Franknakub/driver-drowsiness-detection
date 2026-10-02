@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Group 17 — Driver Drowsiness Detection · Project Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e14;
+    --panel:#11161f;
+    --panel-2:#161c27;
+    --line:#222b3a;
+    --line-bright:#2e3a4e;
+    --txt:#dde3ec;
+    --muted:#7e8aa0;
+    --dim:#56627a;
+    --signal:#ffd84d;       /* drowsy-alert amber — the signature */
+    --signal-deep:#f5a623;
+    --awake:#3ddc97;        /* awake/done */
+    --eye:#5eb3ff;          /* camera blue */
+    --night:#9a7dff;        /* IR / night */
+    --alarm:#ff5c72;        /* buzzer / overdue */
+    --r:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(900px 500px at 85% -5%, rgba(255,216,77,.06), transparent 60%),
+      radial-gradient(800px 500px at 5% 10%, rgba(94,179,255,.05), transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:'IBM Plex Sans Thai',system-ui,sans-serif;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:80px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+
+  /* ── HERO ── */
+  header{padding:54px 0 30px;border-bottom:1px solid var(--line)}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;letter-spacing:3px;text-transform:uppercase;
+    color:var(--signal);display:flex;align-items:center;gap:10px;margin-bottom:18px;
+  }
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--signal)}
+  h1{
+    font-family:'Space Grotesk','IBM Plex Sans Thai',sans-serif;
+    font-size:clamp(30px,6vw,52px);line-height:1.05;font-weight:700;letter-spacing:-1px;
+  }
+  h1 .blink{color:var(--signal);position:relative}
+  .lead{color:var(--muted);font-size:17px;max-width:620px;margin-top:16px}
+
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .chip{
+    background:var(--panel);border:1px solid var(--line);border-radius:99px;
+    padding:7px 15px;font-size:13px;color:var(--muted);
+    display:flex;align-items:center;gap:8px;
+  }
+  .chip b{color:var(--txt);font-weight:600}
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--awake)}
+
+  /* progress meter */
+  .meter-card{
+    margin-top:30px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);padding:20px 22px;
+  }
+  .meter-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .meter-top .lab{font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:1px}
+  .meter-top .pct{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;color:var(--signal)}
+  .track{height:10px;background:#0c1118;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+  .fill{height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,var(--eye),var(--signal) 70%,var(--signal-deep));
+    transition:width .9s cubic-bezier(.22,1,.36,1)}
+  .meter-sub{margin-top:10px;font-size:12.5px;color:var(--dim)}
+
+  /* ── SECTION HEADINGS ── */
+  .sec-head{display:flex;align-items:center;gap:14px;margin:50px 0 8px}
+  .sec-head .num{
+    font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--signal);
+    border:1px solid var(--line-bright);border-radius:7px;padding:4px 9px;
+  }
+  .sec-head h2{font-family:'Space Grotesk','IBM Plex Sans Thai',sans-serif;font-size:22px;font-weight:600;letter-spacing:-.3px}
+  .sec-note{color:var(--dim);font-size:13.5px;margin:0 0 22px 2px}
+
+  /* ── HOW IT WORKS strip ── */
+  .pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px}
+  .pipe .node{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px 10px;text-align:center;position:relative;
+  }
+  .pipe .ic{font-size:26px;display:block;margin-bottom:8px}
+  .pipe .t{font-size:13px;font-weight:600}
+  .pipe .s{font-size:11px;color:var(--dim);margin-top:2px}
+  .pipe .node:not(:last-child)::after{
+    content:"›";position:absolute;right:-8px;top:50%;transform:translateY(-50%);
+    color:var(--line-bright);font-size:22px;z-index:2;font-family:'Space Grotesk',sans-serif;
+  }
+  @media(max-width:720px){
+    .pipe{grid-template-columns:1fr 1fr}
+    .pipe .node::after{display:none!important}
+  }
+
+  /* ── PHASE TIMELINE ── */
+  .phase{
+    position:relative;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);margin-bottom:16px;overflow:hidden;
+    transition:border-color .25s,transform .25s;
+  }
+  .phase:hover{border-color:var(--line-bright)}
+  .phase.open{border-color:var(--accent,var(--signal))}
+  .ph-bar{height:3px;width:100%;background:var(--accent,var(--signal));opacity:.9}
+  .ph-head{
+    display:flex;gap:16px;align-items:flex-start;padding:18px 20px;cursor:pointer;user-select:none;
+  }
+  .ph-idx{
+    flex-shrink:0;width:46px;height:46px;border-radius:11px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;
+    background:color-mix(in srgb,var(--accent,var(--signal)) 14%,transparent);
+    color:var(--accent,var(--signal));
+    border:1px solid color-mix(in srgb,var(--accent,var(--signal)) 35%,transparent);
+  }
+  .ph-mid{flex:1;min-width:0}
+  .ph-title{font-family:'Space Grotesk','IBM Plex Sans Thai',sans-serif;font-size:17px;font-weight:600;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .ph-deliver{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent,var(--signal));letter-spacing:.5px;margin-top:3px}
+  .ph-when{font-size:12.5px;color:var(--muted);margin-top:5px}
+  .ph-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+  .badge{font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 9px;border-radius:99px;letter-spacing:.5px;white-space:nowrap}
+  .b-todo{background:#1a212e;color:var(--muted);border:1px solid var(--line)}
+  .b-key{background:color-mix(in srgb,var(--alarm) 16%,transparent);color:var(--alarm);border:1px solid color-mix(in srgb,var(--alarm) 35%,transparent)}
+  .chev{color:var(--dim);font-size:18px;transition:transform .3s;font-family:'Space Grotesk',sans-serif}
+  .phase.open .chev{transform:rotate(90deg)}
+
+  .ph-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+  .ph-inner{padding:2px 20px 22px 82px}
+  @media(max-width:560px){.ph-inner{padding:2px 18px 20px 18px}}
+  .ph-inner .desc{color:var(--muted);font-size:14px;margin-bottom:14px}
+
+  .task{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-top:1px dashed var(--line)}
+  .task:first-of-type{border-top:none}
+  .cbox{
+    flex-shrink:0;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line-bright);
+    background:#0c1118;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:all .2s;font-size:13px;color:transparent;
+  }
+  .cbox.done{background:var(--awake);border-color:var(--awake);color:#06281b}
+  .task .tx{flex:1;font-size:13.5px}
+  .task.done .tx{color:var(--dim);text-decoration:line-through}
+  .task .tx small{display:block;color:var(--dim);font-size:11.5px;margin-top:1px;text-decoration:none}
+
+  .tools{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+  .tool{font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 10px;border-radius:6px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+  .tool b{color:var(--eye);font-weight:500}
+
+  .out{
+    margin-top:14px;padding:11px 14px;border-radius:10px;font-size:12.5px;
+    background:color-mix(in srgb,var(--awake) 8%,transparent);
+    border:1px solid color-mix(in srgb,var(--awake) 25%,transparent);color:#aef0d4;
+    display:flex;gap:9px;align-items:flex-start;
+  }
+  .out b{color:var(--awake)}
+
+  /* ── BOM / FORM HELP cards ── */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+  .card h3{font-family:'Space Grotesk','IBM Plex Sans Thai',sans-serif;font-size:15px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .card .sub{font-size:12px;color:var(--dim);margin-bottom:14px}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+  .kv:first-of-type{border-top:none}
+  .kv .k{color:var(--muted)}
+  .kv .v{color:var(--txt);text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px}
+
+  .fill-box{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-top:12px}
+  .fill-box .lbl{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--signal);letter-spacing:1px;margin-bottom:7px;text-transform:uppercase}
+  .fill-box pre{font-family:'IBM Plex Sans Thai',sans-serif;font-size:13px;color:var(--txt);white-space:pre-wrap;line-height:1.7}
+  .copy{margin-top:9px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--dim);cursor:pointer;
+    border:1px solid var(--line);background:none;border-radius:6px;padding:4px 9px;transition:.2s}
+  .copy:hover{color:var(--signal);border-color:var(--signal)}
+
+  /* risks */
+  .risk{display:flex;gap:12px;padding:13px 0;border-top:1px solid var(--line)}
+  .risk:first-of-type{border-top:none}
+  .risk .rl{flex-shrink:0;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;
+    background:color-mix(in srgb,var(--alarm) 14%,transparent);border:1px solid color-mix(in srgb,var(--alarm) 30%,transparent)}
+  .risk .rt b{font-size:13.5px;display:block}
+  .risk .rt span{font-size:12.5px;color:var(--muted)}
+
+  footer{margin-top:54px;padding-top:24px;border-top:1px solid var(--line);color:var(--dim);font-size:12.5px;text-align:center}
+  footer b{color:var(--muted)}
+
+  .reset{position:fixed;bottom:20px;right:20px;z-index:30;background:var(--panel);border:1px solid var(--line-bright);
+    color:var(--muted);border-radius:99px;padding:9px 16px;font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);transition:.2s}
+  .reset:hover{color:var(--signal);border-color:var(--signal)}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <header>
+    <div class="eyebrow">Group 17 · Embedded System 2026</div>
+    <h1>Driver Drowsiness<br>Detection<span class="blink"> .</span></h1>
+    <p class="lead">แผนการทำโปรเจคแบบละเอียดทีละขั้นตอน — ตรวจจับความง่วงของคนขับด้วยกล้อง + TinyML บน custom PCB จนถึงวันส่งจริง</p>
+
+    <div class="meta-row">
+      <span class="chip"><span class="dot"></span> สมาชิก <b>2 คน</b></span>
+      <span class="chip">🎯 Deadline ส่งงาน <b>3–5 พ.ย.</b></span>
+    </div>
+
+    <div class="meter-card">
+      <div class="meter-top">
+        <span class="lab">PROJECT PROGRESS</span>
+        <span class="pct" id="pct">0%</span>
+      </div>
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <div class="meter-sub" id="sub">เช็คงานที่ทำเสร็จในแต่ละ phase ด้านล่าง แล้วแถบนี้จะขยับเอง</div>
+    </div>
+  </header>
+
+  <!-- HOW IT WORKS -->
+  <div class="sec-head"><span class="num">A</span><h2>ระบบทำงานยังไง</h2></div>
+  <p class="sec-note">หลักการสั้นๆ ก่อนลงมือ — กล้องดูตา, โมเดลตัดสินว่าง่วงไหม, ถ้าง่วงก็เตือน</p>
+  <div class="pipe">
+    <div class="node"><span class="ic">📷</span><div class="t">Camera</div><div class="s">จับภาพใบหน้า</div></div>
+    <div class="node"><span class="ic">👁️</span><div class="t">ตรวจดวงตา</div><div class="s">เปิด / หลับ</div></div>
+    <div class="node"><span class="ic">🧠</span><div class="t">TinyML</div><div class="s">บน ESP32-S3</div></div>
+    <div class="node"><span class="ic">⏱️</span><div class="t">PERCLOS</div><div class="s">หลับนานเกิน?</div></div>
+    <div class="node"><span class="ic">🔔</span><div class="t">Alert</div><div class="s">Buzzer + LED</div></div>
+  </div>
+
+  <!-- PHASES -->
+  <div class="sec-head"><span class="num">B</span><h2>แผนงาน 8 Phase</h2></div>
+  <p class="sec-note">เรียงตาม deliverable ที่อาจารย์ต้องตรวจ — Schematic → PCB → Order → ประกอบ → Doc → ส่ง</p>
+
+  <div id="phases"></div>
+
+  <!-- WORK SPLIT + BOM -->
+  <div class="sec-head"><span class="num">C</span><h2>แบ่งงาน 2 คน · BOM</h2></div>
+  <p class="sec-note">โปรเจค 2 คน แบ่งสาย Hardware/PCB กับ Software/ML ให้คู่ขนานกัน จะเสร็จเร็วขึ้น</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>👤 คนที่ 1 — Hardware / PCB</h3>
+      <div class="sub">สมาชิกคนที่ 1</div>
+      <div class="kv"><span class="k">EasyEDA Schematic</span><span class="v">Phase 2</span></div>
+      <div class="kv"><span class="k">PCB Layout + Route</span><span class="v">Phase 3</span></div>
+      <div class="kv"><span class="k">Order JLCPCB + BOM</span><span class="v">Phase 4</span></div>
+      <div class="kv"><span class="k">บัดกรี / ประกอบ PCBA</span><span class="v">Phase 6</span></div>
+    </div>
+    <div class="card">
+      <h3>👤 คนที่ 2 — Software / TinyML</h3>
+      <div class="sub">สมาชิกคนที่ 2</div>
+      <div class="kv"><span class="k">หา Dataset + Label</span><span class="v">Phase 1</span></div>
+      <div class="kv"><span class="k">Train โมเดล Edge Impulse</span><span class="v">Phase 5</span></div>
+      <div class="kv"><span class="k">เขียน Firmware + Deploy</span><span class="v">Phase 6</span></div>
+      <div class="kv"><span class="k">เขียน Project Doc</span><span class="v">Phase 7</span></div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:14px">
+    <div class="card">
+      <h3>📦 BOM — อุปกรณ์หลัก (LCSC/JLCPCB)</h3>
+      <div class="sub">เลือกของที่ JLCPCB มีในคลัง จะประกอบ PCBA ได้เลย</div>
+      <div class="kv"><span class="k">ESP32-S3-WROOM-1 (N16R8)</span><span class="v">MCU</span></div>
+      <div class="kv"><span class="k">OV2640 + FPC 24p 0.5mm</span><span class="v">Camera</span></div>
+      <div class="kv"><span class="k">MPU-6050</span><span class="v">IMU</span></div>
+      <div class="kv"><span class="k">MP1584EN</span><span class="v">12V→5V</span></div>
+      <div class="kv"><span class="k">AMS1117-3.3</span><span class="v">5V→3.3V</span></div>
+      <div class="kv"><span class="k">TSAL6200 ×4</span><span class="v">IR LED</span></div>
+      <div class="kv"><span class="k">Active Buzzer + MOSFET</span><span class="v">Alert</span></div>
+      <div class="kv"><span class="k">USB-C + SM6T15A (TVS)</span><span class="v">Prog/Protect</span></div>
+    </div>
+    <div class="card">
+      <h3>✍️ กรอกฟอร์มอาจารย์ (กลุ่ม 17)</h3>
+      <div class="sub">ช่อง Input / Output ที่ยังว่าง — copy ไปวางได้เลย</div>
+      <div class="fill-box">
+        <div class="lbl">ช่อง E · Input (Sensor)</div>
+        <pre id="inp">Input (Sensor)
+1. OV2640 Camera (จับภาพใบหน้า/ดวงตา)
+2. MPU6050 (ตรวจการพยักหน้า/ก้มหลับ)
+3. Tact Switch x1 (เปิด-ปิดระบบ)</pre>
+        <button class="copy" data-c="inp">⧉ copy</button>
+      </div>
+      <div class="fill-box">
+        <div class="lbl">ช่อง F · Output (Alert)</div>
+        <pre id="outp">Output (Alert)
+1. Buzzer (เตือนเสียงเมื่อง่วง)
+2. LED x2 (สถานะ Alert/Drowsy)
+3. OLED Display (แสดงระดับความง่วง)</pre>
+        <button class="copy" data-c="outp">⧉ copy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RISKS -->
+  <div class="sec-head"><span class="num">D</span><h2>จุดเสี่ยง · กันพลาด</h2></div>
+  <p class="sec-note">5 เรื่องที่ทำให้ทีมส่วนใหญ่เสียเวลา — รู้ไว้ก่อนจะไม่ตกหลุม</p>
+  <div class="card">
+    <div class="risk"><div class="rl">📡</div><div class="rt"><b>WiFi Antenna Keepout</b><span>ห้ามมี copper ใต้เสาอากาศ ESP32-S3 เว้น keepout ~3mm ไม่งั้น WiFi ใช้ไม่ได้</span></div></div>
+    <div class="risk"><div class="rl">🔌</div><div class="rt"><b>FPC Camera 0.5mm pitch</b><span>connector กล้องบัดกรียาก ลอกพินจาก ESP32-S3-EYE schematic ของ Espressif มาเป็น reference</span></div></div>
+    <div class="risk"><div class="rl">⚡</div><div class="rt"><b>Decoupling capacitor</b><span>วาง 100nF ใกล้ทุก VCC + 10µF ใกล้ output DC-DC ป้องกัน noise รีเซ็ต MCU</span></div></div>
+    <div class="risk"><div class="rl">📅</div><div class="rt"><b>เผื่อเวลา JLCPCB 7–10 วัน</b><span>สั่งบอร์ดต้องรอ ถ้าสั่งช้าจะไม่ทันส่ง — order ให้เสร็จก่อนกลางต.ค.</span></div></div>
+    <div class="risk"><div class="rl">🔁</div><div class="rt"><b>ทำ prototype ก่อนเสมอ</b><span>ทดสอบ ML บน ESP32-CAM ให้ work ก่อน ค่อยลงทุนทำ PCB จะได้ไม่ต้องสั่งซ้ำ</span></div></div>
+  </div>
+
+  <footer>
+    Group 17 · Driver Drowsiness Detection with TinyML &nbsp;·&nbsp;
+    <b>การบ้านครั้งนี้แผนนี้ติดตามได้จริง</b> — เช็คงานเสร็จ progress จะ save ในเครื่องอัตโนมัติ
+  </footer>
+</div>
+
+<button class="reset" id="reset">↺ reset progress</button>
+
+<script>
+const PHASES=[
+  {a:"--eye",idx:0,title:"Prototype + Dataset",deliver:"PRE-WORK · ยังไม่ต้องส่งอาจารย์",when:"สัปดาห์ 1–2 · ก.ย.",key:false,
+   desc:"พิสูจน์ว่า concept ทำงานได้ก่อนลงทุนทำ PCB จริง ใช้ ESP32-CAM ราคาถูกทดสอบ แล้วเก็บ/หา dataset ขนานกันไป",
+   tools:["ESP32-CAM ~150฿","USB-TTL","Kaggle Dataset","Arduino IDE"],
+   tasks:[
+     {t:"ซื้อ ESP32-CAM + USB-TTL programmer + Buzzer",s:"งบรวม ~300฿ พอสำหรับ prototype"},
+     {t:"โหลด Driver Drowsiness / MRL Eye Dataset จาก Kaggle",s:"แยก 2 class: Alert (ตาเปิด) / Drowsy (ตาหลับ)"},
+     {t:"Label รูป + clean ให้ได้ ~500–1000 รูป/class",s:""},
+     {t:"ทดสอบ flash โค้ดง่ายๆ ลง ESP32-CAM ให้ภาพออก",s:"ยืนยันว่า toolchain พร้อม"},
+   ],
+   out:"มี dataset พร้อม + ESP32-CAM ใช้งานได้ — มั่นใจว่าทำต่อได้"},
+
+  {a:"--signal",idx:1,title:"ออกแบบ Schematic",deliver:"DELIVERABLE · Design Schematic (Link)",when:"สัปดาห์ 3 · ปลายก.ย.",key:true,
+   desc:"วาดวงจรทั้งหมดใน EasyEDA Pro แบ่งเป็น 5 บล็อก: Power → MCU → Camera → IMU → Alert ทำ Power ก่อนเป็นอันดับแรก",
+   tools:["EasyEDA Pro","ESP32-S3-EYE ref","ERC check"],
+   tasks:[
+     {t:"สมัคร EasyEDA + วาง block Power (TVS→MP1584→AMS1117)",s:"12V รถ → 5V → 3.3V"},
+     {t:"วาง ESP32-S3-WROOM-1 + กำหนด GPIO ตาม pinout",s:"camera DVP, I2C, buzzer, USB"},
+     {t:"ต่อ OV2640 FPC + MPU6050 (I2C) + Buzzer/LED",s:""},
+     {t:"ใส่ decoupling cap 100nF ทุก VCC + รัน ERC ให้ผ่าน",s:"ตรวจ error ก่อนทำ PCB"},
+     {t:"export เป็น link / รูป ส่งช่อง 'Design Schematic' ในชีต",s:"อาจารย์ตรวจ (n=2)"},
+   ],
+   out:"ส่ง Schematic link ในชีต → รออาจารย์ comment"},
+
+  {a:"--night",idx:2,title:"ออกแบบ PCB Layout",deliver:"DELIVERABLE · Design PCB Layout (Link)",when:"สัปดาห์ 4 · ต้นต.ค.",key:true,
+   desc:"แปลง schematic เป็นบอร์ดจริง วาง component แล้ว route เส้น 2-layer ระวัง antenna keepout เป็นพิเศษ",
+   tools:["EasyEDA PCB","2-layer FR4","DRC check"],
+   tasks:[
+     {t:"Import จาก schematic → จัดวาง component",s:"กล้อง+IR ไว้ด้านหน้า, MCU กลางบอร์ด"},
+     {t:"ทำ antenna keepout zone ใต้ ESP32-S3 ~3mm",s:"⚠️ พลาดข้อนี้ WiFi ตาย"},
+     {t:"Route power ก่อน (เส้นหนา) แล้วค่อย signal",s:"GND plane ชั้นล่าง"},
+     {t:"รัน DRC ตรวจ short / clearance ให้ผ่าน 0 error",s:""},
+     {t:"export link/รูป ส่งช่อง 'Design PCB Layout'",s:"อาจารย์ตรวจ (n=2)"},
+   ],
+   out:"ส่ง PCB Layout link ในชีต → รออาจารย์ comment"},
+
+  {a:"--awake",idx:3,title:"สั่งทำ PCB + Order Component",deliver:"DELIVERABLE · Order PCB + Order Component",when:"สัปดาห์ 5 · กลางต.ค.",key:true,
+   desc:"export Gerber จาก EasyEDA แล้ว one-click ส่ง JLCPCB เลือก PCBA assembly + สั่งอะไหล่ที่ JLCPCB ไม่มีในคลังเพิ่ม",
+   tools:["JLCPCB","Gerber","BOM + CPL file"],
+   tasks:[
+     {t:"Generate Gerber + BOM + Pick&Place (CPL)",s:"จาก EasyEDA กดปุ่มเดียว"},
+     {t:"Upload JLCPCB → เลือก 2-layer, FR4 1.6mm, HASL",s:"5 แผ่นแรกถูกมาก"},
+     {t:"เลือก PCBA → match parts กับ LCSC catalogue",s:"ของที่มีในคลัง = ประกอบให้เลย"},
+     {t:"สั่งอะไหล่ที่ JLCPCB ไม่มี (เช่น OV2640 module) แยก",s:"จาก Shopee/AliExpress"},
+     {t:"capture หน้า order ส่งช่อง 'Order PCB' + 'Order Component'",s:"⚠️ รอของ 7–10 วัน"},
+   ],
+   out:"แนบรูป order → ระหว่างรอของไปทำ Phase 5 ต่อ"},
+
+  {a:"--signal",idx:4,title:"Train โมเดล TinyML",deliver:"PARALLEL · ทำระหว่างรอบอร์ด",when:"สัปดาห์ 5–6 · ต.ค.",key:false,
+   desc:"ระหว่างรอ PCB มาส่ง ใช้เวลา train โมเดลให้เสร็จบน Edge Impulse — ไม่ต้องเขียน TensorFlow เอง",
+   tools:["Edge Impulse","MobileNetV2","INT8 Quantize",".tflite"],
+   tasks:[
+     {t:"Upload dataset เข้า Edge Impulse (จาก Phase 1)",s:"แบ่ง train/test 80/20"},
+     {t:"เลือก MobileNetV2 / FOMO → กด Train",s:"ตั้งเป้า accuracy > 90%"},
+     {t:"Quantize INT8 → export .tflite ขนาด ~100–300KB",s:"ให้พอดี flash ESP32-S3"},
+     {t:"ทดสอบ inference บน ESP32-CAM (prototype) ก่อน",s:"ดูว่า trigger ตอนหลับตาจริง"},
+   ],
+   out:"ได้ไฟล์ .tflite พร้อม deploy ลงบอร์ดจริง"},
+
+  {a:"--eye",idx:5,title:"ประกอบ PCBA + Deploy Firmware",deliver:"DELIVERABLE · PCBA ประกอบชิ้นงาน",when:"สัปดาห์ 7 · ปลายต.ค.",key:true,
+   desc:"บอร์ดมาถึงแล้ว — บัดกรีชิ้นที่เหลือ, flash firmware + โมเดล, ทดสอบกับหน้าจริง",
+   tools:["Soldering","TFLite-Micro","Arduino IDE"],
+   tasks:[
+     {t:"บัดกรี component ที่ JLCPCB ไม่ได้ประกอบ (กล้อง FPC ฯลฯ)",s:""},
+     {t:"Flash firmware + .tflite ผ่าน USB-C",s:"ใช้ TFLite-Micro library"},
+     {t:"ทดสอบ: หลับตา → Buzzer ดังไหม",s:"ปรับ threshold PERCLOS > 80%"},
+     {t:"ทดสอบในสภาพแสงจริง + กลางคืน (IR LED)",s:""},
+     {t:"ถ่ายรูป/วิดีโอชิ้นงาน ส่งช่อง 'PCBA'",s:"อาจารย์ตรวจ"},
+   ],
+   out:"ชิ้นงานทำงานได้จริง → เหลือเขียน doc + ส่ง"},
+
+  {a:"--night",idx:6,title:"เขียน Project Document",deliver:"DELIVERABLE · Google Doc (public)",when:"สัปดาห์ 8 · ต้นพ.ย.",key:true,
+   desc:"รวบรวมทุกอย่างเป็น Google Doc สาธารณะ: ที่มา, design, schematic, ผลทดสอบ, สรุป",
+   tools:["Google Docs","รูป + ผลทดสอบ"],
+   tasks:[
+     {t:"เขียนที่มา/ปัญหา (ง่วงขับ = สาเหตุอุบัติเหตุ)",s:""},
+     {t:"ใส่ block diagram, schematic, PCB, BOM",s:"ดึงจาก phase ก่อนๆ"},
+     {t:"สรุปผลทดสอบ + accuracy + ข้อจำกัด",s:""},
+     {t:"ตั้งค่า Doc เป็น public + วาง link ช่อง 'google doc'",s:"อาจารย์ตรวจ doc"},
+   ],
+   out:"Doc สาธารณะพร้อม → ทุก deliverable ครบ"},
+
+  {a:"--alarm",idx:7,title:"ส่งโปรเจค + นำเสนอ",deliver:"FINAL · ส่งงาน 3–5 พ.ย.",when:"🎯 Deadline",key:true,
+   desc:"เช็คทุกช่องในชีตให้ครบ ทดสอบ demo ให้พร้อม นำเสนอจริง",
+   tools:["Demo","Presentation"],
+   tasks:[
+     {t:"เช็คทุก link/รูปในชีตกลุ่ม 17 ครบทุกช่อง",s:"Schematic, PCB, Order, PCBA, Doc"},
+     {t:"ซ้อม demo + เตรียมตอบคำถาม",s:"เผื่อบอร์ดพังมี backup video"},
+     {t:"นำเสนอ + ส่งมอบ",s:"🎉"},
+   ],
+   out:"จบโปรเจค!"},
+];
+
+const wrap=document.getElementById('phases');
+PHASES.forEach((p,i)=>{
+  const el=document.createElement('div');
+  el.className='phase';el.style.setProperty('--accent',`var(${p.a})`);
+  el.innerHTML=`
+    <div class="ph-bar"></div>
+    <div class="ph-head" data-i="${i}">
+      <div class="ph-idx">${p.idx+1}</div>
+      <div class="ph-mid">
+        <div class="ph-title">${p.title}</div>
+        <div class="ph-deliver">${p.deliver}</div>
+        <div class="ph-when">🗓 ${p.when}</div>
+      </div>
+      <div class="ph-right">
+        ${p.key?'<span class="badge b-key">ส่งอาจารย์</span>':'<span class="badge b-todo">เตรียมงาน</span>'}
+        <span class="chev">›</span>
+      </div>
+    </div>
+    <div class="ph-body"><div class="ph-inner">
+      <div class="desc">${p.desc}</div>
+      ${p.tasks.map((t,j)=>`
+        <div class="task" data-k="p${i}t${j}">
+          <div class="cbox"></div>
+          <div class="tx">${t.t}${t.s?`<small>${t.s}</small>`:''}</div>
+        </div>`).join('')}
+      <div class="tools">${p.tools.map(t=>`<span class="tool">${t}</span>`).join('')}</div>
+      <div class="out">✓ <div><b>ผลลัพธ์: </b>${p.out}</div></div>
+    </div></div>`;
+  wrap.appendChild(el);
+});
+
+// accordion
+document.querySelectorAll('.ph-head').forEach(h=>{
+  h.addEventListener('click',e=>{
+    if(e.target.closest('.cbox'))return;
+    const ph=h.closest('.phase'),body=ph.querySelector('.ph-body');
+    const open=ph.classList.toggle('open');
+    body.style.maxHeight=open?body.scrollHeight+'px':0;
+  });
+});
+
+// checkboxes + progress (in-memory, restored via JS var only — no storage API)
+const STATE={};
+let totalTasks=0;
+PHASES.forEach((p,i)=>p.tasks.forEach((t,j)=>{STATE[`p${i}t${j}`]=false;totalTasks++;}));
+
+function render(){
+  let done=0;
+  document.querySelectorAll('.task').forEach(t=>{
+    const k=t.dataset.k;
+    const on=STATE[k];
+    t.classList.toggle('done',on);
+    t.querySelector('.cbox').classList.toggle('done',on);
+    t.querySelector('.cbox').textContent=on?'✓':'';
+    if(on)done++;
+  });
+  const pct=Math.round(done/totalTasks*100);
+  document.getElementById('fill').style.width=pct+'%';
+  document.getElementById('pct').textContent=pct+'%';
+  const sub=document.getElementById('sub');
+  if(pct===0)sub.textContent='เช็คงานที่ทำเสร็จในแต่ละ phase ด้านล่าง แล้วแถบนี้จะขยับเอง';
+  else if(pct===100)sub.textContent='🎉 ครบทุกงานแล้ว — พร้อมส่งโปรเจค!';
+  else sub.textContent=`ทำเสร็จ ${done} จาก ${totalTasks} งาน · เหลืออีก ${totalTasks-done} งาน`;
+}
+document.querySelectorAll('.task').forEach(t=>{
+  t.querySelector('.cbox').addEventListener('click',()=>{
+    STATE[t.dataset.k]=!STATE[t.dataset.k];render();
+    // keep accordion height correct
+    const body=t.closest('.ph-body');if(body.style.maxHeight&&body.style.maxHeight!=='0px')body.style.maxHeight=body.scrollHeight+200+'px';
+  });
+});
+document.getElementById('reset').addEventListener('click',()=>{
+  Object.keys(STATE).forEach(k=>STATE[k]=false);render();
+});
+
+// copy buttons
+document.querySelectorAll('.copy').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const txt=document.getElementById(b.dataset.c).textContent;
+    navigator.clipboard.writeText(txt).then(()=>{
+      const o=b.textContent;b.textContent='✓ copied';setTimeout(()=>b.textContent=o,1400);
+    });
+  });
+});
+
+// open first phase by default
+const first=document.querySelector('.phase');
+first.classList.add('open');
+first.querySelector('.ph-body').style.maxHeight=first.querySelector('.ph-body').scrollHeight+'px';
+render();
+</script>
+</body>
+</html>

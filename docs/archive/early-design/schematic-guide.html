@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driver Drowsiness Detection — แนวทางต่อ Schematic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B1820; --bg2:#0F212B; --panel:#132833; --line:#1F3D4A; --line2:#2B505F;
+  --tx:#E4EFF3; --tx2:#9DB8C4; --tx3:#6E8D9B;
+  --l0:#4ADE80; --l1:#FBBF24; --l2:#FB923C; --l3:#F0554D;
+  --in:#5EC8D8; --out:#F0A04B;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'IBM Plex Sans Thai',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--sans);font-weight:300;line-height:1.75;-webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px 100px}
+
+/* header */
+header{border-bottom:1px solid var(--line);padding:56px 0 40px;margin-bottom:8px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--tx3);margin:0 0 18px}
+h1{font-size:clamp(28px,5.4vw,46px);font-weight:600;line-height:1.2;margin:0 0 18px;letter-spacing:-.01em}
+h1 .sub{display:block;font-size:clamp(15px,2.6vw,20px);font-weight:300;color:var(--tx2);margin-top:10px;letter-spacing:0}
+.meta{font-family:var(--mono);font-size:12px;color:var(--tx3);display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:26px}
+
+/* chain */
+.chain{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:34px 0 4px;font-family:var(--mono);font-size:12.5px}
+.chain span{background:var(--panel);border:1px solid var(--line2);border-radius:5px;padding:7px 12px;color:var(--tx)}
+.chain b{color:var(--tx3);font-weight:400}
+
+/* sections */
+section{padding:52px 0 8px;border-bottom:1px solid var(--line)}
+section:last-of-type{border-bottom:none}
+h2{font-size:clamp(21px,3.6vw,28px);font-weight:600;margin:0 0 6px;letter-spacing:-.01em}
+h2 .num{font-family:var(--mono);font-size:12px;color:var(--out);margin-right:12px;font-weight:500;vertical-align:2px}
+.lede{color:var(--tx2);font-size:16px;margin:0 0 30px;max-width:66ch}
+h3{font-size:17px;font-weight:600;margin:38px 0 12px;color:var(--tx)}
+p{margin:0 0 16px;max-width:70ch}
+
+/* figure */
+figure{margin:26px 0;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:22px 16px}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-family:var(--mono);font-size:11.5px;color:var(--tx3);text-align:center;margin-top:14px;letter-spacing:.03em}
+
+/* table */
+.tw{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:440px}
+th{background:var(--panel);text-align:left;padding:12px 14px;font-weight:600;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx2);border-bottom:1px solid var(--line)}
+td{padding:11px 14px;border-bottom:1px solid rgba(31,61,74,.6);vertical-align:top}
+tr:last-child td{border-bottom:none}
+code,.m{font-family:var(--mono);font-size:.9em;background:rgba(94,200,216,.09);color:var(--in);padding:2px 6px;border-radius:4px;white-space:nowrap}
+
+/* ladder */
+.ladder{margin:28px 0;display:flex;flex-direction:column;gap:10px}
+.rung{display:grid;grid-template-columns:52px 1fr;gap:16px;align-items:stretch;background:var(--bg2);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:16px 18px}
+.rung .lv{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--c);line-height:1}
+.rung .lv small{display:block;font-size:9px;letter-spacing:.14em;color:var(--tx3);margin-top:6px;font-weight:400}
+.rung h4{margin:0 0 6px;font-size:16px;font-weight:600;color:var(--c)}
+.rung .cond{font-family:var(--mono);font-size:12.5px;color:var(--tx2);margin:0 0 10px}
+.rung .act{display:flex;flex-wrap:wrap;gap:7px}
+.rung .act i{font-style:normal;font-size:12px;font-family:var(--mono);border:1px solid var(--line2);border-radius:20px;padding:3px 11px;color:var(--tx2)}
+
+/* callouts */
+.note{border-left:3px solid var(--line2);background:var(--bg2);padding:16px 18px;border-radius:0 10px 10px 0;margin:22px 0;font-size:14.5px}
+.note.warn{border-left-color:var(--l1)}
+.note.stop{border-left-color:var(--l3)}
+.note.ok{border-left-color:var(--l0)}
+.note strong{color:var(--tx);font-weight:600}
+.note p:last-child{margin-bottom:0}
+
+/* blocks */
+.blk{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:22px;margin:18px 0}
+.blk .hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.blk .hd h3{margin:0;font-size:18px}
+.tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:4px;font-weight:500}
+.tag.done{background:rgba(74,222,128,.13);color:var(--l0);border:1px solid rgba(74,222,128,.3)}
+.tag.todo{background:rgba(240,85,77,.13);color:var(--l3);border:1px solid rgba(240,85,77,.32)}
+.tag.opt{background:rgba(251,191,36,.12);color:var(--l1);border:1px solid rgba(251,191,36,.3)}
+
+/* steps */
+ol.steps{counter-reset:s;list-style:none;padding:0;margin:16px 0}
+ol.steps li{counter-increment:s;position:relative;padding-left:38px;margin-bottom:12px;font-size:14.5px}
+ol.steps li::before{content:counter(s);position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:50%;background:var(--panel);border:1px solid var(--line2);font-family:var(--mono);font-size:11.5px;display:flex;align-items:center;justify-content:center;color:var(--out)}
+ul.plain{padding-left:20px;margin:14px 0;font-size:14.5px}
+ul.plain li{margin-bottom:8px}
+
+/* checklist */
+.chk{list-style:none;padding:0;margin:20px 0}
+.chk li{display:flex;gap:13px;align-items:flex-start;padding:13px 16px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;margin-bottom:9px;font-size:14.5px}
+.chk .box{flex:0 0 17px;height:17px;border:1.5px solid var(--line2);border-radius:4px;margin-top:4px}
+.chk li.d .box{background:var(--l0);border-color:var(--l0);position:relative}
+.chk li.d .box::after{content:'';position:absolute;left:5px;top:1px;width:4px;height:9px;border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(42deg)}
+.chk li.d{opacity:.5}
+
+footer{padding-top:38px;font-family:var(--mono);font-size:11.5px;color:var(--tx3);line-height:2}
+@media(max-width:560px){
+  .rung{grid-template-columns:42px 1fr;gap:12px;padding:14px}
+  figure{padding:16px 10px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Embedded System 2026 · กลุ่ม 17 · ม.เกษตรศาสตร์ ศรีราชา</p>
+  <h1>Driver Drowsiness Detection
+    <span class="sub">ระบบตรวจจับความง่วงของคนขับด้วยกล้อง + TinyML — แนวทางต่อ Schematic</span>
+  </h1>
+  <div class="chain">
+    <span>กล้องจับภาพ</span><b>→</b><span>วัดการหลับตา</span><b>→</b><span>รวมกับ IMU</span><b>→</b><span>ตัดสินระดับ</span><b>→</b><span>เตือนด้วยเสียง</span>
+  </div>
+  <div class="meta">
+  </div>
+</header>
+
+<!-- ============ 1 ============ -->
+<section id="overview">
+  <h2><span class="num">01</span>ระบบทำงานยังไง</h2>
+  <p class="lede">อุปกรณ์แบ่งเป็น 3 กลุ่ม — ตัวรับข้อมูล ตัวประมวลผล และตัวแจ้งเตือน โดยมี IR LED เป็นตัวช่วยพิเศษที่ทำงานเฉพาะตอนมืด</p>
+
+  <figure>
+  <svg viewBox="0 0 700 470" role="img" aria-label="ผังการทำงานของระบบ">
+    <defs>
+      <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M2 2L8 5L2 8" fill="none" stroke="#6E8D9B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+    <text x="95" y="26" text-anchor="middle" fill="#5EC8D8" font-family="IBM Plex Mono, monospace" font-size="10.5" letter-spacing="1.6">INPUT</text>
+    <text x="350" y="26" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Mono, monospace" font-size="10.5" letter-spacing="1.6">PROCESS</text>
+    <text x="600" y="26" text-anchor="middle" fill="#F0A04B" font-family="IBM Plex Mono, monospace" font-size="10.5" letter-spacing="1.6">OUTPUT</text>
+
+    <g>
+      <rect x="20" y="48" width="150" height="62" rx="9" fill="#132833" stroke="#2B505F"/>
+      <text x="95" y="72" text-anchor="middle" fill="#E4EFF3" font-family="IBM Plex Sans Thai, sans-serif" font-size="14" font-weight="600">OV5640</text>
+      <text x="95" y="93" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Sans Thai, sans-serif" font-size="12">ภาพใบหน้า 10 fps</text>
+    </g>
+    <g>
+      <rect x="20" y="132" width="150" height="62" rx="9" fill="#132833" stroke="#2B505F"/>
+      <text x="95" y="156" text-anchor="middle" fill="#E4EFF3" font-family="IBM Plex Sans Thai, sans-serif" font-size="14" font-weight="600">MPU-6050</text>
+      <text x="95" y="177" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Sans Thai, sans-serif" font-size="12">มุมก้ม/เอียงศีรษะ</text>
+    </g>
+
+    <line x1="172" y1="79" x2="266" y2="128" stroke="#6E8D9B" stroke-width="1.3" marker-end="url(#a1)"/>
+    <line x1="172" y1="163" x2="266" y2="176" stroke="#6E8D9B" stroke-width="1.3" marker-end="url(#a1)"/>
+    <text x="216" y="94" text-anchor="middle" fill="#6E8D9B" font-family="IBM Plex Mono, monospace" font-size="10">DVP</text>
+    <text x="216" y="196" text-anchor="middle" fill="#6E8D9B" font-family="IBM Plex Mono, monospace" font-size="10">I2C</text>
+
+    <g>
+      <rect x="270" y="108" width="160" height="120" rx="9" fill="#132833" stroke="#9DB8C4" stroke-width="1.2"/>
+      <text x="350" y="136" text-anchor="middle" fill="#E4EFF3" font-family="IBM Plex Sans Thai, sans-serif" font-size="15" font-weight="600">ESP32-S3</text>
+      <text x="350" y="161" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Sans Thai, sans-serif" font-size="12">TinyML · TFLite-Micro</text>
+      <line x1="292" y1="174" x2="408" y2="174" stroke="#1F3D4A"/>
+      <text x="350" y="194" text-anchor="middle" fill="#5EC8D8" font-family="IBM Plex Mono, monospace" font-size="11">EAR  70%</text>
+      <text x="350" y="213" text-anchor="middle" fill="#5EC8D8" font-family="IBM Plex Mono, monospace" font-size="11">IMU  30%</text>
+    </g>
+
+    <g>
+      <rect x="480" y="48" width="150" height="50" rx="9" fill="#132833" stroke="#2B505F"/>
+      <text x="555" y="68" text-anchor="middle" fill="#E4EFF3" font-family="IBM Plex Sans Thai, sans-serif" font-size="13.5" font-weight="600">Buzzer</text>
+      <text x="555" y="87" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Sans Thai, sans-serif" font-size="11.5">เสียงเตือน — ตัวปลุกหลัก</text>
+    </g>
+    <g>
+      <rect x="480" y="110" width="150" height="50" rx="9" fill="#132833" stroke="#2B505F"/>
+      <text x="555" y="130" text-anchor="middle" fill="#E4EFF3" font-family="IBM Plex Sans Thai, sans-serif" font-size="13.5" font-weight="600">LED เขียว / แดง</text>
+      <text x="555" y="149" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Sans Thai, sans-serif" font-size="11.5">บอกระดับ ไม่ส่องตา</text>
+    </g>
+    <g>
+      <rect x="480" y="172" width="150" height="50" rx="9" fill="#132833" stroke="#2B505F"/>
+      <text x="555" y="192" text-anchor="middle" fill="#E4EFF3" font-family="IBM Plex Sans Thai, sans-serif" font-size="13.5" font-weight="600">OLED</text>
+      <text x="555" y="211" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Sans Thai, sans-serif" font-size="11.5">ค่า EAR + สถานะ</text>
+    </g>
+
+    <line x1="432" y1="140" x2="476" y2="76" stroke="#6E8D9B" stroke-width="1.3" marker-end="url(#a1)"/>
+    <line x1="432" y1="163" x2="476" y2="137" stroke="#6E8D9B" stroke-width="1.3" marker-end="url(#a1)"/>
+    <line x1="432" y1="188" x2="476" y2="197" stroke="#6E8D9B" stroke-width="1.3" marker-end="url(#a1)"/>
+
+    <line x1="20" y1="262" x2="680" y2="262" stroke="#1F3D4A"/>
+    <text x="20" y="290" fill="#F0A04B" font-family="IBM Plex Mono, monospace" font-size="10.5" letter-spacing="1.6">NIGHT MODE — วงจรปิดที่ทำงานเองอัตโนมัติ</text>
+
+    <g>
+      <rect x="20" y="308" width="150" height="54" rx="9" fill="#132833" stroke="#2B505F"/>
+      <text x="95" y="330" text-anchor="middle" fill="#E4EFF3" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="600">วัดความสว่าง</text>
+      <text x="95" y="349" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Sans Thai, sans-serif" font-size="11.5">จากภาพกล้องเอง</text>
+    </g>
+    <g>
+      <rect x="215" y="308" width="150" height="54" rx="9" fill="#132833" stroke="#2B505F"/>
+      <text x="290" y="330" text-anchor="middle" fill="#E4EFF3" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="600">มืด?</text>
+      <text x="290" y="349" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Mono, monospace" font-size="11">bright &lt; 60</text>
+    </g>
+    <g>
+      <rect x="410" y="308" width="150" height="54" rx="9" fill="#132833" stroke="#F0A04B"/>
+      <text x="485" y="330" text-anchor="middle" fill="#F0A04B" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="600">เปิด IR LED x4</text>
+      <text x="485" y="349" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Sans Thai, sans-serif" font-size="11.5">940nm ตามองไม่เห็น</text>
+    </g>
+
+    <line x1="172" y1="335" x2="211" y2="335" stroke="#6E8D9B" stroke-width="1.3" marker-end="url(#a1)"/>
+    <line x1="367" y1="335" x2="406" y2="335" stroke="#6E8D9B" stroke-width="1.3" marker-end="url(#a1)"/>
+    <path d="M560 335 L610 335 L610 400 L95 400 L95 366" fill="none" stroke="#F0A04B" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#a1)"/>
+    <text x="352" y="422" text-anchor="middle" fill="#9DB8C4" font-family="IBM Plex Sans Thai, sans-serif" font-size="12">แสง IR ทำให้ภาพสว่างพอที่โมเดลจะหาดวงตาเจอ — ไม่ได้ใช้ปลุกคนขับ</text>
+  </svg>
+  <figcaption>ผังการทำงาน — INPUT / PROCESS / OUTPUT และวงจร Night Mode</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <p><strong>ทำไมไม่ใช้ไฟส่องหน้าปลุก</strong></p>
+    <p>ตาที่ปรับให้ชินกับความมืดแล้ว เจอไฟสว่างจ้าจะมองไม่เห็นถนนไปราว 5–10 วินาที และคนที่กำลังงีบจะสะดุ้งจนอาจหักพวงมาลัย <strong>คนง่วงที่มองไม่เห็นถนน อันตรายกว่าคนง่วงที่ยังมองเห็น</strong> ระบบนี้จึงใช้เสียงเป็นตัวปลุกหลัก และ IR LED ทำหน้าที่ให้กล้องมองเห็นเท่านั้น</p>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section id="devices">
+  <h2><span class="num">02</span>อุปกรณ์แต่ละตัวทำอะไร</h2>
+  <p class="lede">สรุปหน้าที่ ขา GPIO ที่ใช้ และวิธีเชื่อมต่อบนบอร์ด</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>อุปกรณ์</th><th>หน้าที่</th><th>ขาที่ใช้</th><th>ต่อผ่าน</th></tr></thead>
+    <tbody>
+      <tr><td><strong>OV5640</strong></td><td>ถ่ายภาพใบหน้าส่งให้โมเดลวัดการหลับตา</td><td><span class="m">16 ขา DVP</span></td><td>FPC 24P</td></tr>
+      <tr><td><strong>MPU-6050</strong></td><td>ตรวจหัวตกและหัวเอียง เสริมตอนกล้องมองไม่ชัด</td><td><span class="m">GPIO1</span> <span class="m">GPIO42</span></td><td>Header 1×4</td></tr>
+      <tr><td><strong>OLED</strong></td><td>แสดงค่า EAR และระดับการเตือน</td><td><span class="m">GPIO1</span> <span class="m">GPIO42</span></td><td>Header 1×4 (P1)</td></tr>
+      <tr><td><strong>Buzzer</strong></td><td>เสียงเตือน — ตัวปลุกหลัก</td><td><span class="m">GPIO14</span></td><td>Header 1×3</td></tr>
+      <tr><td><strong>LED เขียว</strong></td><td>บอกว่าระบบทำงานปกติ</td><td><span class="m">GPIO47</span></td><td>บน PCB</td></tr>
+      <tr><td><strong>LED แดง</strong></td><td>กะพริบเตือนที่ขอบสายตา</td><td><span class="m">GPIO40</span></td><td>บน PCB</td></tr>
+      <tr><td><strong>IR LED ×4</strong></td><td>ส่องหน้าให้กล้องเห็นตอนกลางคืน</td><td><span class="m">GPIO21</span></td><td>บน PCB</td></tr>
+      <tr><td><strong>ปุ่ม USER</strong></td><td>รีเซ็ต / สลับโหมด</td><td><span class="m">GPIO41</span></td><td>บน PCB</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <p><strong>ทำไม OLED กับ MPU6050 ใช้ขาเดียวกันได้</strong> — I2C เป็นบัสที่ต่อขนานกันได้หลายตัว แต่ละตัวมีที่อยู่ไม่ซ้ำกัน (OLED = <code>0x3C</code>, MPU6050 = <code>0x68</code>) ESP32 จึงเรียกทีละตัวได้บนสายคู่เดียว</p>
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section id="logic">
+  <h2><span class="num">03</span>ตรรกะการเตือน 4 ระดับ</h2>
+  <p class="lede">คะแนนความง่วงมาจาก EAR ของกล้อง 70% รวมกับสัญญาณจาก IMU 30% แล้วแมปเป็นระดับ</p>
+
+  <div class="ladder">
+    <div class="rung" style="--c:var(--l0)">
+      <div class="lv">0<small>ปกติ</small></div>
+      <div>
+        <h4>ตื่นดี</h4>
+        <p class="cond">EAR ≥ 0.20 · ศีรษะตรง</p>
+        <div class="act"><i>บัซเซอร์ เงียบ</i><i>LED เขียว ติดค้าง</i><i>OLED แสดง OK</i></div>
+      </div>
+    </div>
+    <div class="rung" style="--c:var(--l1)">
+      <div class="lv">1<small>เริ่มล้า</small></div>
+      <div>
+        <h4>กะพริบตาช้าลง</h4>
+        <p class="cond">ตาหลับต่อเนื่อง 0.5–1.0 วินาที</p>
+        <div class="act"><i>ปี๊บสั้น 1 ครั้ง</i><i>LED เขียว กะพริบ</i></div>
+      </div>
+    </div>
+    <div class="rung" style="--c:var(--l2)">
+      <div class="lv">2<small>ง่วง</small></div>
+      <div>
+        <h4>หลับตานาน</h4>
+        <p class="cond">ตาหลับต่อเนื่อง 1.0–2.0 วินาที</p>
+        <div class="act"><i>ปี๊บ 2 ครั้ง/วินาที</i><i>LED แดง กะพริบ</i></div>
+      </div>
+    </div>
+    <div class="rung" style="--c:var(--l3)">
+      <div class="lv">3<small>อันตราย</small></div>
+      <div>
+        <h4>หลับแล้ว</h4>
+        <p class="cond">ตาหลับ &gt; 2.0 วินาที <em>หรือ</em> IMU ตรวจพบหัวตก</p>
+        <div class="act"><i>เสียงยาวต่อเนื่อง</i><i>LED แดง ติดค้าง</i><i>แจ้งเตือนออนไลน์</i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note warn">
+    <p><strong>ทำไมต้องมี IMU ด้วย</strong> — กล้องพลาดได้หลายกรณี เช่น คนขับใส่แว่นกันแดด แสงจากไฟหน้ารถสวนทำให้ภาพขาว หรือหันหน้าออกจากกล้อง IMU ไม่สนใจแสงเลย จับได้แค่การเคลื่อนไหว จึงเป็นตัวสำรองที่ทำงานได้เสมอ</p>
+  </div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section id="schematic">
+  <h2><span class="num">04</span>แนวทางต่อ Schematic</h2>
+  <p class="lede">แยกเป็นบล็อก ทำทีละบล็อกแล้วตรวจก่อนไปบล็อกถัดไป ป้ายชื่อ net ให้สะกดเหมือนกันเป๊ะทุกที่ ตัวพิมพ์ใหญ่เล็กมีผล</p>
+
+  <div class="note">
+    <p><strong>หลักการที่ใช้ทั้งบอร์ด</strong> — บอร์ด GOOUUU เสียบลงบน socket U5/U6 ซึ่งทำให้รูเต็ม อุปกรณ์ที่จะเสียบเพิ่มทีหลังจึงต้องมี header ของตัวเองบน PCB โดยลากสายจาก socket มาเข้า header นั้น</p>
+  </div>
+
+  <div class="blk">
+    <div class="hd"><h3>A · I2C — OLED และ MPU-6050</h3><span class="tag done">P1 เสร็จแล้ว</span></div>
+    <p>บัส I2C เส้นเดียวรองรับทั้งสองตัว วาง header สองชุดขนานกันบนเส้นเดิม</p>
+    <div class="tw"><table>
+      <thead><tr><th>ขา Header</th><th>Net</th><th>หมายเหตุ</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><span class="m">3V3</span></td><td>ห้ามใช้ 5V — MPU6050 พัง</td></tr>
+        <tr><td>2</td><td><span class="m">GND</span></td><td></td></tr>
+        <tr><td>3</td><td><span class="m">GPIO01</span></td><td>SDA</td></tr>
+        <tr><td>4</td><td><span class="m">GPIO42</span></td><td>SCL</td></tr>
+      </tbody>
+    </table></div>
+    <ol class="steps">
+      <li>วาง header 1×4 ตัวใหม่ ตั้งชื่อ <code>J4</code> (ค้นหา <code>HDR-TH_4P-P2.54-V-M</code>)</li>
+      <li>ลากสายจาก J4 ไปเข้า net ทั้ง 4 ตามตาราง — ใช้ net เดียวกับ P1 ได้เลย</li>
+      <li>Pull-up R4/R5 4.7kΩ มีอยู่แล้ว ไม่ต้องเพิ่มอีก</li>
+    </ol>
+    <div class="note stop"><p><strong>ก่อนวาด</strong> หยิบโมดูลจริงมาอ่านตัวหนังสือข้างขา ลำดับขาไม่เหมือนกันทุกยี่ห้อ — ต่อ VCC กับ GND สลับกันคือพังทันทีที่เสียบ</p></div>
+  </div>
+
+  <div class="blk">
+    <div class="hd"><h3>B · Buzzer</h3><span class="tag todo">ต้องเพิ่ม</span></div>
+    <p>ใช้โมดูลสำเร็จรูป <strong>KY-012 Active Buzzer</strong> ซึ่งมีทรานซิสเตอร์ขับในตัวแล้ว จึงไม่ต้องมี MOSFET บนบอร์ด</p>
+    <div class="tw"><table>
+      <thead><tr><th>ขา Header</th><th>Net</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><span class="m">5V</span></td></tr>
+        <tr><td>2</td><td><span class="m">GND</span></td></tr>
+        <tr><td>3</td><td><span class="m">GPIO14</span></td></tr>
+      </tbody>
+    </table></div>
+    <ol class="steps">
+      <li>ลบ <code>Q2</code> (AO3400A), <code>R1</code>, <code>R2</code> ออก — บั๊ก gate ลอยจะหายไปพร้อมกัน</li>
+      <li>วาง header 1×3 ตั้งชื่อ <code>J2</code> (<code>HDR-TH_3P-P2.54-V-M</code>)</li>
+      <li>เพิ่ม R 10kΩ 0805 จาก <code>GPIO14</code> ลง <code>GND</code> กันบัซเซอร์ร้องตอนบูต</li>
+    </ol>
+    <div class="note warn"><p><strong>ต้องเป็น Active ไม่ใช่ Passive</strong> — KY-012 คือ active (จ่ายไฟแล้วร้องเลย) ส่วน KY-006 เป็น passive ต้องส่ง PWM ถึงจะมีเสียง</p></div>
+  </div>
+
+  <div class="blk">
+    <div class="hd"><h3>C · IR LED — วงจรขับ</h3><span class="tag done">เสร็จแล้ว</span></div>
+    <p>เป็น low-side switch มาตรฐาน กระแสไหลลงจาก 5V ผ่าน LED แล้วออกที่ทรานซิสเตอร์</p>
+    <div class="tw"><table>
+      <thead><tr><th>จุด</th><th>ต่อกับ</th></tr></thead>
+      <tbody>
+        <tr><td>รางบน</td><td><span class="m">5V</span> → R16–R19 120Ω 1206</td></tr>
+        <tr><td>IR1–IR4</td><td>anode รับจาก R · cathode ลงรางล่าง</td></tr>
+        <tr><td>รางล่าง</td><td>Q3 <strong>collector</strong></td></tr>
+        <tr><td>Q3 emitter</td><td><span class="m">GND</span></td></tr>
+        <tr><td>Q3 base</td><td>R3 1kΩ ← <span class="m">GPIO21</span></td></tr>
+      </tbody>
+    </table></div>
+    <p>กระแสต่อดวง ≈ 29mA รวม 4 ดวง ≈ 116mA ซึ่ง SS8050 รับได้ถึง 700mA</p>
+  </div>
+
+  <div class="blk">
+    <div class="hd"><h3>D · LED สถานะ</h3><span class="tag done">เสร็จแล้ว</span></div>
+    <div class="tw"><table>
+      <thead><tr><th>LED</th><th>เส้นทาง</th></tr></thead>
+      <tbody>
+        <tr><td>เขียว (LED1)</td><td><span class="m">GPIO47</span> → R11 470Ω → LED1 → <span class="m">GND</span></td></tr>
+        <tr><td>แดง (LED2)</td><td><span class="m">GPIO40</span> → R12 470Ω → LED2 → <span class="m">GND</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="note warn"><p><strong>ตอนวาง PCB</strong> วาง LED แดงไว้ริมบอร์ดหันออกด้านข้าง อย่าหันเข้าหน้าคนขับ — ให้เห็นด้วยหางตาก็พอ</p></div>
+  </div>
+
+  <div class="blk">
+    <div class="hd"><h3>E · ปุ่ม USER</h3><span class="tag todo">ต้องเพิ่ม</span></div>
+    <ol class="steps">
+      <li>วาง Tactile switch 6×6mm ตั้งชื่อ <code>SW1</code> ขาหนึ่งไป <code>GPIO41</code> อีกขาไป <code>GND</code></li>
+      <li>เพิ่ม R 10kΩ จาก <code>GPIO41</code> ขึ้น <code>3V3</code> เป็น pull-up</li>
+      <li>เพิ่ม C 100nF คร่อมปุ่ม ช่วย debounce</li>
+    </ol>
+    <p>ในโค้ดใช้ <code>INPUT_PULLUP</code> แล้วอ่านค่า LOW เมื่อกด</p>
+  </div>
+
+  <div class="blk">
+    <div class="hd"><h3>F · กล้อง OV5640 — FPC 24P</h3><span class="tag todo">เสี่ยงสุด</span></div>
+    <p>สายกล้อง 16 เส้นต้องเรียงตรงตาม pinout ที่กำหนดไว้ ตรวจซ้ำทีละเส้นก่อนสั่งผลิต</p>
+    <div class="tw"><table>
+      <thead><tr><th>สัญญาณ</th><th>GPIO</th><th>สัญญาณ</th><th>GPIO</th></tr></thead>
+      <tbody>
+        <tr><td>XCLK</td><td><span class="m">15</span></td><td>D0 / Y2</td><td><span class="m">11</span></td></tr>
+        <tr><td>PCLK</td><td><span class="m">13</span></td><td>D1 / Y3</td><td><span class="m">9</span></td></tr>
+        <tr><td>VSYNC</td><td><span class="m">6</span></td><td>D2 / Y4</td><td><span class="m">8</span></td></tr>
+        <tr><td>HREF</td><td><span class="m">7</span></td><td>D3 / Y5</td><td><span class="m">10</span></td></tr>
+        <tr><td>SIOD</td><td><span class="m">4</span></td><td>D4 / Y6</td><td><span class="m">12</span></td></tr>
+        <tr><td>SIOC</td><td><span class="m">5</span></td><td>D5 / Y7</td><td><span class="m">18</span></td></tr>
+        <tr><td>PWDN</td><td>ไม่ต่อ</td><td>D6 / Y8</td><td><span class="m">17</span></td></tr>
+        <tr><td>RESET</td><td>ไม่ต่อ</td><td>D7 / Y9</td><td><span class="m">16</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="note stop">
+      <p><strong>จุดที่พลาดแล้วบอร์ดใช้ไม่ได้เลย</strong></p>
+      <p>คอนเนคเตอร์ FPC มีสองแบบ — <strong>top contact</strong> กับ <strong>bottom contact</strong> ถ้าเลือกผิดด้าน สายกล้องจะเสียบกลับข้าง แก้ไม่ได้ ต้องสั่งบอร์ดใหม่ ตรวจให้ชัดในหน้าสินค้า LCSC ก่อนวาง</p>
+    </div>
+    <div class="note warn">
+      <p><strong>ต้องทดสอบก่อนสั่ง PCB</strong> — โมดูล OV5640 ส่วนใหญ่มี IR-cut filter ที่บล็อกแสงอินฟราเรดทั้ง 850 และ 940nm ถ้าโมดูลที่มีอยู่มีฟิลเตอร์ IR LED ทั้ง 4 ดวงจะไม่ช่วยอะไรเลย ให้ทดลองส่อง IR ในที่มืดแล้วดูว่าภาพสว่างขึ้นไหม ถ้าไม่ ต้องหาโมดูลรุ่น <em>no IR filter</em> หรือ <em>night vision</em></p>
+    </div>
+  </div>
+
+  <div class="blk">
+    <div class="hd"><h3>G · ภาคจ่ายไฟ</h3><span class="tag todo">ต้องเพิ่ม</span></div>
+    <div class="tw"><table>
+      <thead><tr><th>ขั้น</th><th>อุปกรณ์</th><th>จ่ายให้</th></tr></thead>
+      <tbody>
+        <tr><td>12V → 5V</td><td>MP1584EN</td><td>ESP32, Buzzer, IR LED</td></tr>
+        <tr><td>5V → 3.3V</td><td>AMS1117-3.3</td><td>MPU6050, OLED</td></tr>
+      </tbody>
+    </table></div>
+    <ul class="plain">
+      <li>ใส่ C 100µF ที่อินพุต 12V และ C 22µF ที่เอาต์พุต 5V</li>
+      <li>ใส่ C 100nF ใกล้ขาไฟของทุก IC</li>
+      <li>ใส่ฟิวส์ 1A และ diode กันต่อกลับขั้วที่อินพุต — ไฟรถมีสัญญาณรบกวนสูงและอาจกระชากถึง 40V ตอนสตาร์ท</li>
+    </ul>
+    <div class="note stop"><p><strong>ห้ามให้ VBUS จาก USB ต่อตรงกับ net 5V</strong> ที่ MP1584EN จ่ายอยู่ ไฟสองแหล่งจะตีกัน ถ้าจะเก็บพอร์ต USB ไว้ต้องมี Schottky diode กั้น หรือตัดภาค USB-C กับ CH221K ออกไปเลยเพราะบอร์ด GOOUUU มี USB ของตัวเองอยู่แล้ว</p></div>
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section id="check">
+  <h2><span class="num">05</span>รายการงานคงเหลือ</h2>
+  <p class="lede">เรียงตามลำดับที่ควรทำ — ข้อที่ติ๊กแล้วคือส่วนที่ตรวจ netlist แล้วผ่าน</p>
+
+  <ul class="chk">
+    <li class="d"><span class="box"></span><span>I2C — P1 OLED header + pull-up 4.7kΩ ต่อครบ</span></li>
+    <li class="d"><span class="box"></span><span>IR LED — ขั้ว ทิศกระแส และขา Q3 ถูกต้อง</span></li>
+    <li class="d"><span class="box"></span><span>LED เขียว GPIO47 · LED แดง GPIO40</span></li>
+    <li class="d"><span class="box"></span><span>R16–R19 เปลี่ยนเป็น 120Ω ขนาด 1206</span></li>
+    <li><span class="box"></span><span><strong>ลบสายค้างที่ทำให้ GPIO21 ลัดกับ GPIO42</strong> — คลิกเส้นที่ออกจาก U6 pin 34 แล้วดูว่าสาย SCL สว่างขึ้นด้วยไหม</span></li>
+    <li><span class="box"></span><span><strong>ลบ Q2, R1, R2</strong> แล้ววาง header J2 1×3 สำหรับบัซเซอร์</span></li>
+    <li><span class="box"></span><span>วาง header J4 1×4 สำหรับ MPU-6050</span></li>
+    <li><span class="box"></span><span>เพิ่มปุ่ม USER + pull-up + debounce cap</span></li>
+    <li><span class="box"></span><span>ทดสอบ IR กับกล้องจริง ก่อนตัดสินใจเรื่อง FPC</span></li>
+    <li><span class="box"></span><span>วาง FPC 24P — ตรวจ top/bottom contact ให้ชัด</span></li>
+    <li><span class="box"></span><span>เพิ่มภาคจ่ายไฟ MP1584EN + AMS1117 + ฟิวส์ + diode</span></li>
+    <li><span class="box"></span><span>ตัดภาค USB-C และ CH221K ออก</span></li>
+    <li><span class="box"></span><span>ผูก LCSC part number ให้ครบทุกตัว แล้วเช็ค stock</span></li>
+    <li><span class="box"></span><span>รัน DRC ให้ผ่านหมด ไม่มี net ที่มีขาเดียว</span></li>
+  </ul>
+
+  <div class="note ok">
+    <p><strong>ก่อนกดสั่งผลิต</strong> ตรวจสามอย่างนี้ให้ครบ — ทิศทาง FPC contact, ค่าตัวต้านทานทุกตัวและขนาด package, และ DRC ต้องไม่เหลือ error ทั้งสามข้อนี้คือสาเหตุที่บอร์ดกลับมาแล้วใช้ไม่ได้บ่อยที่สุด</p>
+  </div>
+</section>
+
+<footer>
+  Driver Drowsiness Detection with TinyML · กลุ่ม 17<br>
+  Embedded System 03603323 · มหาวิทยาลัยเกษตรศาสตร์ วิทยาเขตศรีราชา · 2026
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# ML datasets and training outputs
+ml/data/
+ml/output/
+
+# Arduino / ESP-IDF build output
+build/
+*.bin
+*.elf
+*.map
+
+# Office lock files and OS clutter
+~$*
+Thumbs.db
+desktop.ini
+.DS_Store
