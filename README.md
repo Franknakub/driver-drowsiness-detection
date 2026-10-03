@@ -11,11 +11,11 @@ LDR วัดแสง → มืด? → เปิด IR LED → กล้อ�
 
 PCB ในโปรเจกต์นี้เป็น **carrier board** ไม่ได้ประมวลผลเอง โมดูล ESP32-S3-CAM (N16R8) เสียบลงบน header 2×20 ส่วนบอร์ดทำหน้าที่จ่ายไฟและเดินสายไปเซนเซอร์กับตัวเตือน กล้องเสียบที่ FPC ของโมดูลโดยตรง ไม่ผ่าน PCB
 
-## สถานะ (2 ต.ค. 2026)
+## สถานะ (3 ต.ค. 2026)
 
 | ส่วน | สถานะ |
 |---|---|
-| Schematic + PCB | เสร็จ, DRC 0 error, สั่งผลิตที่ JLCPCB แล้ว (ชุด 31 ส.ค.) |
+| Schematic + PCB | **v2 เสร็จ** DRC 0 error ไฟล์ผลิตอยู่ที่ `hardware/fabrication/2026-10-03_v2/` (v1 มี header เป็นภาพกระจก ใช้กับโมดูลไม่ได้) |
 | ตรวจบอร์ดโมดูล | ESP32-S3 rev2, Flash 16 MB, PSRAM 8 MB, กล้อง **OV5640** |
 | Firmware | มีสเก็ตช์ตรวจฮาร์ดแวร์ ตัวจริงยังไม่เริ่ม ดูแผน |
 | ML | เลือก dataset แล้ว (MRL Eye) ยังไม่ train |
@@ -30,8 +30,8 @@ docs/
   reviews/                  รีวิว schematic/PCB วันที่ 14 ส.ค.
   archive/early-design/     เอกสารออกแบบช่วงแรก (ใช้ไฟ 12V, มี IMU) เก็บไว้อ้างอิงเท่านั้น
 hardware/
-  easyeda/                  ไฟล์โปรเจกต์ EasyEDA Pro (.epro2)
-  fabrication/              Gerber + BOM + Pick and Place
+  easyeda/                  ไฟล์โปรเจกต์ EasyEDA Pro v2 (.epro2) · archive/ = v1
+  fabrication/2026-10-03_v2 Gerber + BOM + Pick and Place ชุดล่าสุด · archive/ = ชุดเก่า
 firmware/
   DrowsinessDiag/           สเก็ตช์ตรวจบอร์ด กล้อง และทดสอบ IR filter
 ml/                         แผน dataset และการ train

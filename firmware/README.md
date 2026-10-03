@@ -30,6 +30,8 @@ arduino-cli upload -p COM6 --fqbn "$FQBN" firmware/DrowsinessDiag
 | `303A:4001` | USB CDC ที่สเก็ตช์สร้าง | ❌ esptool รีเซ็ตไม่ได้ |
 | `1A86:55D3` | ชิป CH343 (UART) | ⚠️ auto-reset ไม่ทำงาน ต้องกดปุ่มเอง |
 
+ถ้าโมดูลเสียบอยู่บน PCB ให้เลื่อน **SW1 ไปที่ OFF** ก่อนเสียบสายคอม (ขา 5V ของโมดูลต่อตรงกับราง 5V ของบอร์ด) และ USB-C บน PCB (USB1) รับไฟอย่างเดียว แฟลชไม่ได้
+
 ลำดับที่ใช้ได้: ถอดสาย → กด BOOT ค้าง → เสียบช่อง native USB → รอ 2 วิ → ปล่อย BOOT → เช็คว่าได้ `303A:1001` → compile + upload → กด RST 1 ครั้ง
 
 | error | สาเหตุ |
