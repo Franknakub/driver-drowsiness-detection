@@ -3,7 +3,7 @@
 | สเก็ตช์ | หน้าที่ |
 |---|---|
 | `DrowsinessDiag/` | ตรวจ Flash/PSRAM, ระบุรุ่นกล้อง, ทดสอบ IR-cut filter (ล็อก exposure แล้วนับพิกเซลสว่าง) |
-| `DrowsyFW/` | firmware ตัวจริง ยังไม่ได้เขียน ดูโครงสร้างที่วางไว้ใน [docs/firmware-plan.html](../docs/firmware-plan.html) |
+| `DrowsyFW/` | firmware ตัวจริง (PlatformIO) ตอนนี้มีกล้อง + โมเดลตาเปิด/ปิด ดู [DrowsyFW/README.md](DrowsyFW/README.md) |
 
 ## Toolchain
 
