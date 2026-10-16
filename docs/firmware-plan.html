@@ -2,8 +2,9 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>แผน Firmware ตรวจจับความง่วง</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
@@ -16,7 +17,7 @@
   --line: #d8e0da;
   --mask: #1f6b4a;      /* solder mask green — accent */
   --mask-soft: #e3efe8;
-  --copper: #a85a22;    /* copper — "ต้องแก้" */
+  --copper: #a85a22;    /* copper — "ต้องระวัง" */
   --copper-soft: #f6e9de;
   --warn: #b3261e;
   --warn-soft: #fbe7e5;
@@ -38,8 +39,8 @@
   --warn: #ff8a80; --warn-soft: #3d1b19; --code-bg: #1f2923; color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15.5px; line-height: 1.7; }
-.wrap { max-width: 920px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: grid; gap: 44px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15.5px; line-height: 1.7; }
+.wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px; display: grid; gap: 44px; }
 header { display: grid; gap: 10px; border-bottom: 2px solid var(--mask); padding-bottom: 24px; }
 .eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--mask); }
 h1 { font-family: var(--f-display); font-size: clamp(28px, 5vw, 40px); line-height: 1.2; margin: 0; text-wrap: balance; }
@@ -47,6 +48,7 @@ h2 { font-family: var(--f-display); font-size: 23px; margin: 0; text-wrap: balan
 h2 .n { font-family: var(--f-mono); font-size: 14px; color: var(--mask); font-weight: 500; }
 h3 { font-family: var(--f-display); font-size: 17px; margin: 0; }
 p { margin: 0; max-width: 68ch; }
+a { color: var(--mask); }
 .lede { color: var(--muted); max-width: 68ch; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13.5px; color: var(--muted); }
 .meta b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -60,7 +62,7 @@ table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 620p
 th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 th { font-family: var(--f-display); font-weight: 600; font-size: 13.5px; background: var(--mask-soft); }
 tr:last-child td { border-bottom: 0; }
-td:first-child { font-weight: 600; white-space: nowrap; }
+td:first-child { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pill { display: inline-block; font-family: var(--f-mono); font-size: 11.5px; padding: 1px 8px; border-radius: 99px; white-space: nowrap; }
 .pill.rec { background: var(--mask-soft); color: var(--mask); }
 .pill.fix { background: var(--copper-soft); color: var(--copper); }
@@ -70,17 +72,14 @@ td:first-child { font-weight: 600; white-space: nowrap; }
 .callout.ok { border-left-color: var(--mask); background: var(--mask-soft); }
 .callout strong { font-family: var(--f-display); }
 .files { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 24px; font-size: 14px; }
-.files div { display: grid; grid-template-columns: 9.5em 1fr; gap: 8px; border-bottom: 1px dashed var(--line); padding-block: 5px; min-width: 0; }
-.files code { background: none; padding: 0; color: var(--mask); }
+.files div { display: grid; grid-template-columns: 10.5em 1fr; gap: 8px; border-bottom: 1px dashed var(--line); padding-block: 5px; min-width: 0; }
+.files code { background: none; padding: 0; color: var(--mask); overflow-wrap: anywhere; }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 .cols > div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
-.decide { counter-reset: d; list-style: none; padding: 0; display: grid; gap: 10px; }
-.decide li { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px 12px 52px; position: relative; }
-.decide li::before { counter-increment: d; content: counter(d); position: absolute; left: 16px; top: 12px; width: 24px; height: 24px; border-radius: 50%; background: var(--mask); color: var(--surface); font-family: var(--f-mono); font-size: 13px; display: grid; place-items: center; }
 footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
 @media (max-width: 520px) { .files div { grid-template-columns: 1fr; gap: 0; } }
 </style>
-<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"; mermaid.initialize({ startOnLoad: true });</script>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs"; mermaid.initialize({ startOnLoad: true });</script>
 </head>
 <body>
 
@@ -88,206 +87,281 @@ footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line)
 <header>
   <div class="eyebrow">Embedded System 03603323 · กลุ่ม 17 · ESP32-S3 N16R8 + OV5640</div>
   <h1>แผน Firmware ระบบตรวจจับความง่วงของคนขับ</h1>
-  <p class="lede">ตอนนี้เหลือเวลาราว 4.5 สัปดาห์ แผนนี้เลยให้ทำระบบให้ครบวงจรแบบหยาบก่อน แล้วค่อยเพิ่มความแม่นทีหลัง งานแบ่งเป็น 2 สายให้ทำขนานกัน สายแรกคือ ML สายที่สองคือ firmware กับเว็บ</p>
+  <p class="lede">workflow ของอุปกรณ์ตั้งแต่กล้องเห็นหน้าจนถึง dashboard ประวัติ พร้อมแผนรายวันถึงวันส่ง firmware, ML และ dashboard ทำคนเดียวบน branch <code>firmware</code> คำศัพท์ทุกคำในหน้านี้ใช้ตาม <a href="../GLOSSARY.md">GLOSSARY.md</a></p>
   <div class="meta">
-    <span>อัปเดต <b>2 ต.ค. 2026</b></span>
+    <span>อัปเดต <b>16 ต.ค. 2026</b></span>
     <span>ส่งงาน <b>3–5 พ.ย. 2026</b></span>
-    <span>Core <b>esp32 3.3.12</b></span>
+    <span>Core <b>esp32 3.3.12</b> (มี ESP-DL 3.3.11 + TFLite Micro 1.4.0)</span>
     <span>Partition <b>app3M_fat9M_16MB</b></span>
   </div>
 </header>
 
 <section>
-  <h2><span class="n">1</span>โครงสร้าง firmware</h2>
-  <p>งานแยกตาม core ของ ESP32-S3 ฝั่ง Core 1 ทำงานภาพกับ ML ฝั่ง Core 0 ซึ่งมี WiFi stack อยู่แล้วให้ดูแลเว็บและการแจ้งเตือน ทั้งสองฝั่งคุยกันผ่าน struct สถานะกลางที่ล็อกด้วย mutex</p>
+  <h2><span class="n">1</span>Workflow ทั้งระบบ</h2>
+  <p>Device ตัดสินและเตือนเองทั้งหมดโดยไม่ต้องใช้เน็ต (<a href="adr/0001-decide-and-alert-on-device.md">ADR 0001</a>) ส่วนประวัติเก็บลง flash ก่อนเสมอ แล้วค่อย Sync ขึ้น Supabase เมื่อมีเน็ต (<a href="adr/0002-device-first-history-synced-to-supabase.md">ADR 0002</a>) ภาพดิบไม่ออกจาก Device ยกเว้นตอน Driver เปิดดูภาพสดหรือดาวน์โหลดภาพ dataset เอง</p>
 <pre class="mermaid">
 flowchart LR
-  subgraph C1["Core 1 · vision_task"]
-    CAM["กล้อง OV5640<br/>grayscale SVGA"] --> EYE["หาตา<br/>crop 96×96"] --> ML["โมเดล<br/>P(ตาปิด)"] --> SM["state machine<br/>ระดับ 0–3"]
+  subgraph DEV["Device (ESP32-S3)"]
+    CAM["กล้อง OV5640"] --> FD["หาหน้า + จุดตา<br/>ESP-DL HumanFaceDetect"]
+    FD --> CROP["ตัด Eye Region<br/>ซ้าย/ขวา 64×64"]
+    CROP --> CLS["โมเดลตาเปิด/ปิด<br/>TFLite Micro INT8"]
+    CLS --> SM["Drowsiness Level<br/>PERCLOS · Microsleep<br/>Distraction · Unmonitored"]
+    SM --> AL["Alert<br/>buzzer · LED · OLED"]
+    SM --> LOG[("FFat<br/>Sample ทุก 1 วิ + Event")]
+    LDR["LDR"] --> IR["IR LED"]
+    LOG --> DD["Device Dashboard<br/>192.168.4.1"]
   end
-  SM --> ST[("shared_state<br/>+ mutex")]
-  ST --> AL["alert_task<br/>buzzer · LED · OLED"]
-  ST --> WEB["web_task (Core 0)<br/>WebSocket · stream · OTA"]
-  ST --> NT["notify_task (Core 0)<br/>แจ้งเตือนมือถือ"]
-  LDR["sensor_task<br/>LDR ทุก 500 ms"] --> IR["IR LED<br/>เปิด/ปิด ผ่าน Q3"]
+  LOG -- "Sync เมื่อมีเน็ต<br/>(hotspot / WiFi บ้าน)" --> SB[("Supabase<br/>trips · samples · events")]
+  SB --> CD["Cloud Dashboard<br/>GitHub Pages + login"]
 </pre>
-  <h3>ไฟล์ในสเก็ตช์ <code>DrowsyFW/</code></h3>
+  <ol>
+    <li><b>เปิดเครื่อง</b> = เริ่ม Trip ใหม่ (นับเลข boot ใน NVS) · ตรวจตัวเอง: กล้อง, PSRAM, FFat · ลองต่อ WiFi ที่บันทึกไว้ และเปิด AP ของตัวเองคู่กันตลอด</li>
+    <li><b>ทุกเฟรม</b>: หาหน้า → ได้จุดตา → ตัด Eye Region → โมเดลให้ P(ตาปิด) → รวมเป็น Eye State ของเฟรม</li>
+    <li><b>ทุกเฟรม</b>: อัปเดต PERCLOS (หน้าต่าง 60 วิ) และตัวจับเวลาตาปิดต่อเนื่อง → คำนวณ Drowsiness Level → สั่ง Alert</li>
+    <li><b>ทุก 1 วินาที</b>: เขียน Sample ลง FFat และเขียน Event ทันทีเมื่อระดับเปลี่ยน</li>
+    <li><b>เมื่อมีเน็ต</b>: ได้เวลาจริงจาก NTP · ทยอย Sync Sample/Event ที่ยังไม่ได้ส่งทุก 1 นาที · ข้อมูลที่ Sync ไม่ทันก่อนไฟดับ จะส่งตอนเปิดเครื่องครั้งถัดไป</li>
+    <li><b>ปิดเครื่อง</b> = Trip จบ (Device ไม่ต้องรู้ตัว) · Trip Summary คำนวณบน cloud จาก Sample</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="n">2</span>สิ่งที่ตัดสินใจแล้ว</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>เรื่อง</th><th>ข้อสรุป</th></tr></thead>
+    <tbody>
+      <tr><td>ที่ทำงาน</td><td>branch <code>firmware</code> ใน repo นี้ · firmware + ML + dashboard ทำคนเดียว</td></tr>
+      <tr><td>ที่ตัดสินผล</td><td>บน Device ทั้งหมด ส่งออกแค่ตัวเลขกับ Event</td></tr>
+      <tr><td>หาตา</td><td><b>B</b> ESP-DL HumanFaceDetect · วันแรกทดลองให้ผ่าน 3 ข้อ ถ้าไม่ผ่านถอยไปใช้ <b>A</b> (กรอบคงที่)</td></tr>
+      <tr><td>Toolchain</td><td>arduino-cli + core 3.3.12 ต่อ (ไม่ต้องใช้ ESP-IDF เพราะ ESP-DL มากับ core แล้ว)</td></tr>
+      <tr><td>Train</td><td>Keras บน Colab · CNN เล็ก 64×64 grayscale · INT8 · TFLite Micro</td></tr>
+      <tr><td>Trip</td><td>เปิดไฟถึงไฟดับ</td></tr>
+      <tr><td>เวลาจริง</td><td>NTP ผ่าน hotspot + เวลาจาก browser ตอนเปิด Device Dashboard · ถ้าไม่ได้ทั้งคู่ ให้ติดป้าย "ไม่ทราบเวลา" · ไม่เพิ่ม RTC</td></tr>
+      <tr><td>Log</td><td>Sample ทุก 1 วิ + Event (~72 KB/ชม.)</td></tr>
+      <tr><td>Cloud</td><td>Supabase · Sync ระหว่างขับ · 1 แถวต่อ Sample · Driver login ด้วยอีเมล · Device เขียนผ่าน Edge Function</td></tr>
+      <tr><td>ลบข้อมูลบน Device</td><td>ลบเฉพาะที่ Sync แล้วเมื่อ FFat ถึง 80% (ลบเก่าสุดก่อน) · <b>ห้ามลบข้อมูลที่ยังไม่ได้ Sync</b></td></tr>
+      <tr><td>เน็ตในรถ</td><td>hotspot มือถือ + WiFi บ้าน บันทึกได้หลายเครือข่าย</td></tr>
+      <tr><td>Dashboard</td><td>Device = สถานะสด / ตั้งค่า / dataset / Trip ที่ยังไม่ Sync · Cloud = ประวัติ / Trip Summary / แนวโน้ม</td></tr>
+      <tr><td>หยุด Alert</td><td>หยุดเองเมื่อลืมตา · ปิดเสียงจาก Device Dashboard ได้เฉพาะระดับ 1–2 · <b>ระดับ 3 ปิดไม่ได้</b></td></tr>
+      <tr><td>แว่นดำ / ภาพอ่านไม่ได้</td><td>สถานะ Unmonitored · งด Alert เรื่องความง่วง · แสดงบน OLED · นับ % ใน Trip Summary</td></tr>
+      <tr><td>ภาพ dataset</td><td>ดาวน์โหลด zip จาก Device Dashboard · ไม่ขึ้น cloud</td></tr>
+      <tr><td>ทดสอบ</td><td>สคริปต์จำลองที่โต๊ะหรือในรถที่จอดอยู่ · ห้ามแกล้งหลับขณะรถวิ่ง</td></tr>
+      <tr><td>ไม่ทำ</td><td>LINE Notify (ปิดบริการแล้ว) · Edge Impulse · EAR · ตรวจการหาว · ใช้ blink rate ตัดสินความง่วง</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">3</span>โครงสร้าง firmware</h2>
+  <p>Core 1 ทำงานภาพกับ ML ส่วน Core 0 ซึ่งมี WiFi stack อยู่แล้ว ดูแลเว็บ log และ Sync ทั้งสองฝั่งคุยกันผ่าน <code>shared_state</code> ที่ล็อกด้วย mutex <b>ห้ามส่ง camera <code>fb</code> ข้าม core</b> ให้คัดลอกเฟรมที่ย่อแล้วไว้ใน buffer กลาง</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Task</th><th>Core</th><th>งาน</th></tr></thead>
+    <tbody>
+      <tr><td><code>vision_task</code></td><td>1</td><td>ดึงเฟรม → หาหน้า → ตัด Eye Region → โมเดล → Eye State → Drowsiness Level</td></tr>
+      <tr><td><code>alert_task</code></td><td>1</td><td>buzzer / LED / OLED ตามระดับและสถานะปิดเสียง · buzzer เป็น active-LOW ต้อง <code>digitalWrite(14, HIGH)</code> ตั้งแต่ต้น <code>setup()</code></td></tr>
+      <tr><td><code>sensor_task</code></td><td>1</td><td>LDR ทุก 500 ms + hysteresis → เปิด/ปิด IR</td></tr>
+      <tr><td><code>log_task</code></td><td>0</td><td>เขียน Sample ทุก 1 วิ + Event ลง FFat · จัดการพื้นที่ 80%</td></tr>
+      <tr><td><code>net_task</code></td><td>0</td><td>ลอง WiFi ที่บันทึกไว้ทุก 1 นาที · เปิด AP <code>Drowsy-XXXX</code> คู่กัน · NTP</td></tr>
+      <tr><td><code>sync_task</code></td><td>0</td><td>ส่ง Sample/Event ที่ยังไม่ส่ง ครั้งละ 60 แถวผ่าน HTTPS · ติดป้าย synced เมื่อ cloud ตอบรับ</td></tr>
+      <tr><td><code>web_task</code></td><td>0</td><td>Device Dashboard: HTTP, WebSocket, ภาพสด, OTA, ดาวน์โหลด dataset</td></tr>
+    </tbody>
+  </table></div>
+  <h3>ไฟล์ใน <code>firmware/DrowsyFW/</code></h3>
   <div class="files">
-    <div><code>DrowsyFW.ino</code><span>setup() สร้าง task อย่างเดียว</span></div>
-    <div><code>config.h/.cpp</code><span>ขา GPIO, ค่า default, NVS</span></div>
+    <div><code>DrowsyFW.ino</code><span><code>setup()</code> สร้าง task อย่างเดียว</span></div>
+    <div><code>config.h</code><span>GPIO, เกณฑ์ default, คีย์ NVS</span></div>
+    <div><code>secrets.h</code><span>WiFi, URL Supabase, secret ของ Device · <b>ไม่ commit</b> (มี <code>secrets.example.h</code> ให้)</span></div>
     <div><code>shared_state.h</code><span>struct สถานะกลาง + mutex</span></div>
     <div><code>camera.cpp</code><span>init กล้อง, ล็อก/ปลด AEC</span></div>
-    <div><code>eye_locator.cpp</code><span>หาตำแหน่งตา (ข้อ 2)</span></div>
-    <div><code>ml_inference.cpp</code><span>ให้ค่า P(closed)</span></div>
-    <div><code>drowsiness.cpp</code><span>smoothing, PERCLOS, ระดับเตือน</span></div>
-    <div><code>alert.cpp</code><span>buzzer, LED, OLED</span></div>
-    <div><code>ir_light.cpp</code><span>LDR + คุม IR</span></div>
-    <div><code>web_server.cpp</code><span>HTTP, WebSocket, stream, OTA</span></div>
-    <div><code>notify.cpp</code><span>ส่งแจ้งเตือนผ่านเน็ต</span></div>
+    <div><code>face_eye.cpp</code><span>ESP-DL HumanFaceDetect → จุดตา (ทาง B)</span></div>
+    <div><code>eye_region_fixed.cpp</code><span>กรอบคงที่ (ทาง A) ใช้เมื่อ B ไม่ผ่าน</span></div>
+    <div><code>eye_classifier.cpp</code><span>TFLite Micro → P(ตาปิด)</span></div>
+    <div><code>drowsiness.cpp</code><span>hysteresis, PERCLOS, Level, Distraction, Unmonitored</span></div>
+    <div><code>alert.cpp</code><span>buzzer, LED, OLED, ปิดเสียง</span></div>
+    <div><code>ir_light.cpp</code><span>LDR + IR</span></div>
+    <div><code>trip_log.cpp</code><span>ไฟล์ Trip ใน FFat, cursor ของ Sync</span></div>
+    <div><code>net.cpp</code><span>WiFi หลายเครือข่าย, AP, NTP</span></div>
+    <div><code>sync.cpp</code><span>ส่งข้อมูลขึ้น Supabase Edge Function</span></div>
+    <div><code>web_server.cpp</code><span>Device Dashboard + OTA</span></div>
+    <div><code>data/</code><span>ไฟล์หน้าเว็บ gzip + Chart.js (ต้องฝังในเครื่อง เพราะตอนต่อ AP ไม่มีเน็ต)</span></div>
   </div>
+  <ul>
+    <li><b>Library:</b> <code>ESP32Async/ESPAsyncWebServer</code> + <code>AsyncTCP</code> · OLED ใช้ <code>Wire.begin(42, 1)</code> (SDA=42, SCL=1 สลับกับ GPIO map)</li>
+    <li><b>OTA ทำให้เสร็จก่อนงานอื่น</b> จะได้ไม่ต้องกด BOOT/RST ทุกครั้ง partition มี <code>ota_0</code>/<code>ota_1</code> แล้ว</li>
+    <li><b>IR:</b> R16–R19 (120Ω 1206) ไม่เกินพิกัด เปิด IR ค้างได้ · LDR ต้องคาลิเบรต ADC ใหม่ เพราะ R1 ต่ออยู่กับ 3V3</li>
+  </ul>
 </section>
 
 <section>
-  <h2><span class="n">2</span>ML: ยังขาดขั้นตอนหาตา</h2>
-  <p>โมเดลรับภาพตาขนาด 96×96 แต่กล้องส่งมาทั้งเฟรม เอกสารเดิมยังไม่ได้บอกว่าจะ crop ตาออกมาอย่างไร มี 3 ทางให้เลือก</p>
-  <div class="scroll"><table>
-    <thead><tr><th>ทาง</th><th>วิธี</th><th>ข้อดี</th><th>ความเสี่ยง</th></tr></thead>
-    <tbody>
-      <tr><td>A <span class="pill rec">MVP</span></td><td>กรอบตาคงที่ ตั้งครั้งเดียวจากหน้าเว็บ</td><td>ง่ายที่สุด ใช้ MRL train ได้เลย</td><td>ถ้าขยับหัว ตาจะหลุดกรอบ</td></tr>
-      <tr><td>B <span class="pill rec">อัปเกรด</span></td><td>ใช้ face detection ของ ESP-DL ซึ่งให้จุดตำแหน่งตา แล้วค่อย crop</td><td>แม่นที่สุด ยังใช้ MRL ได้</td><td>ไม่มี ESP-DL มากับ core 3.3.12 อาจต้องย้ายไป PlatformIO/ESP-IDF</td></tr>
-      <tr><td>C</td><td>Edge Impulse FOMO ตรวจ <code>eye_open</code>/<code>eye_closed</code> จากทั้งเฟรม</td><td>อยู่ใน Arduino ได้ ใช้โมเดลเดียว</td><td>ต้องถ่ายและ label ภาพเองหลายร้อยรูป ตาเล็กมากเมื่อเทียบกับ grid</td></tr>
-    </tbody>
-  </table></div>
+  <h2><span class="n">4</span>Vision และ ML</h2>
   <div class="cols">
     <div>
-      <h3>Train</h3>
+      <h3>หาตา (ทาง B)</h3>
       <ul>
-        <li>ใช้ MRL Eye dataset (grayscale มีภาพ IR) แยก 2 class คือตาเปิดกับตาปิด</li>
-        <li>MobileNetV2 96×96 grayscale INT8 บน Edge Impulse แล้ว export เป็น Arduino library</li>
-        <li>สัปดาห์ 1 ต้องเช็คว่า library ที่ได้ compile กับ core 3.3.12 ผ่าน</li>
+        <li>HumanFaceDetect (MSR + MNP) ให้กรอบหน้าและจุด 5 จุด เราใช้แค่จุดตาซ้าย/ขวา</li>
+        <li>Eye Region = สี่เหลี่ยมจัตุรัสรอบจุดตา ขนาดตามระยะห่างระหว่างตาสองข้าง จึงปรับตามระยะห่างจากกล้องเอง</li>
+        <li>หาหน้าไม่เจอ ≥ 3 วิ → Distraction</li>
+        <li>ถ้าช้าเกินไป ให้หาหน้าทุก 3–5 เฟรม แล้วใช้ตำแหน่งตาล่าสุดในเฟรมที่เหลือ</li>
+        <li>HumanFaceDetect น่าจะรับภาพสี ส่วนโมเดลตาใช้ grayscale รูปแบบเฟรมจากกล้องให้ตัดสินหลังทดลองวันแรก</li>
       </ul>
     </div>
     <div>
-      <h3>Fine-tune ด้วยภาพจริง</h3>
+      <h3>ทดลองวันแรก <span class="pill gate">gate</span></h3>
+      <ol>
+        <li>สเก็ตช์ที่ include <code>esp-dl</code> จาก core และไฟล์โมเดล <code>.espdl</code> ของ human_face_detect compile ผ่าน</li>
+        <li>บนบอร์ดจริงได้จุดตาที่ตรงกับหน้าจริง (ดูจากภาพสดที่วาดจุดไว้)</li>
+        <li>วัดเวลาหาหน้าต่อเฟรมได้</li>
+      </ol>
+      <p>ไม่ผ่านภายใน 1 วัน → ใช้ทาง A: Driver ลากกรอบครอบตาบน Device Dashboard ครั้งเดียว</p>
+    </div>
+  </div>
+  <h3>Train โมเดลตาเปิด/ปิด</h3>
+  <ol>
+    <li><b>ข้อมูล:</b> MRL Eye Dataset (84,898 ภาพ, 37 คน) วางไว้ที่ <code>ml/data/</code> · label อยู่ในชื่อไฟล์ <code>eyestate</code> 0 = ปิด, 1 = เปิด</li>
+    <li><b>แบ่ง train/val/test ตาม subject ID</b> ไม่สุ่มรายภาพ ไม่งั้นความแม่นสูงเกินจริง</li>
+    <li><b>Preprocess:</b> grayscale → 64×64 → normalize · <b>บอร์ดต้องใช้ฟังก์ชันเดียวกันทุกขั้น</b> ทำ "golden test" โดยส่ง crop ชุดเดียวกันเข้าทั้ง PC และบอร์ด แล้วเทียบค่า P ให้ตรงกัน</li>
+    <li><b>โมเดล:</b> CNN เล็ก 3–4 ชั้น conv + augmentation (ความสว่าง, blur, พลิกซ้ายขวา) ใน <code>ml/train.ipynb</code> บน Colab</li>
+    <li><b>Export:</b> INT8 แบบ full-integer ใช้ representative dataset → <code>.tflite</code> → แปลงเป็น <code>model_data.h</code></li>
+    <li><b>Fine-tune:</b> เก็บภาพจากกล้องเราเองด้วยโหมด dataset ราว 300–500 ภาพต่อ class ให้ครบกลางวัน กลางคืน ใส่แว่น และไม่ใส่แว่น</li>
+    <li><b>วัดผล:</b> accuracy/recall ของ class ตาปิด บนชุด test (คนที่ไม่เคยเห็น) + บนภาพของเราเอง · เวลา inference บนบอร์ด</li>
+  </ol>
+  <div class="callout">
+    <strong>บทเรียนจาก DrowsyFW ที่ลบไปแล้ว</strong>
+    <p>ตัวเดิมใช้โมเดลขนาด 609 KB ใช้เวลา 223 ms ต่อเฟรม (ได้ ~4 fps) และตอบ P(ตาปิด) = 1.00 ทุกเฟรม สาเหตุที่น่าจะเป็นคือ preprocessing ไม่ตรงกับตอน train หรือ crop ไม่ได้อยู่บนตา ทั้งสองเรื่องนี้ golden test และภาพสดที่วาดกรอบไว้จะจับได้ backup ของตัวเดิมอยู่ที่ <code>Desktop\esp32-flash-backup\</code></p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">5</span>Logic ความง่วง</h2>
+  <p>Eye State ของแต่ละเฟรมได้จาก P(ตาปิด) ที่ผ่าน EMA และ hysteresis: เกิน 0.6 = ปิด, ต่ำกว่า 0.4 = เปิด, ระหว่างนั้น = ไม่แน่ใจ เกณฑ์ทุกตัวนับเป็นวินาทีด้วย <code>millis()</code> ไม่นับเป็นจำนวนเฟรม และปรับได้จาก Device Dashboard</p>
+  <div class="scroll"><table>
+    <thead><tr><th>สถานะ</th><th>เงื่อนไข (ค่าเริ่มต้น)</th><th>Alert</th><th>ปิดเสียงได้</th></tr></thead>
+    <tbody>
+      <tr><td>Level 0 ปกติ</td><td>—</td><td>LED เขียว</td><td>—</td></tr>
+      <tr><td>Level 1 เริ่มล้า</td><td>PERCLOS (60 วิ) ≥ 15%</td><td>LED แดงกระพริบ + OLED</td><td>ได้</td></tr>
+      <tr><td>Level 2 ง่วง</td><td>ตาปิดต่อเนื่อง ≥ 1.5 วิ หรือ PERCLOS ≥ 25%</td><td>buzzer เป็นจังหวะ</td><td>ได้</td></tr>
+      <tr><td>Level 3 Microsleep</td><td>ตาปิดต่อเนื่อง ≥ 3 วิ</td><td>buzzer ดังค้าง</td><td><b>ไม่ได้</b></td></tr>
+      <tr><td>Distraction</td><td>หาหน้า/ตาไม่เจอ ≥ 3 วิ</td><td>buzzer สั้นๆ</td><td>ได้</td></tr>
+      <tr><td>Unmonitored</td><td>เห็นหน้า แต่ Eye State เป็น "ไม่แน่ใจ" ≥ 5 วิ หรือภาพมืด/สว่างเกินไป</td><td>OLED "ตรวจไม่ได้" · ไม่มี Alert เรื่องความง่วง</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>Alert หยุดเอง</b> เมื่อลืมตาต่อเนื่อง ≥ 1 วิ ระดับที่มาจาก PERCLOS จะลดลงเองเมื่อ PERCLOS ต่ำกว่าเกณฑ์</li>
+    <li><b>ปิดเสียง</b> จาก Device Dashboard ปิดได้เฉพาะ buzzer ของระดับ 1–2 และ Distraction (ค่าเริ่มต้น 5 นาที) ส่วน LED/OLED ยังทำงานอยู่</li>
+    <li>ต้องอ้างอิงเปเปอร์เรื่องเกณฑ์ PERCLOS ในรายงาน · blink rate แสดงในเว็บเท่านั้น ไม่ใช้ตัดสิน</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">6</span>ประวัติและการ Sync</h2>
+  <div class="cols">
+    <div>
+      <h3>บน Device (FFat 9.9 MB)</h3>
       <ul>
-        <li>ภาพ MRL ต่างจากภาพ OV5640 + IR ของเรา ถ้าไม่ fine-tune โมเดลมักแม่นบน PC แต่พังบนบอร์ด</li>
-        <li>เก็บภาพผ่านโหมดเก็บข้อมูลบนเว็บ (ข้อ 4)</li>
-        <li>วัดผลด้วยภาพของเราเอง และทั้ง pipeline ต้องได้อย่างน้อย 5 fps</li>
+        <li>1 Trip = 1 ไฟล์ <code>/trips/&lt;boot&gt;.bin</code> ประกอบด้วย header + Sample ขนาดคงที่ ~20 ไบต์ + ไฟล์ Event แยก</li>
+        <li>flush ลง flash ทุก 5–10 วิ ข้อมูลจะหายไม่เกินนี้เมื่อไฟดับ</li>
+        <li>เก็บ cursor ว่า Sync ไปถึงไหนแล้ว</li>
+        <li>header เก็บเวลาจริงทันทีที่ได้จาก NTP หรือ browser</li>
+        <li>เก็บได้ ~130 ชั่วโมง · ถึง 80% ให้ลบไฟล์ที่ Sync แล้วที่เก่าที่สุด · ถ้าเต็มไปด้วยข้อมูลที่ยังไม่ Sync ให้หยุดเก็บ Sample แต่ยังเก็บ Event</li>
+      </ul>
+    </div>
+    <div>
+      <h3>บน Supabase</h3>
+      <ul>
+        <li><code>trips</code> (device, boot, started_at, time_known)</li>
+        <li><code>samples</code> (trip, t วินาทีนับจากเริ่ม, eye_state, p_closed, perclos, level, lux, ir)</li>
+        <li><code>events</code> (trip, t, type, value)</li>
+        <li><code>trip_summary</code> เป็น SQL view คำนวณจาก samples</li>
+        <li>Device ส่งผ่าน Edge Function <code>ingest</code> ที่ตรวจ secret · Driver อ่านผ่าน Auth + RLS</li>
+        <li>~0.3 MB ต่อชั่วโมง free 500 MB เก็บได้ราว 1,500 ชั่วโมง</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout warn">
+    <strong>ข้อควรระวัง</strong>
+    <ul>
+      <li>repo เป็น public: <code>secrets.h</code> และ service key ของ Supabase ห้ามเข้า git เด็ดขาด</li>
+      <li>โปรเจกต์ Supabase แบบ free จะถูก pause ถ้าไม่มีการใช้งาน 7 วัน ให้เช็คก่อนวันเดโม</li>
+      <li>Sync ต้องรันใน task ของ Core 0 เท่านั้น เพราะ HTTPS ใช้เวลา 1–2 วิ ถ้ารันใน vision loop จะบล็อกการตรวจ</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">7</span>Dashboard</h2>
+  <div class="cols">
+    <div>
+      <h3>Device Dashboard</h3>
+      <p class="lede">เปิดจากมือถือที่ต่อ <code>Drowsy-XXXX</code> → <code>192.168.4.1</code> (หรือ <code>drowsy.local</code> ถ้าอยู่วงเดียวกัน)</p>
+      <ul>
+        <li>สถานะสด: Level, P(ตาปิด), PERCLOS, fps, แสง, IR ผ่าน WebSocket</li>
+        <li>ภาพสดพร้อมกรอบหน้าและ Eye Region (เปิดเฉพาะตอนกดดู)</li>
+        <li>ปุ่มปิดเสียง (ระดับ 1–2)</li>
+        <li>Settings: เกณฑ์, WiFi หลายเครือข่าย, โหมด IR → NVS</li>
+        <li>โหมด dataset: ปุ่ม "ตาเปิด" / "ตาปิด" → ดาวน์โหลด zip</li>
+        <li>Trip ที่ยังไม่ Sync พร้อมกราฟง่ายๆ · ส่งเวลาจาก browser ให้ Device</li>
+        <li>OTA</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Cloud Dashboard</h3>
+      <p class="lede">HTML + Chart.js บน GitHub Pages ใน <code>web/</code> · login ด้วยอีเมล</p>
+      <ul>
+        <li>รายการ Trip พร้อม Trip Summary: เวลาขับ, % ง่วง, จำนวน Microsleep, ตาปิดนานสุด, % Unmonitored</li>
+        <li>กราฟราย Trip: Level และ PERCLOS ตามเวลา พร้อมจุด Event</li>
+        <li>เพิ่มถ้ามีเวลา: แนวโน้มข้าม Trip, heatmap ช่วงเวลาที่ง่วงบ่อย, Export CSV</li>
       </ul>
     </div>
   </div>
 </section>
 
 <section>
-  <h2><span class="n">3</span>Logic ความง่วงที่ต้องแก้จากเอกสารเดิม</h2>
+  <h2><span class="n">8</span>แผนรายวันถึงวันส่ง</h2>
+  <p>PCB v2 ยังไม่มาถึงมือ (บอร์ด v1 ห้ามจ่ายไฟขณะเสียบโมดูล) ช่วงแรกจึงทำบนโมดูลเปล่า + breadboard · ฟีเจอร์ #2–#6 (เตือนให้พัก, แนวโน้ม, Telegram, CSV, ตรวจตัวเอง) ทำเฉพาะเมื่อเหลือเวลาหลังผ่านเป้าทุกขั้น</p>
   <div class="scroll"><table>
-    <thead><tr><th>เอกสารเดิม</th><th>ปัญหา</th><th>เปลี่ยนเป็น</th></tr></thead>
+    <thead><tr><th>ช่วง</th><th>Firmware</th><th>ML</th><th>Cloud / เว็บ</th><th>เป้าที่ต้องผ่าน</th></tr></thead>
     <tbody>
-      <tr><td>EAR &lt; 0.20</td><td>EAR ต้องใช้ landmark 6 จุดต่อตา แต่ classifier ไม่ให้ค่านี้</td><td><span class="pill fix">แก้</span> ใช้ P(closed) + EMA + hysteresis (เกิน 0.6 = ปิด, ต่ำกว่า 0.4 = เปิด)</td></tr>
-      <tr><td>45 / 90 / 150 frames</td><td>fps จริงได้แค่ 5–15</td><td><span class="pill fix">แก้</span> นับเป็น 1.5 / 3 / 5 วินาที ด้วย <code>millis()</code></td></tr>
-      <tr><td>PERCLOS &gt; 80%</td><td>80% มาจากนิยาม P80 (เปลือกตาปิดอย่างน้อย 80%) ไม่ใช่เกณฑ์สัดส่วนเวลา เกณฑ์ในงานวิจัยต่ำกว่านี้มาก</td><td><span class="pill fix">แก้</span> ใช้ sliding window 60 วินาทีตามเวลาจริง ปรับค่าได้จากเว็บ และอ้างอิงเปเปอร์ในรายงาน</td></tr>
-      <tr><td>Blink rate</td><td>การกระพริบตาใช้เวลา 100–400 ms ที่ 5 fps จับได้แค่ 0–2 เฟรม</td><td>แสดงในเว็บอย่างเดียว ไม่ใช้ตัดสินความง่วง</td></tr>
-      <tr><td>การหาว</td><td>โมเดลดูแค่ตา</td><td>ตัดออก</td></tr>
-      <tr><td>(ไม่มี)</td><td>ยังไม่มีกรณีที่หาตาไม่เจอ</td><td><span class="pill fix">เพิ่ม</span> สถานะ <code>NO_FACE</code></td></tr>
+      <tr><td>17 ต.ค.</td><td>ทดลองทาง B · ทดสอบ IR filter (10 นาที)</td><td>ดาวน์โหลด MRL, ทำ split ตาม subject</td><td>—</td><td><span class="pill gate">gate</span> เลือก B หรือ A · รู้ผล IR filter</td></tr>
+      <tr><td>18–20 ต.ค.</td><td>โครง task, shared_state, OTA, alert/OLED/LED/buzzer, LDR+IR</td><td>train baseline · INT8 · วัด inference บนบอร์ด · golden test</td><td>—</td><td>OTA ใช้ได้ · โมเดลรันบนบอร์ดได้</td></tr>
+      <tr><td>21–24 ต.ค.</td><td>vision pipeline ครบ · drowsiness.cpp · โหมด dataset + zip</td><td>เก็บภาพตัวเองกลางวัน/กลางคืน/แว่น</td><td>—</td><td><span class="pill gate">MVP</span> หลับตา 3 วิแล้ว buzzer ดัง</td></tr>
+      <tr><td>25–28 ต.ค.</td><td>trip_log, net (WiFi หลายตัว + AP + NTP), Device Dashboard, ปิดเสียง</td><td>fine-tune · วัดผลบนภาพของเรา</td><td>สร้างโปรเจกต์ Supabase · schema · Edge Function <code>ingest</code></td><td>ดูประวัติ Trip ใน Device Dashboard ได้</td></tr>
+      <tr><td>29 ต.ค.–1 พ.ย.</td><td>sync.cpp · ประกอบลง PCB v2 ถ้ามาถึงแล้ว</td><td>—</td><td>Cloud Dashboard: login, รายการ Trip, กราฟ, Trip Summary</td><td>Trip ขึ้น cloud แล้วดูกราฟได้ · <b>หยุดเพิ่มฟีเจอร์ 1 พ.ย.</b></td></tr>
+      <tr><td>2–4 พ.ย.</td><td colspan="3">ทดสอบตามสคริปต์ข้อ 9 · แก้บั๊ก · ถ่ายวิดีโอเดโม · เขียนรายงาน · เช็คว่า Supabase ไม่ถูก pause</td><td>ส่งงาน</td></tr>
     </tbody>
   </table></div>
 </section>
 
 <section>
-  <h2><span class="n">4</span>เว็บบนตัวบอร์ด</h2>
-  <p>ESP32 เป็นเว็บเซิร์ฟเวอร์เอง เพราะในรถไม่มีเน็ตบ้าน บอร์ดจะต่อ hotspot มือถือก่อน ถ้าต่อไม่ได้ภายใน 10 วินาทีจะเปิด AP ของตัวเองชื่อ <code>Drowsy-XXXX</code> ทั้งสองแบบเข้าผ่าน <code>drowsy.local</code> ได้</p>
+  <h2><span class="n">9</span>การทดสอบ</h2>
+  <div class="callout warn"><strong>ห้ามให้คนขับแกล้งหลับตาขณะรถวิ่ง</strong><p>สคริปต์ด้านล่างทำที่โต๊ะหรือในรถที่จอดอยู่ ส่วนตอนขับจริงให้คนอื่นขับปกติ เพื่อวัดการเตือนผิดเท่านั้น</p></div>
   <div class="scroll"><table>
-    <thead><tr><th>หน้า</th><th>มีอะไร</th></tr></thead>
+    <thead><tr><th>กรณี</th><th>ทำอะไร</th><th>ผลที่ควรได้</th></tr></thead>
     <tbody>
-      <tr><td>Dashboard</td><td>ระดับเตือน, กราฟ P(closed), PERCLOS, fps, ค่าแสง, สถานะ IR อัปเดตสดผ่าน WebSocket</td></tr>
-      <tr><td>Live view</td><td>ภาพสดพร้อมกรอบตา เปิดเฉพาะตอนกดดู เพราะกิน CPU</td></tr>
-      <tr><td>Settings</td><td>เกณฑ์เวลาเตือน, เปิด/ปิด buzzer, โหมด IR, เกณฑ์ LDR, WiFi, token แจ้งเตือน บันทึกลง NVS</td></tr>
-      <tr><td>Calibrate &amp; Data</td><td>ตั้งกรอบตา (ทาง A) และปุ่ม "ตาเปิด" / "ตาปิด" สำหรับเก็บภาพ crop ไปใช้ fine-tune</td></tr>
-      <tr><td>Event log</td><td>ประวัติการเตือน ใช้เวลาจาก NTP</td></tr>
-      <tr><td>OTA <span class="pill rec">ทำก่อน</span></td><td>อัปโหลด <code>.bin</code> ผ่านเว็บได้ ไม่ต้องกด BOOT/RST ทุกครั้งอีก ตรวจแล้วว่า partition มี <code>ota_0</code>/<code>ota_1</code> อยู่แล้ว</td></tr>
+      <tr><td>กระพริบตา</td><td>กระพริบปกติ 1 นาที</td><td>ไม่มี Alert</td></tr>
+      <tr><td>หลับ 1 วิ</td><td>หลับตาทีละครั้ง 10 ครั้ง</td><td>ไม่มี Alert</td></tr>
+      <tr><td>หลับ 2 วิ</td><td>10 ครั้ง</td><td>Level 2 ทุกครั้ง</td></tr>
+      <tr><td>หลับ 3 และ 5 วิ</td><td>10 ครั้งต่อแบบ</td><td>Level 3 ทุกครั้ง · วัดเวลาตั้งแต่หลับจนเตือน</td></tr>
+      <tr><td>หันออก / ก้มดูมือถือ</td><td>4 วิ 10 ครั้ง</td><td>Distraction</td></tr>
+      <tr><td>แว่นใส / แว่นดำ</td><td>ทำซ้ำชุดหลับ 3 วิ</td><td>แว่นใสตรวจได้ · แว่นดำเป็น Unmonitored</td></tr>
+      <tr><td>กลางคืน</td><td>ทำทั้งชุดในที่มืดโดยเปิด IR</td><td>ผลตามผลทดสอบ IR filter</td></tr>
+      <tr><td>ขับจริง</td><td>คนอื่นขับปกติ ≥ 1 ชม.</td><td>จำนวนครั้งที่เตือนผิดต่อชั่วโมง</td></tr>
     </tbody>
   </table></div>
+  <p>ตัวเลขที่ใส่รายงาน: recall ของ Microsleep, จำนวนครั้งที่เตือนผิดต่อชั่วโมง, เวลาตั้งแต่หลับตาจนเตือน, fps ทั้ง pipeline และ accuracy ของโมเดลบนชุด test กับบนภาพของเราเอง</p>
+</section>
+
+<section>
+  <h2><span class="n">10</span>ความเสี่ยงที่ยังเปิดอยู่</h2>
   <ul>
-    <li><b>Library:</b> <code>ESP32Async/ESPAsyncWebServer</code> + <code>AsyncTCP</code> ซึ่งเป็นตัวที่ยังมีคนดูแลอยู่</li>
-    <li><b>ไฟล์หน้าเว็บ:</b> gzip ฝังใน firmware หรือเก็บใน FFat (partition นี้เป็น FAT 9.9 MB ไม่ใช่ LittleFS)</li>
-    <li><b>Stream:</b> ให้กล้องส่ง grayscale ตามที่ ML ต้องการ แล้วใช้ <code>frame2jpg()</code> แปลงเฉพาะเฟรมที่จะส่ง ที่ 2–5 fps ขนาด QVGA ไม่ควรให้กล้องส่ง JPEG มาตรงๆ เพราะ ML ต้อง decode กลับอีกรอบ และให้คัดลอกเฟรมที่ย่อแล้วไว้ใน buffer กลาง ไม่ส่ง <code>fb</code> ข้าม core</li>
+    <li><b>IR filter ยังไม่ได้ทดสอบ:</b> ถ้ากล้องมีแผ่นกรอง IR โหมดกลางคืนจะใช้ไม่ได้ ทางแก้คือเปลี่ยนเป็นกล้อง NoIR ซึ่งเสียบ FPC เดิมได้</li>
+    <li><b>HumanFaceDetect กับภาพ IR และมุมเฉียง:</b> โมเดล train จากภาพแสงปกติและหน้าตรง ต้องลองกับมุมติดตั้งจริงในรถ</li>
+    <li><b>PCB v2 ยังไม่มาถึง:</b> ถ้าไม่ทัน ให้เดโมบนโมดูล + breadboard</li>
+    <li><b>buzzer TMB12A05 ที่ 3.3V อาจเบา:</b> ต้องลองฟัง ถ้าเบาให้เปลี่ยนเป็น TMB12A03</li>
+    <li>กล่อง 3D อยู่นอกแผนนี้ ข้อกำหนดล่าสุดอยู่ใน <a href="../enclosure/README.md">enclosure/README.md</a></li>
   </ul>
 </section>
 
-<section>
-  <h2><span class="n">5</span>แจ้งเตือนเข้ามือถือ</h2>
-  <div class="callout warn"><strong>LINE Notify ปิดบริการไปแล้วตั้งแต่ มี.ค. 2025</strong><p>แต่เอกสารเดิมยังเขียนว่าจะใช้ ต้องเลือกช่องทางใหม่</p></div>
-  <ul>
-    <li><b>Telegram Bot</b> <span class="pill rec">แนะนำ</span> ฟรี ส่งด้วย HTTPS POST ครั้งเดียว</li>
-    <li><b>LINE Messaging API</b> ต้องสร้าง Official Account และมีโควตาฟรีจำกัด</li>
-    <li>ต้องต่อ hotspot ถึงจะส่งได้ ถ้าอยู่โหมด AP ให้เก็บคิวไว้ส่งทีหลัง</li>
-    <li>ต้องส่งจาก task แยก เพราะ HTTPS ใช้เวลา 1–2 วินาที จะไปบล็อก vision loop</li>
-  </ul>
-</section>
-
-<section>
-  <h2><span class="n">6</span>IR LED</h2>
-  <ul>
-    <li><b>ทดสอบ IR filter ให้จบก่อนอย่างอื่น</b> ถ้ากล้องมีแผ่นกรอง IR โหมดกลางคืนทั้งหมดจะใช้ไม่ได้</li>
-    <li><b>R16–R19 ไม่เกินพิกัด</b> BOM ชุดที่สั่งผลิตใช้ 120Ω ขนาด 1206 (0.25 W) กระแสดวงละ ~29 mA ทำให้ตัวต้านทานรับแค่ ~0.1 W เปิด IR ค้างได้ ไม่ต้องจำกัด duty</li>
-    <li><b>LDR:</b> ใส่ hysteresis กัน IR กระพริบตอนแสงก้ำกึ่ง และต้องคาลิเบรต ADC ใหม่ เพราะ R1 ย้ายไปต่อ 3V3 แล้ว</li>
-  </ul>
-</section>
-
-<section>
-  <h2><span class="n">7</span>Timeline</h2>
-  <div class="scroll"><table>
-    <thead><tr><th>สัปดาห์</th><th>Firmware + Web</th><th>ML</th><th>กล่อง 3D</th><th>เป้าที่ต้องผ่าน</th></tr></thead>
-    <tbody>
-      <tr><td>1 · 2–8 ต.ค.</td><td>ทดสอบ IR filter, โครง task, alert / OLED / LDR / IR, dashboard + OTA</td><td>train baseline จาก MRL, ลอง compile กับ core 3.3.12</td><td>export STEP จาก EasyEDA, วัดขนาดบอร์ดและ dev board จริง</td><td>OTA ใช้ได้ และรู้ผลเรื่อง IR filter</td></tr>
-      <tr><td>2 · 9–15 ต.ค.</td><td>camera pipeline, กรอบตา (ทาง A), โหมดเก็บข้อมูล, state machine</td><td>เอาโมเดลลงบอร์ด, เก็บภาพตัวเองทั้งกลางวันและกลางคืน</td><td>CAD v1 ฝาหน้า + ฐาน</td><td><span class="pill gate">MVP</span> หลับตา 3 วิแล้ว buzzer ดัง</td></tr>
-      <tr><td>3 · 16–22 ต.ค.</td><td>settings / NVS, event log, แจ้งเตือน, stream</td><td>fine-tune, ลองทาง B</td><td>ปริ้นทดลองด้วย PLA, เช็คแสง IR รั่วเข้ากล้อง</td><td>ความแม่นบนภาพจริงผ่านเกณฑ์</td></tr>
-      <tr><td>4 · 23–29 ต.ค.</td><td>ประกอบลง PCB, ทดสอบในรถ, เช็คว่า power bank ตัดไฟเองไหม, ความร้อน</td><td>อัปเกรดวิธีหาตาถ้าทัน</td><td>ปริ้นตัวจริงด้วย PETG / ASA แล้วติดในรถ</td><td>ทดสอบในรถผ่าน</td></tr>
-      <tr><td>5 · 30 ต.ค.–2 พ.ย.</td><td>หยุดเพิ่ม feature, แก้บั๊ก, ถ่ายวิดีโอเดโม, เขียนรายงาน</td><td></td><td></td><td>ส่งงาน</td></tr>
-    </tbody>
-  </table></div>
-</section>
-
-<section>
-  <h2><span class="n">8</span>กล่อง 3D</h2>
-  <div class="callout ok"><strong>อัปเดต 3 ต.ค. 2026: บอร์ด v2</strong><p>บอร์ดยาวขึ้นเป็น 58.55 × 73.03 มม. เพิ่มรู M3 สี่มุม ย้าย MOUNT1 และ H2 ข้อมูลในหัวข้อนี้เป็นของ v1 ใช้ข้อมูลล่าสุดจาก <code>enclosure/README.md</code> และ <code>hardware/README.md</code> แทน</p></div>
-  <p>ข้อมูลตำแหน่งชิ้นส่วนในหัวข้อนี้มาจาก Gerber และ PickAndPlace ชุดที่สั่งผลิตจริง (<code>FinalV1/</code>, 31 ส.ค.) พิกัดเป็นมิลลิเมตรตามระบบของ EasyEDA</p>
-  <div class="callout warn">
-    <strong>ไฟล์ผลิตจริงไม่ตรงกับเอกสาร 2 จุด</strong>
-    <ul>
-      <li>เส้นขอบบอร์ดใน <code>Gerber_BoardOutlineLayer.GKO</code> ได้ขนาด <b>58.5 × 65.7 มม.</b> ไม่ใช่ 80 × 70 ตามที่ PROJECT_STATUS เขียน ควรวัดบอร์ดจริงยืนยันอีกที</li>
-      <li><b>บอร์ดไม่มีรูน็อต M3</b> มีรูเดียวคือ MOUNT1 ขนาด Ø7.5 มม. ที่ (33.4, −75.9) ซึ่งเป็นรูสำหรับขาตั้งกระจก กล่องต้องจับบอร์ดด้วยร่องรางที่ขอบหรือตัวล็อก snap หรือออกแบบให้ใช้รู MOUNT1 ยึด</li>
-    </ul>
-  </div>
-  <h3>ชิ้นส่วนที่กล่องต้องเว้นช่อง</h3>
-  <div class="scroll"><table>
-    <thead><tr><th>ชิ้น</th><th>ตำแหน่ง</th><th>ต้องเว้นอะไร</th></tr></thead>
-    <tbody>
-      <tr><td>กล้อง</td><td>บน dev board ต้องวัดจากของจริง</td><td>ช่องเปิดตรงๆ <b>ห้ามมีแผ่นใสบัง</b> เพราะจะสะท้อนแสง IR</td></tr>
-      <tr><td>IR1–IR4</td><td>ขอบขวา x = 61, y = −28 / −42 / −56 / −70</td><td>รู Ø5.2 จำนวน 4 รู และ<b>ผนังกั้นระหว่าง IR กับกล้อง</b> ไม่ให้แสงรั่วเข้าเลนส์</td></tr>
-      <tr><td>LDR (R2)</td><td>(12.8, −46.9)</td><td>รูให้แสงเข้า</td></tr>
-      <tr><td>LED1 / LED2</td><td>(48.4, −73.5) / (53.7, −73.4)</td><td>light pipe หรือรูเล็ก</td></tr>
-      <tr><td>USB1 (USB-C รับไฟ)</td><td>ขอบซ้าย (10.9, −32.9)</td><td>ช่องเสียบสาย และตัวกันสายโยก</td></tr>
-      <tr><td>SW1</td><td>(14.7, −78)</td><td>สไลด์สวิตช์ SS-12D01 สำหรับเปิด/ปิดไฟทั้งบอร์ด ต้องเว้นช่องให้นิ้วเลื่อนได้</td></tr>
-      <tr><td>H1 OLED / H2 buzzer</td><td>(12.6, −57.5) / (12.4, −22.7)</td><td>หน้าต่าง OLED หันหาคนขับ และรูให้เสียงออก</td></tr>
-      <tr><td>USB ของ dev board</td><td>ต้องวัดจากของจริง</td><td>ช่องเสียบไว้ใช้ฉุกเฉิน งานปกติใช้ OTA</td></tr>
-      <tr><td>Dev board บน header 2×20</td><td>U5 x = 21.6, U6 x = 49.5 (ห่างกัน 27.94)</td><td>กล่องต้องสูงพอให้ header ตัวเมีย + dev board + โมดูลกล้องซ้อนกันได้</td></tr>
-    </tbody>
-  </table></div>
-  <div class="callout">
-    <strong>ห้ามใช้ PLA กับตัวจริง</strong>
-    <p>PLA เริ่มนิ่มที่ประมาณ 55–60°C แต่ในรถกลางแดดร้อนได้ถึง 70–80°C กล่องจะบิดจนกล้องเปลี่ยนมุม ขั้นต่ำให้ใช้ PETG ซึ่งทนได้ราว 80°C และปริ้นง่ายพอๆ กับ PLA ถ้ามี ASA จะดีกว่าเพราะทนร้อนและทน UV ได้ดีกว่า PLA ใช้ได้เฉพาะชิ้นทดลองเช็คขนาด</p>
-  </div>
-  <div class="scroll"><table>
-    <thead><tr><th>ขั้น</th><th>งาน</th><th>ช่วงเวลา</th></tr></thead>
-    <tbody>
-      <tr><td>1. เก็บขนาด</td><td>export โมเดล 3D ของบอร์ดเป็น STEP จาก EasyEDA (Export → 3D File) แล้ววัดของที่ไม่มีในโมเดล: dev board, ตำแหน่งกล้อง, OLED, โมดูล buzzer</td><td>สัปดาห์ 1–2</td></tr>
-      <tr><td>2. CAD v1</td><td>ใช้ Fusion 360 (มี license การศึกษาฟรี) หรือ Onshape ทำกล่อง 2 ชิ้น ฝาหน้ากับฐาน ล็อกด้วย snap หรือน็อต M3 กับ heat-set insert เผื่อระยะ 0.3 มม.</td><td>สัปดาห์ 2</td></tr>
-      <tr><td>3. ปริ้นทดลอง</td><td>ใช้ PLA ปริ้นเฉพาะส่วนที่ต้องพอดี เช่น รางรับบอร์ด ช่อง USB-C แนวรู IR</td><td>สัปดาห์ 3</td></tr>
-      <tr><td>4. ทดสอบรวม</td><td>เช็คว่ากล้องไม่เห็นแสง IR รั่ว, ความร้อนข้างใน, มุมกล้องมองเห็นหน้าคนขับ</td><td>สัปดาห์ 3</td></tr>
-      <tr><td>5. ตัวจริง</td><td>ปริ้นด้วย PETG / ASA แล้วติดตั้งในรถ</td><td>สัปดาห์ 4</td></tr>
-    </tbody>
-  </table></div>
-  <ul>
-    <li><b>ส่วนติดตั้งในรถ:</b> ฝังน็อตเกลียว 1/4"-20 (เกลียวขาตั้งกล้อง) หรือทำขาแบบ GoPro ไว้ที่ฐาน จะใช้กับขาจับมือถือในรถที่มีขายทั่วไปได้ และปรับมุมได้โดยไม่ต้องออกแบบข้อต่อเอง</li>
-    <li><b>ระบายความร้อน:</b> ทำช่องระบายอากาศด้านล่างกับด้านบน ไม่ต้องใส่พัดลม</li>
-  </ul>
-</section>
-
-<section>
-  <h2><span class="n">9</span>เรื่องที่ต้องตัดสินใจก่อนเริ่ม</h2>
-  <ol class="decide">
-    <li><b>วิธีหาตา:</b> A แล้วค่อย B <span class="pill rec">แนะนำ</span> หรือไป C เลย</li>
-    <li><b>เครื่องมือ:</b> ใช้ Arduino IDE ต่อ หรือย้ายไป PlatformIO / ESP-IDF ขึ้นกับข้อ 1 ถ้าเลือก B น่าจะต้องย้าย</li>
-    <li><b>ช่องทางแจ้งเตือน:</b> Telegram <span class="pill rec">แนะนำ</span> / LINE Messaging API / ไม่ทำ</li>
-    <li><b>ขอบเขตเว็บ:</b> อยู่บนบอร์ดอย่างเดียว <span class="pill rec">แนะนำ</span> หรืออยากมี cloud เก็บประวัติด้วย</li>
-    <li><b>PCB จาก JLCPCB มาถึงหรือยัง:</b> ถ้ายัง สัปดาห์ 1–3 ทำบน dev board + breadboard ไปก่อนได้</li>
-    <li><b>เครื่องปริ้น 3D:</b> มีเครื่องเองหรือต้องส่งร้าน และมีเส้น PETG หรือ ASA ไหม</li>
-    <li><b>ตำแหน่งติดตั้งในรถ:</b> บนคอนโซลหน้า, กระจกหน้า หรือเสา A</li>
-    <li><b>จอ OLED:</b> ต้องหันหาคนขับในด้านเดียวกับกล้องใช่ไหม</li>  </ol>
-</section>
-
-<footer>อ้างอิงสเปกจาก PROJECT_STATUS.md, ไฟล์ผลิต FinalV1 (31 ส.ค. 2026) และค่าที่วัดจากบอร์ดจริงเมื่อ 1 ต.ค. 2026 (ESP32-S3 rev2, Flash 16 MB, PSRAM 8 MB, เซนเซอร์ OV5640)</footer>
+<footer>สรุปจากการซักถามออกแบบเมื่อ 16 ต.ค. 2026 (29 ข้อ) · คำศัพท์: <a href="../GLOSSARY.md">GLOSSARY.md</a> · การตัดสินใจหลัก: <a href="adr/">docs/adr/</a> · ค่าบอร์ดจริงวัดเมื่อ 1 และ 16 ต.ค. 2026 (ESP32-S3 rev2, Flash 16 MB, PSRAM 8 MB, OV5640)</footer>
 </div>
+
 </body>
 </html>

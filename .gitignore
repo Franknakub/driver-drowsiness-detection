@@ -13,3 +13,7 @@ build/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Credentials (WiFi, Supabase, device secret) - repo is public
+secrets.h
+.env
