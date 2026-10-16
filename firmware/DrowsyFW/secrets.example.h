@@ -1,0 +1,19 @@
+// คัดลอกไฟล์นี้เป็น secrets.h แล้วใส่ค่าจริง · secrets.h อยู่ใน .gitignore (repo เป็น public)
+#pragma once
+
+// WiFi ที่ Device จะลองต่อ (hotspot มือถือ + WiFi บ้าน) ใส่ได้หลายเครือข่าย
+struct WifiCred { const char* ssid; const char* pass; };
+static const WifiCred WIFI_NETWORKS[] = {
+  {"phone-hotspot", "password"},
+  {"home-wifi",     "password"},
+};
+
+// รหัส AP ของ Device (Drowsy-XXXX) อย่างน้อย 8 ตัวอักษร
+#define AP_PASSWORD    "change-me-123"
+
+// รหัสหน้า OTA (/update) ผู้ใช้ชื่อ admin
+#define OTA_PASSWORD   "change-me-ota"
+
+// Supabase (ยังไม่ใช้ในโครงนี้)
+#define SUPABASE_INGEST_URL "https://<project>.supabase.co/functions/v1/ingest"
+#define DEVICE_SECRET       "<device-secret>"
