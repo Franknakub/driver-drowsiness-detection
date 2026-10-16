@@ -3,6 +3,7 @@
 | สเก็ตช์ | หน้าที่ |
 |---|---|
 | `DrowsinessDiag/` | ตรวจ Flash/PSRAM, ระบุรุ่นกล้อง, ทดสอบ IR-cut filter (ล็อก exposure แล้วนับพิกเซลสว่าง) |
+| `BenchTest/` | ทดสอบ LED, LDR, OLED, buzzer, IR (+ นับพิกเซลจากกล้อง) บนบอร์ด v1 แบบไม่เสียบโมดูล ต่อสายตาม [docs/bench-wiring-v1.md](../docs/bench-wiring-v1.md) |
 | `DrowsyFW/` | firmware ตัวจริง ยังไม่ได้เขียน ดูโครงสร้างที่วางไว้ใน [docs/firmware-plan.html](../docs/firmware-plan.html) |
 
 ## Toolchain
