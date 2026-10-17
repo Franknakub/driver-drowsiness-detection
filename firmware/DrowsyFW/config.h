@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.1.0-skeleton"
+#define FW_VERSION "0.2.3-hvga-eyeview"
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47
@@ -29,6 +29,16 @@
 #define CAM_PIN_VSYNC  6
 #define CAM_PIN_HREF   7
 #define CAM_PIN_PCLK  13
+
+// ---- หาหน้า + ตา (ผล FaceSpike 16 ต.ค.) ----
+#define CAM_FRAME_SIZE       FRAMESIZE_HVGA  // 480x320: ตาใหญ่ขึ้น ~1.5 เท่าจาก QVGA · FaceSpike วัดได้ 8.9 fps, หาหน้า ~49 ms
+#define CAM_ROTATE_CW        270    // ภาพจากกล้องตะแคง 90° ต้องหมุนก่อนหาหน้า · ถ้าออกแบบกล่องให้ภาพตั้งตรงได้ ตั้งเป็น 0
+#define FACE_TILT_COMP       1      // หมุนภาพชดเชยหน้าเอียงตามมุมเส้นตา
+#define FACE_MSR_SCORE_THR   0.30f  // ค่าเดิม 0.5 ตัดหน้าในภาพที่หมุนชดเชยทิ้ง
+#define EYE_CROP_SCALE       0.8f   // ด้าน Eye Region = 0.8 × ระยะระหว่างจุดตา (ให้ใกล้ภาพ MRL · ml/README.md)
+#define EYE_MIN_CROP_PX      10     // Eye Region เล็กกว่านี้ถือว่ามองไม่เห็นตา
+#define P_CLOSED_ON          0.5f   // P(ตาปิด) ≥ ค่านี้ = ปิด · < P_CLOSED_OFF = เปิด · ระหว่างนั้น = ไม่แน่ใจ
+#define P_CLOSED_OFF         0.3f   //   ค่าชั่วคราวจาก ml/output/threshold_note.md (วัดบน MRL) ต้องปรับใหม่ด้วยภาพกล้องเรา
 
 // ---- task: Core 1 = ภาพ/ML/Alert/เซนเซอร์ · Core 0 = WiFi stack, เว็บ, log, Sync ----
 #define CORE_VISION 1

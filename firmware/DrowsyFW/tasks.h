@@ -13,3 +13,5 @@ void startWebServer();  // AsyncWebServer ทำงานบน task ของ A
 // ใช้ร่วมระหว่าง task
 void alertMute(uint32_t durationMs);
 bool timeSetFromEpoch(time_t epoch, const char* source);
+bool snapshotJpeg(uint8_t** out, size_t* outLen);   // ผู้เรียกต้อง free(*out)
+bool eyesJpeg(uint8_t** out, size_t* outLen);       // ภาพตา 32x32 ที่เข้าโมเดลจริง · ผู้เรียกต้อง free(*out)

@@ -14,6 +14,11 @@ struct SharedState {
   float    pClosed;            // P(ตาปิด) หลัง EMA
   EyeState eyeState;
   bool     faceFound;
+  float    faceScore;
+  float    pLeft, pRight;      // P(ตาปิด) ของตาซ้าย/ขวาในภาพ · -1 = ใช้ไม่ได้
+  int16_t  eyeDistPx;          // ระยะระหว่างจุดตาในภาพที่หมุนแล้ว
+  int16_t  tiltCompDeg;        // มุมที่หมุนชดเชยหน้าเอียงในเฟรมล่าสุด
+  float    rotateMs, detectMs, classifyMs;
   uint32_t visionFrames;
 
   // drowsiness
