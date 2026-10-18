@@ -26,10 +26,11 @@ static SemaphoreHandle_t s_snapMutex = nullptr;
 static volatile uint32_t s_snapWantedMs = 0;
 
 // เก็บภาพตั้งตรง (หมุนแค่ CAM_ROTATE_CW) ไม่ใช่ภาพที่หมุนชดเชย จะได้ไม่แกว่งตอนระบบไล่หามุม
+// หมุนเฉพาะตอนมีคนเปิดดู (ทางหาหน้าไม่ได้สร้างภาพตั้งตรงแล้ว)
 static void snapshotStore(camera_fb_t* raw, const FaceEyes& f, int side, float pL, float pR) {
   if (!s_snapWantedMs || millis() - s_snapWantedMs > 3000) return;
   if (xSemaphoreTake(s_snapMutex, 0) != pdTRUE) return;      // web กำลังอ่านอยู่ ข้ามเฟรมนี้
-  const camera_fb_t* fr = f.compDeg == 0 ? f.frame : faceEyesUprightView(raw);
+  const camera_fb_t* fr = faceEyesUprightView(raw);
   if (fr->len > s_snap.size) {
     if (s_snap.buf) heap_caps_free(s_snap.buf);
     s_snap.buf = (uint8_t*)heap_caps_malloc(fr->len, MALLOC_CAP_SPIRAM);
@@ -38,7 +39,7 @@ static void snapshotStore(camera_fb_t* raw, const FaceEyes& f, int side, float p
   if (s_snap.buf) {
     memcpy(s_snap.buf, fr->buf, fr->len);
     s_snap.w = fr->width; s_snap.h = fr->height;
-    s_snap.face = f; s_snap.face.frame = nullptr;
+    s_snap.face = f; s_snap.face.view.raw = nullptr;
     s_snap.eyeSide = side; s_snap.pL = pL; s_snap.pR = pR;
     s_snap.valid = true;
   }
@@ -143,6 +144,70 @@ static bool cameraInit() {
   return esp_camera_init(&c) == ESP_OK;   // ไม่เปิด AF: fixed-focus ตั้งใจไว้
 }
 
+// ---- A/B: ทางเดิม (หมุนทั้งเฟรม) กับทางใหม่ (หยิบพิกเซลผ่านแผนที่) บนเฟรมเดียวกัน · เปิดด้วย /api/ab?on=1 ----
+// ช้าลงมากระหว่างเปิด (ทำทางเดิมซ้ำ + หมุนอีกรอบเพื่อเทียบ model input) ใช้ตอนทดสอบเท่านั้น
+struct AbAcc {
+  uint32_t frames = 0, foundNew = 0, foundOld = 0, both = 0;
+  double eyeErrSum = 0; int eyeErrMax = 0;
+  uint32_t input0 = 0, input0Bad = 0; int input0DiffMax = 0;
+  uint32_t inputTilt = 0; double inputTiltDiffSum = 0;
+  uint32_t crops = 0, cropBad = 0;
+  double oldRot = 0, oldDet = 0, newRot = 0, newDet = 0, newPre = 0;
+  double msrPreOld = 0, msrPreNew = 0; uint32_t msrPreN = 0;
+};
+static AbAcc s_ab;
+static uint8_t *s_abCropA = nullptr, *s_abCropB = nullptr;
+
+static void abStep(camera_fb_t* fb, const FaceEyes& f, int side) {
+  FaceEyes o;
+  faceEyesRunLegacy(fb, f.compDeg, o);
+  AbAcc& a = s_ab;
+  a.frames++;
+  a.foundNew += f.found; a.foundOld += o.found;
+  a.oldRot += o.rotateMs; a.oldDet += o.detectMs;
+  a.newRot += f.rotateMs; a.newDet += f.detectMs; a.newPre += f.preMs;
+  if (f.found && o.found) {
+    a.both++;
+    int err = 0;
+    for (int e = 0; e < 2; e++)
+      err = max(err, (int)lroundf(hypotf((float)(f.eye[e][0] - o.eye[e][0]), (float)(f.eye[e][1] - o.eye[e][1]))));
+    a.eyeErrSum += err; a.eyeErrMax = max(a.eyeErrMax, err);
+  }
+  // Eye Region จากภาพดิบผ่านแผนที่ ต้องตรงกับ crop จากภาพที่หมุนทั้งเฟรมทุก byte (ใช้จุดตาจริง หรือกลางภาพถ้าไม่เจอหน้า)
+  if (!s_abCropA) {
+    s_abCropA = (uint8_t*)heap_caps_malloc(160 * 160, MALLOC_CAP_SPIRAM);
+    s_abCropB = (uint8_t*)heap_caps_malloc(160 * 160, MALLOC_CAP_SPIRAM);
+  }
+  if (s_abCropA && s_abCropB) {
+    int cx = f.found ? f.eye[0][0] : f.view.width / 2, cy = f.found ? f.eye[0][1] : f.view.height / 2;
+    int sd = f.found && side >= EYE_MIN_CROP_PX ? side : 40;
+    if (eyeCropGray(f.view, cx, cy, sd, s_abCropA) && eyeCropGray(o.view, cx, cy, sd, s_abCropB)) {
+      a.crops++;
+      a.cropBad += memcmp(s_abCropA, s_abCropB, sd * sd) != 0;
+    }
+  }
+  float ms[2];
+  int d = faceEyesCompareInput(fb, f.compDeg, ms);
+  if (d >= 0) {
+    a.msrPreOld += ms[0]; a.msrPreNew += ms[1]; a.msrPreN++;
+    if (f.compDeg == 0) { a.input0++; a.input0Bad += d != 0; a.input0DiffMax = max(a.input0DiffMax, d); }
+    else { a.inputTilt++; a.inputTiltDiffSum += d; }
+  }
+}
+
+static void abPublish(AbStats& out) {
+  const AbAcc& a = s_ab;
+  float n = a.frames ? a.frames : 1;
+  out.frames = a.frames; out.foundNew = a.foundNew; out.foundOld = a.foundOld; out.both = a.both;
+  out.eyeErrMean = a.both ? a.eyeErrSum / a.both : 0; out.eyeErrMax = a.eyeErrMax;
+  out.input0 = a.input0; out.input0Bad = a.input0Bad; out.input0DiffMax = a.input0DiffMax;
+  out.inputTilt = a.inputTilt; out.inputTiltDiffMean = a.inputTilt ? a.inputTiltDiffSum / a.inputTilt : 0;
+  out.crops = a.crops; out.cropBad = a.cropBad;
+  out.oldRotateMs = a.oldRot / n; out.oldDetectMs = a.oldDet / n;
+  out.newRotateMs = a.newRot / n; out.newDetectMs = a.newDet / n; out.newPreMs = a.newPre / n;
+  out.msrPreOldMs = a.msrPreN ? a.msrPreOld / a.msrPreN : 0; out.msrPreNewMs = a.msrPreN ? a.msrPreNew / a.msrPreN : 0;
+}
+
 // รวมสองข้าง: เฉลี่ยข้างที่ใช้ได้ · ใช้ไม่ได้ทั้งคู่ = -1
 static float combineEyes(float a, float b) {
   if (a >= 0 && b >= 0) return (a + b) / 2;
@@ -160,7 +225,7 @@ static void visionTask(void*) {
   if (!cameraInit())        { Serial.println("[vision] camera init FAILED");     vTaskDelete(nullptr); }
   if (!faceEyesInit())      { Serial.println("[vision] face detect init FAILED"); vTaskDelete(nullptr); }
   if (!eyeClassifierInit()) { Serial.println("[vision] eye model init FAILED");   vTaskDelete(nullptr); }
-  Serial.println("[vision] ready (RGB565 QVGA, HumanFaceDetect + eye CNN)");
+  Serial.println("[vision] ready (RGB565, HumanFaceDetect on rotated view map + eye CNN)");
 
   uint32_t windowStart = millis(), frames = 0;
   FaceEyes f;
@@ -175,12 +240,16 @@ static void visionTask(void*) {
       eyeDist = (int)lroundf(hypotf((float)(f.eye[1][0] - f.eye[0][0]), (float)(f.eye[1][1] - f.eye[0][1])));
       side = (int)lroundf(EYE_CROP_SCALE * eyeDist);
       uint32_t t = micros();
-      pL = eyeClassify(f.frame, f.eye[0][0], f.eye[0][1], side, 0);
-      pR = eyeClassify(f.frame, f.eye[1][0], f.eye[1][1], side, 1);
+      pL = eyeClassify(f.view, f.eye[0][0], f.eye[0][1], side, 0);
+      pR = eyeClassify(f.view, f.eye[1][0], f.eye[1][1], side, 1);
       classifyMs = (micros() - t) / 1000.0f;
     }
     snapshotStore(fb, f, side, pL, pR);
-    esp_camera_fb_return(fb);       // f.frame ชี้ไป buffer ที่หมุนแล้ว (ถ้ามีการหมุน) ซึ่งไม่ใช่ fb
+    bool ab, abReset;
+    { StateGuard g; ab = g_state.abOn; abReset = g_state.abReset; g_state.abReset = false; }
+    if (abReset) s_ab = AbAcc();
+    if (ab) abStep(fb, f, side);
+    esp_camera_fb_return(fb);       // หลังจากนี้ f.view ใช้ไม่ได้ (ชี้เข้า fb)
 
     float p = combineEyes(pL, pR);
     frames++;
@@ -198,6 +267,8 @@ static void visionTask(void*) {
       g_state.rotateMs = f.rotateMs;
       g_state.detectMs = f.detectMs;
       g_state.classifyMs = classifyMs;
+      g_state.preMs = f.preMs;
+      if (ab) abPublish(g_state.ab);
       if (now - windowStart >= 1000) {
         g_state.fps = frames * 1000.0f / (now - windowStart);
         g_state.visionFrames += frames;

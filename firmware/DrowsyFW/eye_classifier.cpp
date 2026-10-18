@@ -9,7 +9,7 @@
 #include "eye_model_data.h"
 #include "config.h"
 
-static constexpr size_t kArenaSize = 28 * 1024;   // โมเดลใช้จริง ~20 KB · ให้พอดีก้อนว่างใน RAM ภายใน (เหลือก้อนใหญ่สุด ~33 KB)
+static constexpr size_t kArenaSize = 29 * 1024 + 256;   // deep2_half ใช้จริง 29,324 B · ให้พอดีก้อนว่างใน RAM ภายใน (ก้อนใหญ่สุด ~30 KB) ไม่พอก็ตกไป PSRAM เอง
 static constexpr int N = EYE_MODEL_INPUT_SIZE;
 static constexpr int kMaxCrop = 160;              // กรอบใหญ่กว่านี้ (หน้าชิดกล้องมาก) ถือว่าใช้ไม่ได้
 
@@ -57,18 +57,22 @@ bool eyeLastInput(int slot, uint8_t* out) {
   return true;
 }
 
-float eyeClassify(const camera_fb_t* frame, int cx, int cy, int side, int slot) {
-  if (slot >= 0 && slot < 2) s_lastValid[slot] = false;
-  if (!s_interp || side < EYE_MIN_CROP_PX || side > kMaxCrop) return -1;
+bool eyeCropGray(const FaceViewMap& v, int cx, int cy, int side, uint8_t* out) {
+  if (side < EYE_MIN_CROP_PX || side > kMaxCrop) return false;
   const int x0 = cx - side / 2, y0 = cy - side / 2;
-  if (x0 < 0 || y0 < 0 || x0 + side > (int)frame->width || y0 + side > (int)frame->height) return -1;
+  if (x0 < 0 || y0 < 0 || x0 + side > v.width || y0 + side > v.height) return false;
+  // RGB565 ของ esp32-camera เก็บ byte สูงก่อน -> px = (hi << 8) | lo · นอกภาพ (มุมชดเชย) = ดำ เหมือนภาพที่หมุนแล้วแบบเดิม
+  for (int y = 0; y < side; y++)
+    for (int x = 0; x < side; x++) {
+      const uint8_t* p = v.px(x0 + x, y0 + y);
+      out[y * side + x] = p ? eye_rgb565_to_gray((uint16_t)((p[0] << 8) | p[1])) : 0;
+    }
+  return true;
+}
 
-  // RGB565 ของ esp32-camera เก็บ byte สูงก่อน -> px = (hi << 8) | lo
-  for (int y = 0; y < side; y++) {
-    const uint8_t* row = frame->buf + ((size_t)(y0 + y) * frame->width + x0) * 2;
-    for (int x = 0; x < side; x++)
-      s_crop[y * side + x] = eye_rgb565_to_gray((uint16_t)((row[2 * x] << 8) | row[2 * x + 1]));
-  }
+float eyeClassify(const FaceViewMap& v, int cx, int cy, int side, int slot) {
+  if (slot >= 0 && slot < 2) s_lastValid[slot] = false;
+  if (!s_interp || !eyeCropGray(v, cx, cy, side, s_crop)) return -1;
   eye_resize_bilinear(s_crop, side, side, side, s_small, N, N);
   if (slot >= 0 && slot < 2) { memcpy(s_last[slot], s_small, N * N); s_lastValid[slot] = true; }
   TfLiteTensor* in = s_interp->input(0);

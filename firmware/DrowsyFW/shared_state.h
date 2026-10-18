@@ -8,6 +8,17 @@
 enum class EyeState : uint8_t { Unknown, Open, Closed, Uncertain, NotVisible };
 enum class DrowsinessLevel : uint8_t { Normal = 0, Fatigue = 1, Drowsy = 2, Microsleep = 3 };
 
+// ผลเทียบ A/B ทางเดิม (หมุนทั้งเฟรม) กับทางใหม่ (หยิบพิกเซลผ่านแผนที่) บนเฟรมเดียวกัน · เวลาเป็นค่าเฉลี่ย ms
+struct AbStats {
+  uint32_t frames, foundNew, foundOld, both;
+  float    eyeErrMean; int32_t eyeErrMax;       // ระยะจุดตาที่ห่างกันมากสุดในสองข้าง (px) เฉพาะเฟรมที่เจอทั้งคู่
+  uint32_t input0, input0Bad; int32_t input0DiffMax;   // model input ขั้น MSR ที่มุมชดเชย 0: ควรต่าง 0 byte
+  uint32_t inputTilt; float inputTiltDiffMean;  // มุมชดเชยไม่ใช่ 0: ต่างได้เล็กน้อยจากการปัดเศษ
+  uint32_t crops, cropBad;                      // Eye Region ที่ไม่ตรงกันทุก byte
+  float    oldRotateMs, oldDetectMs, newRotateMs, newDetectMs, newPreMs;
+  float    msrPreOldMs, msrPreNewMs;                 // preprocess ขั้น MSR อย่างเดียว ทางเดิม/ทางใหม่ บนเฟรมเดียวกัน
+};
+
 struct SharedState {
   // vision (Core 1)
   float    fps;
@@ -19,6 +30,9 @@ struct SharedState {
   int16_t  eyeDistPx;          // ระยะระหว่างจุดตาในภาพที่หมุนแล้ว
   int16_t  tiltCompDeg;        // มุมที่หมุนชดเชยหน้าเอียงในเฟรมล่าสุด
   float    rotateMs, detectMs, classifyMs;
+  float    preMs;              // ส่วนของ detectMs ที่ esp-dl หยิบพิกเซล (หมุน + ย่อ) เข้าโมเดล
+  bool     abOn, abReset;      // web ตั้ง · vision อ่าน
+  AbStats  ab;
   uint32_t visionFrames;
 
   // drowsiness

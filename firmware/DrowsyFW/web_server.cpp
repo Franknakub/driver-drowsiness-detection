@@ -78,16 +78,41 @@ static void handleStatus(AsyncWebServerRequest* req) {
     "{\"fw\":\"%s\",\"trip\":%u,\"uptime_s\":%u,\"time_known\":%s,\"trip_start_epoch\":%lu,"
     "\"fps\":%.1f,\"face\":%s,\"face_score\":%.2f,\"eye_state\":\"%s\",\"p_closed\":%.2f,"
     "\"p_left\":%.2f,\"p_right\":%.2f,\"eye_dist_px\":%d,\"tilt_comp_deg\":%d,"
-    "\"rotate_ms\":%.1f,\"detect_ms\":%.1f,\"classify_ms\":%.1f,\"perclos\":%.2f,\"level\":\"%s\","
+    "\"rotate_ms\":%.2f,\"detect_ms\":%.1f,\"pre_ms\":%.1f,\"classify_ms\":%.1f,\"perclos\":%.2f,\"level\":\"%s\","
     "\"distraction\":%s,\"unmonitored\":%s,\"mute_left_s\":%ld,"
     "\"ldr_raw\":%u,\"ir_on\":%s,\"ap\":\"%s\",\"sta\":\"%s\",\"sta_ip\":\"%s\",\"free_psram_kb\":%u}",
     FW_VERSION, s.bootCount, (unsigned)((now - s.tripStartMs) / 1000), s.timeKnown ? "true" : "false",
     (unsigned long)s.tripStartEpoch, s.fps, s.faceFound ? "true" : "false", s.faceScore,
     eyeStateName(s.eyeState), s.pClosed, s.pLeft, s.pRight, s.eyeDistPx, s.tiltCompDeg,
-    s.rotateMs, s.detectMs, s.classifyMs, s.perclos,
+    s.rotateMs, s.detectMs, s.preMs, s.classifyMs, s.perclos,
     levelName(s.level), s.distraction ? "true" : "false", s.unmonitored ? "true" : "false",
     muteLeft > 0 ? muteLeft : 0L, s.ldrRaw, s.irOn ? "true" : "false", s.apSsid, s.staSsid, s.staIp,
     (unsigned)(ESP.getFreePsram() / 1024));
+  req->send(200, "application/json", buf);
+}
+
+// /api/ab?on=1 เปิดการเทียบทางเดิมกับทางใหม่ (ล้างค่าสะสม) · ?on=0 ปิด · ไม่มี on = อ่านผลอย่างเดียว
+static void handleAb(AsyncWebServerRequest* req) {
+  if (req->hasParam("on")) {
+    bool on = req->getParam("on")->value() == "1";
+    StateGuard g;
+    if (on && !g_state.abOn) g_state.abReset = true;
+    g_state.abOn = on;
+  }
+  SharedState s = stateSnapshot();
+  const AbStats& a = s.ab;
+  char buf[840];
+  snprintf(buf, sizeof(buf),
+    "{\"on\":%s,\"frames\":%u,\"found_new\":%u,\"found_old\":%u,\"found_both\":%u,"
+    "\"eye_err_mean_px\":%.2f,\"eye_err_max_px\":%d,"
+    "\"msr_input_comp0_frames\":%u,\"msr_input_comp0_mismatch_frames\":%u,\"msr_input_comp0_diff_max\":%d,"
+    "\"msr_input_tilt_frames\":%u,\"msr_input_tilt_diff_mean\":%.1f,"
+    "\"eye_crop_checked\":%u,\"eye_crop_mismatch\":%u,"
+    "\"old_rotate_ms\":%.2f,\"old_detect_ms\":%.2f,\"new_rotate_ms\":%.3f,\"new_detect_ms\":%.2f,\"new_pre_ms\":%.2f,\"msr_pre_old_ms\":%.2f,\"msr_pre_new_ms\":%.2f}",
+    s.abOn ? "true" : "false", (unsigned)a.frames, (unsigned)a.foundNew, (unsigned)a.foundOld, (unsigned)a.both,
+    a.eyeErrMean, (int)a.eyeErrMax, (unsigned)a.input0, (unsigned)a.input0Bad, (int)a.input0DiffMax,
+    (unsigned)a.inputTilt, a.inputTiltDiffMean, (unsigned)a.crops, (unsigned)a.cropBad,
+    a.oldRotateMs, a.oldDetectMs, a.newRotateMs, a.newDetectMs, a.newPreMs, a.msrPreOldMs, a.msrPreNewMs);
   req->send(200, "application/json", buf);
 }
 
@@ -125,6 +150,7 @@ static void handleUpload(AsyncWebServerRequest* req, const String& filename, siz
 void startWebServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "text/html", INDEX_HTML); });
   server.on("/api/status", HTTP_GET, handleStatus);
+  server.on("/api/ab", HTTP_GET, handleAb);
 
   // ภาพที่โมเดลเห็นล่าสุด (หมุนแล้ว) พร้อมกรอบหน้า/ตา · vision เริ่มคัดลอกภาพเมื่อมีคนขอ จึงอาจว่างในครั้งแรก
   server.on("/snapshot.jpg", HTTP_GET, [](AsyncWebServerRequest* r) {
