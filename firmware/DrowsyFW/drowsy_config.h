@@ -9,6 +9,7 @@
 #define CLOSED_LEVEL2_MS       1500
 #define MICROSLEEP_MS          3000
 #define DISTRACTION_MS         3000
+#define DRIVER_ABSENT_MS       60000  // มองไม่เห็นตานานเกินนี้ = Driver ลงจากรถ เลิกเตือน Distraction จนกว่าจะเห็นตาอีกครั้ง
 #define UNMONITORED_MS         5000
 #define EYES_OPEN_CLEAR_MS     1000   // ลืมตาต่อเนื่องเท่านี้ ระดับที่เกิดจากตาปิดจึงหาย
 #define EYE_HOLD_MS            500    // หาหน้าไม่เจอสั้นกว่านี้ ถือ Eye State เดิม (หาหน้าพลาดราวครึ่งหนึ่งของเฟรม)

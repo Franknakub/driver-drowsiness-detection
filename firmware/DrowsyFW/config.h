@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.2.8-drowsiness"
+#define FW_VERSION "0.2.9-drowsiness"
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47

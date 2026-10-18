@@ -261,6 +261,47 @@ static void testMicrosleepHeadDrop() {
   CHECK(s.microsleeps == 1, "microsleep=%d", s.microsleeps);
 }
 
+static void testBootNoFace() {
+  puts("boot with no face: no Distraction until eyes seen");
+  Sim s;
+  s.run(S::NotVisible, 10000);
+  CHECK(!s.everDistraction && s.distractions == 0, "distraction ตอนบูตไม่มีคน");
+  s.run(S::Open, 2000);                       // คนขับนั่งแล้ว
+  s.run(S::NotVisible, 4000);
+  CHECK(s.r().distraction && s.distractions == 1, "หลังเห็นหน้าแล้วหันออก 4 s ต้องเตือน (n=%d)", s.distractions);
+}
+
+static void testDriverAbsent() {
+  puts("away 70 s: Distraction stops after 60 s, re-arms on next eyes");
+  Sim s;
+  s.run(S::Open, 5000);
+  bool at10 = false, at65 = false;
+  s.run(S::NotVisible, 70000, [&](const DrowsyResult& r, uint32_t el) {
+    if (el == 9900) at10 = r.distraction;     // el เป็นจำนวนเท่าของ 150
+    if (el == 64950) at65 = r.distraction;
+  });
+  CHECK(at10, "ที่ 10 s distraction ต้องติด");
+  CHECK(!at65 && !s.r().distraction, "เกิน 60 s ต้องเลิกเตือน");
+  CHECK(s.distractions == 1, "distraction event=%d", s.distractions);
+  s.run(S::Open, 1000);
+  s.run(S::NotVisible, 4000);
+  CHECK(s.r().distraction && s.distractions == 2, "เห็นตาอีกครั้งแล้วหันออก ต้องเตือนใหม่ (n=%d)", s.distractions);
+}
+
+static void testMicrosleepHeadDropLong() {
+  puts("microsleep then head drop 70 s: level 3 stays");
+  Sim s;
+  s.run(S::Open, 5000);
+  s.run(S::Closed, 3500);
+  CHECK(s.r().level == L::Microsleep, "level=%d", (int)s.r().level);
+  bool dropped = false;
+  s.run(S::NotVisible, 70000, [&](const DrowsyResult& r, uint32_t) { if (r.level != L::Microsleep) dropped = true; });
+  CHECK(!dropped, "ระดับ 3 หลุดระหว่างหาหน้าไม่เจอ 70 s");
+  CHECK(!s.r().distraction, "เกิน 60 s distraction ต้องดับ (ระดับ 3 ยังดังอยู่)");
+  s.run(S::Open, 1200);
+  CHECK(s.r().level == L::Normal, "ลืมตา 1.2 s level=%d", (int)s.r().level);
+}
+
 static void testStallKeepsLatch() {
   puts("vision stall 3 s then open: latch must not clear on one frame");
   Sim s;   // เจอบนบอร์ด 0.2.6: vision ค้าง ~3 s เฟรมแรกหลังค้างได้ dt ใหญ่จนปลดระดับทันที
@@ -299,6 +340,9 @@ int main() {
   testPerclos();
   testPerclosIgnoresInvisible();
   testMicrosleepHeadDrop();
+  testBootNoFace();
+  testDriverAbsent();
+  testMicrosleepHeadDropLong();
   testStallKeepsLatch();
   testEventQueue();
   printf("\n%d passed, %d failed\n", g_pass, g_fail);

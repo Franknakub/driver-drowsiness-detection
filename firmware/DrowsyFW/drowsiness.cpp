@@ -16,6 +16,7 @@ void DrowsinessJudge::reset() {
   lastMs_ = 0;
   lastSeen_ = EyeState::Unknown;
   lastVisibleMs_ = 0;
+  driverArmed_ = false;
   memset(closedBucket_, 0, sizeof(closedBucket_));
   memset(validBucket_, 0, sizeof(validBucket_));
   curSec_ = 0;
@@ -136,7 +137,11 @@ const DrowsyResult& DrowsinessJudge::update(uint32_t nowMs, EyeState raw) {
   if (openRun_ >= EYES_OPEN_CLEAR_MS) eyeLevel_ = 0;
 
   // 4. Distraction: มองไม่เห็นตานับจากเฟรมสุดท้ายที่เห็น
-  bool dis = e == EyeState::NotVisible && nowMs - lastVisibleMs_ >= DISTRACTION_MS;
+  //    เริ่มนับหลังเห็นตาครั้งแรกเท่านั้น (บูตมาไม่มีคนนั่ง = ไม่เตือน) · มองไม่เห็นนานเกิน DRIVER_ABSENT_MS
+  //    ถือว่า Driver ลงจากรถ: เลิกเตือนจนกว่าจะเห็นตาอีกครั้ง (กันเสียงค้างตอนจอดทิ้งไว้) · ไม่แตะระดับที่ latch ไว้
+  if (isVisible(raw)) driverArmed_ = true;
+  else if (driverArmed_ && nowMs - lastVisibleMs_ > DRIVER_ABSENT_MS) driverArmed_ = false;
+  bool dis = driverArmed_ && e == EyeState::NotVisible && nowMs - lastVisibleMs_ >= DISTRACTION_MS;
   if (dis && !r_.distraction) {
     DrowsyEvent ev = {nowMs, DrowsyEventType::Distraction, DrowsinessLevel::Normal, DrowsinessLevel::Normal, 0};
     push(ev);
