@@ -14,4 +14,7 @@ void startWebServer();  // AsyncWebServer ทำงานบน task ของ A
 void alertMute(uint32_t durationMs);
 bool timeSetFromEpoch(time_t epoch, const char* source);
 bool snapshotJpeg(uint8_t** out, size_t* outLen);   // ผู้เรียกต้อง free(*out)
+struct DrowsyEvent;
+bool drowsyEventPop(DrowsyEvent& out, uint32_t waitMs);  // log task รับ Event จาก vision
+void drowsyEventPrint(const DrowsyEvent& e);
 bool eyesJpeg(uint8_t** out, size_t* outLen);       // ภาพตา 32x32 ที่เข้าโมเดลจริง · ผู้เรียกต้อง free(*out)

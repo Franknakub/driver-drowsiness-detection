@@ -5,6 +5,7 @@
 #include "config.h"
 #include "shared_state.h"
 #include "tasks.h"
+#include "drowsiness.h"
 
 static uint32_t nextBootCount() {
   Preferences p;
@@ -30,9 +31,10 @@ static void tripBegin() {
 }
 
 static void logTask(void*) {
+  DrowsyEvent e;
   for (;;) {
-    // TODO: Sample ทุก 1 วิ จาก stateSnapshot()
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // TODO: Sample ทุก 1 วิ จาก stateSnapshot() + เขียน Event ลง FFat
+    if (drowsyEventPop(e, 1000)) drowsyEventPrint(e);
   }
 }
 

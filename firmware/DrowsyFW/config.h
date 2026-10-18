@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.2.5-deep2half"
+#define FW_VERSION "0.2.8-drowsiness"
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47
@@ -44,16 +44,7 @@
 #define CORE_VISION 1
 #define CORE_NET    0
 
-// ---- เกณฑ์เริ่มต้น (หน่วยเป็นมิลลิวินาที ไม่นับเป็นเฟรม) ----
-#define PERCLOS_WINDOW_MS      60000
-#define PERCLOS_LEVEL1         0.15f
-#define PERCLOS_LEVEL2         0.25f
-#define CLOSED_LEVEL2_MS       1500
-#define MICROSLEEP_MS          3000
-#define DISTRACTION_MS         3000
-#define UNMONITORED_MS         5000
-#define EYES_OPEN_CLEAR_MS     1000
-#define MUTE_DEFAULT_MS        (5UL * 60UL * 1000UL)
+#include "drowsy_config.h"   // เกณฑ์ความง่วง (แยกไฟล์ให้ทดสอบบน PC ได้)
 
 // ---- LDR -> IR (hysteresis กัน IR กระพริบตอนแสงก้ำกึ่ง) · ยังไม่ได้คาลิเบรตกับของจริง ----
 #define LDR_DARK_ON_RAW        2800   // ค่าสูงกว่านี้ = มืด เปิด IR

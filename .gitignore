@@ -17,3 +17,7 @@ desktop.ini
 # Credentials (WiFi, Supabase, device secret) - repo is public
 secrets.h
 .env
+
+# PC test binaries (firmware/tests)
+firmware/tests/*.exe
+firmware/tests/drowsiness_test

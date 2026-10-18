@@ -73,21 +73,22 @@ static void handleStatus(AsyncWebServerRequest* req) {
   SharedState s = stateSnapshot();
   uint32_t now = millis();
   long muteLeft = s.mutedUntilMs ? (long)(int32_t)(s.mutedUntilMs - now) / 1000 : 0;
-  char buf[900];
-  snprintf(buf, sizeof(buf),
+  char buf[1100];
+  int n = snprintf(buf, sizeof(buf),
     "{\"fw\":\"%s\",\"trip\":%u,\"uptime_s\":%u,\"time_known\":%s,\"trip_start_epoch\":%lu,"
     "\"fps\":%.1f,\"face\":%s,\"face_score\":%.2f,\"eye_state\":\"%s\",\"p_closed\":%.2f,"
     "\"p_left\":%.2f,\"p_right\":%.2f,\"eye_dist_px\":%d,\"tilt_comp_deg\":%d,"
-    "\"rotate_ms\":%.2f,\"detect_ms\":%.1f,\"pre_ms\":%.1f,\"classify_ms\":%.1f,\"perclos\":%.2f,\"level\":\"%s\","
+    "\"rotate_ms\":%.2f,\"detect_ms\":%.1f,\"pre_ms\":%.1f,\"classify_ms\":%.1f,\"perclos\":%.2f,\"perclos_ready\":%s,\"closed_ms\":%lu,\"frame_age_ms\":%lu,\"level\":\"%s\","
     "\"distraction\":%s,\"unmonitored\":%s,\"mute_left_s\":%ld,"
     "\"ldr_raw\":%u,\"ir_on\":%s,\"ap\":\"%s\",\"sta\":\"%s\",\"sta_ip\":\"%s\",\"free_psram_kb\":%u}",
     FW_VERSION, s.bootCount, (unsigned)((now - s.tripStartMs) / 1000), s.timeKnown ? "true" : "false",
     (unsigned long)s.tripStartEpoch, s.fps, s.faceFound ? "true" : "false", s.faceScore,
     eyeStateName(s.eyeState), s.pClosed, s.pLeft, s.pRight, s.eyeDistPx, s.tiltCompDeg,
-    s.rotateMs, s.detectMs, s.preMs, s.classifyMs, s.perclos,
+    s.rotateMs, s.detectMs, s.preMs, s.classifyMs, s.perclos, s.perclosReady ? "true" : "false", (unsigned long)s.closedMs, (unsigned long)(now - s.lastFrameMs),
     levelName(s.level), s.distraction ? "true" : "false", s.unmonitored ? "true" : "false",
     muteLeft > 0 ? muteLeft : 0L, s.ldrRaw, s.irOn ? "true" : "false", s.apSsid, s.staSsid, s.staIp,
     (unsigned)(ESP.getFreePsram() / 1024));
+  if (n < 0 || n >= (int)sizeof(buf)) { req->send(500, "text/plain", "status buffer too small"); return; }
   req->send(200, "application/json", buf);
 }
 

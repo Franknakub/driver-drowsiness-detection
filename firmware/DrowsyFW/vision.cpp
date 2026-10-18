@@ -1,11 +1,12 @@
 // vision_task: กล้อง -> หาหน้า + จุดตา (ESP-DL) -> Eye Region สองข้าง -> โมเดลตา -> Eye State
-// ขั้นต่อไป: drowsiness (PERCLOS, Drowsiness Level, Distraction, Unmonitored)
+//   -> DrowsinessJudge (PERCLOS, Drowsiness Level, Distraction, Unmonitored) -> SharedState ให้ alert อ่าน
 #include "esp_camera.h"
 #include "config.h"
 #include "shared_state.h"
 #include "tasks.h"
 #include "face_eye.h"
 #include "eye_classifier.h"
+#include "drowsiness.h"
 #include "img_converters.h"
 #include "esp_heap_caps.h"
 
@@ -221,6 +222,35 @@ static EyeState eyeStateFrom(bool face, float p) {
   return EyeState::Uncertain;
 }
 
+static DrowsinessJudge s_judge;
+static QueueHandle_t s_eventQ = nullptr;
+
+// vision ห้ามพิมพ์ Serial เอง: USB CDC ที่ไม่มีใครเปิดพอร์ตอ่าน ทำให้ write ค้างได้หลายวินาที (เจอใน 0.2.6)
+// ส่ง Event เข้าคิวแบบไม่รอ ให้ log task (Core 0) เป็นคนพิมพ์/เขียนไฟล์
+static void forwardEvents() {
+  DrowsyEvent e;
+  while (s_judge.popEvent(e)) xQueueSend(s_eventQ, &e, 0);
+}
+
+bool drowsyEventPop(DrowsyEvent& out, uint32_t waitMs) {
+  return s_eventQ && xQueueReceive(s_eventQ, &out, pdMS_TO_TICKS(waitMs)) == pdTRUE;
+}
+
+void drowsyEventPrint(const DrowsyEvent& e) {
+  switch (e.type) {
+    case DrowsyEventType::LevelChange:
+      Serial.printf("[event] %lu ms level %u -> %u (closed %lu ms)\n", (unsigned long)e.ms,
+                    (unsigned)e.from, (unsigned)e.to, (unsigned long)e.closedMs);
+      break;
+    case DrowsyEventType::Microsleep:
+      Serial.printf("[event] %lu ms MICROSLEEP (closed %lu ms)\n", (unsigned long)e.ms, (unsigned long)e.closedMs);
+      break;
+    case DrowsyEventType::Distraction:
+      Serial.printf("[event] %lu ms distraction\n", (unsigned long)e.ms);
+      break;
+  }
+}
+
 static void visionTask(void*) {
   if (!cameraInit())        { Serial.println("[vision] camera init FAILED");     vTaskDelete(nullptr); }
   if (!faceEyesInit())      { Serial.println("[vision] face detect init FAILED"); vTaskDelete(nullptr); }
@@ -254,6 +284,8 @@ static void visionTask(void*) {
     float p = combineEyes(pL, pR);
     frames++;
     uint32_t now = millis();
+    EyeState es = eyeStateFrom(f.found, p);
+    const DrowsyResult& dr = s_judge.update(now, es);
     {
       StateGuard g;
       g_state.faceFound = f.found;
@@ -261,7 +293,14 @@ static void visionTask(void*) {
       g_state.pLeft = pL;
       g_state.pRight = pR;
       g_state.pClosed = p < 0 ? 0 : p;
-      g_state.eyeState = eyeStateFrom(f.found, p);
+      g_state.eyeState = es;
+      g_state.perclos = dr.perclos;
+      g_state.perclosReady = dr.perclos >= 0;
+      g_state.closedMs = dr.closedMs;
+      g_state.level = dr.level;
+      g_state.distraction = dr.distraction;
+      g_state.unmonitored = dr.unmonitored;
+      g_state.lastFrameMs = now;
       g_state.eyeDistPx = eyeDist;
       g_state.tiltCompDeg = f.compDeg;
       g_state.rotateMs = f.rotateMs;
@@ -276,10 +315,12 @@ static void visionTask(void*) {
         windowStart = now;
       }
     }
+    forwardEvents();
   }
 }
 
 void startVisionTask() {
   s_snapMutex = xSemaphoreCreateMutex();
+  s_eventQ = xQueueCreate(32, sizeof(DrowsyEvent));
   xTaskCreatePinnedToCore(visionTask, "vision", 16384, nullptr, 5, nullptr, CORE_VISION);
 }

@@ -5,8 +5,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
-enum class EyeState : uint8_t { Unknown, Open, Closed, Uncertain, NotVisible };
-enum class DrowsinessLevel : uint8_t { Normal = 0, Fatigue = 1, Drowsy = 2, Microsleep = 3 };
+#include "domain_types.h"
 
 // ผลเทียบ A/B ทางเดิม (หมุนทั้งเฟรม) กับทางใหม่ (หยิบพิกเซลผ่านแผนที่) บนเฟรมเดียวกัน · เวลาเป็นค่าเฉลี่ย ms
 struct AbStats {
@@ -34,9 +33,12 @@ struct SharedState {
   bool     abOn, abReset;      // web ตั้ง · vision อ่าน
   AbStats  ab;
   uint32_t visionFrames;
+  uint32_t lastFrameMs;        // millis() ของเฟรมล่าสุดที่ vision ประมวลผลเสร็จ
 
   // drowsiness
-  float           perclos;     // 0..1 ในหน้าต่าง PERCLOS_WINDOW_MS
+  float           perclos;     // 0..1 ในหน้าต่าง PERCLOS_WINDOW_MS · -1 = ยังไม่พร้อม
+  bool            perclosReady;
+  uint32_t        closedMs;    // ตาปิดต่อเนื่องขณะนี้
   DrowsinessLevel level;
   bool            distraction;
   bool            unmonitored;

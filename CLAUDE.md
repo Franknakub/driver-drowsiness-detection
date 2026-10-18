@@ -19,6 +19,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ไม่มี lint หรือ unit test บนบอร์ด · การตรวจคือ compile ผ่าน แล้วดู serial / `GET /api/status` จากบอร์ดจริง
 
+logic ความง่วง (`drowsiness.cpp`) ไม่พึ่ง Arduino มีเทสต์บน PC ด้วยลำดับเฟรมจำลอง · แก้ `drowsiness.*` / `drowsy_config.h` แล้วต้องรันผ่านก่อน:
+
+```bash
+cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW drowsiness_test.cpp ../DrowsyFW/drowsiness.cpp -o drowsiness_test && ./drowsiness_test
+```
+
 ```bash
 CLI="$LOCALAPPDATA/Programs/Arduino IDE/resources/app/lib/backend/resources/arduino-cli.exe"
 FQBN="esp32:esp32:esp32s3:PSRAM=opi,CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom"   # DrowsyFW
@@ -52,7 +58,8 @@ S=~/Documents/Arduino/DrowsyFW
 - `face_eye.cpp` = หาหน้า + หมุนภาพ (ย้ายมาจากสเก็ตช์ทดลอง FaceSpike) · `human_face_detect*.{hpp,cpp}` + `human_face_detect_model.cpp` = โค้ดและโมเดลจาก esp-dl v3.3.11 (MIT) · `eye_classifier.cpp` + `eye_preprocess.h` + `eye_model_data.h` = โมเดลตา
 - **endpoint ดีบัก:** `/api/status` (JSON ทุกค่าใน state รวมเวลา rotate/detect/classify) · `/snapshot.jpg` (ภาพตั้งตรงพร้อมกรอบหน้า/ตา) · `/eyes.jpg` (ภาพ 32×32 ที่เข้าโมเดลจริง ซ้าย = ตาซ้ายของภาพ)
 - RAM ภายในเหลือก้อนใหญ่สุดแค่ ~30 KB หลัง WiFi + esp-dl · arena ของ TFLM จึงตั้ง 28 KB และ fallback ไป PSRAM
-- **ยังไม่ได้ทำ:** logic ความง่วง (PERCLOS / Drowsiness Level / Distraction / Unmonitored), เขียน log ลง FFat, Sync ขึ้น Supabase, OLED
+- **logic ความง่วง** อยู่ใน `drowsiness.{h,cpp}` (class `DrowsinessJudge`, เกณฑ์ใน `drowsy_config.h`) · vision เรียกทุกเฟรมหลังได้ Eye State · นับเป็นเวลา (dt) ไม่นับเฟรม · Event ส่งผ่านคิวให้ log task พิมพ์ — **ห้ามพิมพ์ Serial จาก vision task** (USB CDC ที่ไม่มีใครเปิดพอร์ตทำให้ค้าง ~3 วิ เจอใน 0.2.6)
+- **ยังไม่ได้ทำ:** เขียน Sample/Event ลง FFat, Sync ขึ้น Supabase, OLED
 
 ## ML (`ml/`)
 
