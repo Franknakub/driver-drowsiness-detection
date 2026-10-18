@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.3.3-visible"   // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
+#define FW_VERSION "0.3.4-absent"   // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47

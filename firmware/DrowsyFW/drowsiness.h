@@ -59,7 +59,7 @@ private:
   uint32_t gapUncertain_, gapOpen_; // ส่วนของช่องว่างที่เป็น Uncertain+Open / Open ต่อเนื่อง
   uint32_t seenClosed_, seenOther_; // ในช่วงตาปิด: เวลาที่เห็นตาปิดจริง / เห็นตาเปิดหรือไม่แน่ใจ (raw)
   uint32_t openRun_;
-  uint8_t  eyeLevel_;               // latch จนกว่าลืมตาต่อเนื่อง EYES_OPEN_CLEAR_MS
+  uint8_t  eyeLevel_;               // latch จนกว่าลืมตาต่อเนื่อง EYES_OPEN_CLEAR_MS หรือไม่เห็นตานาน (ระดับ 2: DRIVER_ABSENT_MS · 3: MICROSLEEP_ABSENT_CLEAR_MS)
 
   uint32_t uncertainRun_;
 

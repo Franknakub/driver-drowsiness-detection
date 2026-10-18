@@ -9,6 +9,7 @@
 #include "drowsy_config.h"
 #include "trip411_frames.h"
 #include "trip412_frames.h"
+#include "trip413_frames.h"
 
 static int g_fail = 0, g_pass = 0;
 #define CHECK(cond, ...) do { if (cond) g_pass++; else { g_fail++; \
@@ -339,6 +340,57 @@ static void testLookDownSparseClosed() {
   CHECK(s.maxLevel == 0 && s.microsleeps == 0, "maxLevel=%d microsleep=%d closed=%u", s.maxLevel, s.microsleeps, s.maxClosed);
 }
 
+static void testAbsentClearsLevel2() {
+  puts("level 2 latched, then no eyes 70 s: clears after 60 s (driver left)");
+  Sim s;
+  s.run(S::Open, 5000);
+  s.run(S::Closed, 2000);
+  CHECK(s.r().level == L::Drowsy, "level=%d", (int)s.r().level);
+  int changes = s.levelChanges, at59 = -1, at61 = -1;
+  s.run(S::NotVisible, 70000, [&](const DrowsyResult& r, uint32_t el) {
+    if (el == 59850) at59 = (int)r.level;
+    if (el == 61050) at61 = (int)r.level;
+  });
+  CHECK(at59 == 2, "ที่ 59.85 s level=%d (ต้องยังค้าง)", at59);
+  CHECK(at61 == 0, "ที่ 61 s level=%d (ต้องปลดแล้ว)", at61);
+  CHECK(s.levelChanges == changes + 1, "LevelChange event %d", s.levelChanges - changes);
+  s.run(S::Open, 300);
+  CHECK(s.r().level == L::Normal && s.maxLevel == 2, "เห็นตาอีกครั้ง level=%d", (int)s.r().level);
+}
+
+static void testAbsentClearsMicrosleep() {
+  puts("level 3 latched, then no eyes: stays 4 min, clears after 5 min");
+  Sim s;
+  s.run(S::Open, 5000);
+  s.run(S::Closed, 3500);
+  CHECK(s.r().level == L::Microsleep, "level=%d", (int)s.r().level);
+  int changes = s.levelChanges, at4m = -1, at299 = -1, at301 = -1;
+  s.run(S::NotVisible, 310050, [&](const DrowsyResult& r, uint32_t el) {
+    if (el == 240000) at4m = (int)r.level;
+    if (el == 299850) at299 = (int)r.level;
+    if (el == 301050) at301 = (int)r.level;
+  });
+  CHECK(at4m == 3 && at299 == 3, "4 นาที level=%d · 299.85 s level=%d (ต้องยังค้าง 3)", at4m, at299);
+  CHECK(at301 == 0, "ที่ 301 s level=%d (ต้องปลดแล้ว)", at301);
+  CHECK(s.levelChanges == changes + 1, "LevelChange event %d", s.levelChanges - changes);
+  CHECK(s.microsleeps == 1, "microsleep=%d", s.microsleeps);
+}
+
+static void testTrip413() {
+  puts("Trip 413 (walked away, L2 from unseen frames): L2 clears within 60 s of the last seen frame");
+  Sim s;   // เฟรมขยายจาก Sample 2440-2462 (make_trip413_frames.py) แล้วไม่เห็นตา 3294 s เหมือนบอร์ด
+  uint32_t lastSeen = 0;
+  for (const char* p = TRIP413_FRAMES; *p; p++) { s.frame(frameState(*p)); if (*p != '.') lastSeen = s.t; }
+  CHECK(s.maxLevel == 2, "ระดับ 2 แบบบอร์ด maxLevel=%d", s.maxLevel);   // บอร์ด 0.3.3 เข้าระดับ 2 ที่ Sample 2451
+  uint32_t clearedAt = 0;
+  s.run(S::NotVisible, 3294000, [&](const DrowsyResult& r, uint32_t) {
+    if (!clearedAt && r.level == L::Normal) clearedAt = s.t;
+  });
+  CHECK(clearedAt && clearedAt - lastSeen <= DRIVER_ABSENT_MS + FRAME, "ปลดหลังเห็นตาครั้งสุดท้าย %u ms (บอร์ด 0.3.3 ค้าง 3294 s)",
+        clearedAt ? clearedAt - lastSeen : 0);
+  CHECK(s.r().level == L::Normal && s.microsleeps == 0, "level=%d microsleep=%d", (int)s.r().level, s.microsleeps);
+}
+
 static void testRealClosureWithDropouts() {
   puts("real closure 4.5 s with heavy face dropouts still reaches Microsleep");
   // สัดส่วนเหมือนทดสอบหน้ากล้อง 0.2.8 ช่วงหลับ 4.5 s: ตาปิด ~30% · เปิด/ไม่แน่ใจ ~20% · หาหน้าไม่เจอ ~50%
@@ -404,6 +456,9 @@ int main() {
   testTrip411();
   testTrip412();
   testLookDownSparseClosed();
+  testAbsentClearsLevel2();
+  testAbsentClearsMicrosleep();
+  testTrip413();
   testRealClosureWithDropouts();
   testUncertainStitch();
   testStallKeepsLatch();

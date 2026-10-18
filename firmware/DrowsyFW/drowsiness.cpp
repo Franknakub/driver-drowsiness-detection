@@ -153,10 +153,15 @@ const DrowsyResult& DrowsinessJudge::update(uint32_t nowMs, EyeState raw) {
   // latch: ระดับจากตาปิดหายเมื่อเห็นตาเปิดต่อเนื่องเท่านั้น (หัวก้มจนหาหน้าไม่เจอ ระดับต้องค้าง)
   openRun_ = e == EyeState::Open ? openRun_ + dt : 0;
   if (openRun_ >= EYES_OPEN_CLEAR_MS) eyeLevel_ = 0;
+  //        หรือเมื่อไม่เห็นตาเลยนานพอ = Driver ลงจากรถ (Trip 413: ระดับ 2 ค้าง 55 นาทีตอนเดินออกไป เสียงดังค้างตอนจอด)
+  //        ระดับ 2 หายหลัง DRIVER_ABSENT_MS · ระดับ 3 ค้างนานกว่า (หลับแล้วหัวก้มจนหาหน้าไม่เจอ) หายหลัง MICROSLEEP_ABSENT_CLEAR_MS
+  uint32_t absentMs = nowMs - lastVisibleMs_;
+  if ((eyeLevel_ == 2 && absentMs > DRIVER_ABSENT_MS) || (eyeLevel_ == 3 && absentMs > MICROSLEEP_ABSENT_CLEAR_MS))
+    eyeLevel_ = 0;
 
   // 4. Distraction: มองไม่เห็นตานับจากเฟรมสุดท้ายที่เห็น
   //    เริ่มนับหลังเห็นตาครั้งแรกเท่านั้น (บูตมาไม่มีคนนั่ง = ไม่เตือน) · มองไม่เห็นนานเกิน DRIVER_ABSENT_MS
-  //    ถือว่า Driver ลงจากรถ: เลิกเตือนจนกว่าจะเห็นตาอีกครั้ง (กันเสียงค้างตอนจอดทิ้งไว้) · ไม่แตะระดับที่ latch ไว้
+  //    ถือว่า Driver ลงจากรถ: เลิกเตือนจนกว่าจะเห็นตาอีกครั้ง (กันเสียงค้างตอนจอดทิ้งไว้)
   if (isVisible(raw)) driverArmed_ = true;
   else if (driverArmed_ && nowMs - lastVisibleMs_ > DRIVER_ABSENT_MS) driverArmed_ = false;
   bool dis = driverArmed_ && e == EyeState::NotVisible && nowMs - lastVisibleMs_ >= DISTRACTION_MS;
