@@ -134,8 +134,12 @@ const DrowsyResult& DrowsinessJudge::update(uint32_t nowMs, EyeState raw) {
   // กันกรณีปิด/ไม่แน่ใจสลับกันครึ่งต่อครึ่ง ซึ่งจะ "ชนะ" ทุกครั้งหลังเฟรมตาปิดแล้วระดับ latch ทันที)
   // และมีเวลาตาปิดจริงอย่างน้อย CLOSED_SEEN_MIN_PCT % ของช่วง (Trip 411: ช่องว่างหาหน้าไม่เจอ +
   // "ไม่แน่ใจ" p≈0.45 ถูกเชื่อมด้วยเฟรมตาปิด p≈0.5–0.6 ไม่กี่เฟรม จนเกิด Microsleep ทั้งที่ไม่ได้หันมาที่กล้อง)
+  // และเห็นหน้าจริงอย่างน้อย CLOSED_VISIBLE_MIN_PCT % ของช่วง (Trip 412: ก้มทำการบ้าน/ดูมือถือ ลืมตา หาหน้าไม่เจอเกือบตลอด
+  // เฟรมที่เจอหน้าโมเดลอ่านว่าตาปิด · ถือค่าเดิม + เชื่อมช่องว่างทำให้ตาปิดทีละเฟรมกลายเป็นช่วงตาปิด 5–7 วิ จนเกิด Microsleep
+  // ส่วนหลับตาจริงหน้ากล้อง 0.2.8 เห็นหน้าราวครึ่งหนึ่งของเวลา)
   bool credible = closedRun_ && seenClosed_ >= seenOther_ + CLOSED_SEEN_LEAD_MS &&
-                  seenClosed_ * 100 >= closedRun_ * CLOSED_SEEN_MIN_PCT;
+                  seenClosed_ * 100 >= closedRun_ * CLOSED_SEEN_MIN_PCT &&
+                  (seenClosed_ + seenOther_) * 100 >= closedRun_ * CLOSED_VISIBLE_MIN_PCT;
   uint32_t run = credible ? closedRun_ : 0;
   r_.closedMs = run;
 

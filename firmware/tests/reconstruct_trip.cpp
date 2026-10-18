@@ -13,6 +13,10 @@
 //   + 1 per visible frame equal to the sample's own state, + 2 per other visible frame
 // i.e. the frames with the least visible evidence (mostly "not visible": the trip saw a face in ~24% of
 // samples) that still explain the logged closed runs.
+// --lookahead (Trip 412): also score the chunks before the last one of an interval with a lower bound of the
+//   final peak error (the peak can only grow, and can grow by at most 150 ms per remaining frame), so long
+//   intervals (log stalls of 2-3 s) are not pruned to all-"not visible" before their peak is checked.
+//   Without it the output is the same as when trip411_frames.h was made.
 // Build against the old judge:  g++ -std=c++17 -O2 -I<old DrowsyFW> reconstruct_trip.cpp <old>/drowsiness.cpp
 #include <algorithm>
 #include <cstdio>
@@ -50,7 +54,8 @@ static int frameCost(const std::string& f, char eye) {
   return c;
 }
 
-int main() {
+int main(int argc, char** argv) {
+  bool lookahead = argc > 1 && std::string(argv[1]) == "--lookahead";
   std::vector<int> N; std::vector<char> EYE; std::vector<long> PEAK;
   { int n; char e; long p; while (scanf("%d %c %ld", &n, &e, &p) == 3) { N.push_back(n); EYE.push_back(e); PEAK.push_back(p); } }
 
@@ -72,6 +77,10 @@ int main() {
           for (char ch : f) { tt += 150; cm = jj.update(tt, st(ch)).closedMs; if (cm > pk) pk = cm; }
           long s = beams[bi].score + frameCost(f, eye);
           if (last) s += (labs((long)pk - PEAK[i]) + ((long)cm > next ? (long)cm - next : 0)) * 1000;
+          else if (lookahead) {
+            long reach = std::max((long)pk, (long)cm + 150L * left);
+            s += (std::max(0L, PEAK[i] - reach) + std::max(0L, (long)pk - PEAK[i])) * 1000;
+          }
           cands.push_back({s, bi, p});
         }
       }

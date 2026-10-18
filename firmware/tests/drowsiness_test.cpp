@@ -8,6 +8,7 @@
 #include "drowsiness.h"
 #include "drowsy_config.h"
 #include "trip411_frames.h"
+#include "trip412_frames.h"
 
 static int g_fail = 0, g_pass = 0;
 #define CHECK(cond, ...) do { if (cond) g_pass++; else { g_fail++; \
@@ -318,6 +319,26 @@ static void testTrip411() {
   CHECK(s.maxClosed < MICROSLEEP_MS, "maxClosed=%u", s.maxClosed);
 }
 
+static void testTrip412() {
+  puts("Trip 412 22:12-22:15 (looking down at homework/phone, eyes open): no Microsleep");
+  Sim s;   // เฟรมขยายจาก Sample 1 Hz ของบอร์ด (make_trip412_frames.py)
+  int n = 0;
+  for (const char* p = TRIP412_FRAMES; *p; p++, n++) s.frame(frameState(*p));
+  CHECK(n > 1200, "frames=%d", n);
+  // กติกา 0.3.2 บนเฟรมชุดนี้ได้ Microsleep 2 ครั้ง ตรงกับบอร์ด (ตาปิดต่อเนื่องสูงสุดต่อ Sample คลาดจากบอร์ดเฉลี่ย 37 ms)
+  CHECK(s.microsleeps == 0, "microsleep=%d (บอร์ด 0.3.2 ได้ 2) maxClosed=%u", s.microsleeps, s.maxClosed);
+  CHECK(s.maxClosed < MICROSLEEP_MS, "maxClosed=%u", s.maxClosed);
+}
+
+static void testLookDownSparseClosed() {
+  puts("looking down: sparse Closed frames, face otherwise lost, does not count");
+  Sim s;   // ตาปิดจริง 30% เท่าหลับตาจริงด้านล่าง แต่ไม่มีเฟรมที่เห็นหน้าอื่นเลย · กติกา 0.3.2 ถึง Microsleep ที่ 3 s
+  s.run(S::Open, 3000);
+  const char* pat = "C...C..C..";
+  for (int i = 0; i < 40; i++) s.frame(frameState(pat[i % 10]));
+  CHECK(s.maxLevel == 0 && s.microsleeps == 0, "maxLevel=%d microsleep=%d closed=%u", s.maxLevel, s.microsleeps, s.maxClosed);
+}
+
 static void testRealClosureWithDropouts() {
   puts("real closure 4.5 s with heavy face dropouts still reaches Microsleep");
   // สัดส่วนเหมือนทดสอบหน้ากล้อง 0.2.8 ช่วงหลับ 4.5 s: ตาปิด ~30% · เปิด/ไม่แน่ใจ ~20% · หาหน้าไม่เจอ ~50%
@@ -381,6 +402,8 @@ int main() {
   testDriverAbsent();
   testMicrosleepHeadDropLong();
   testTrip411();
+  testTrip412();
+  testLookDownSparseClosed();
   testRealClosureWithDropouts();
   testUncertainStitch();
   testStallKeepsLatch();
