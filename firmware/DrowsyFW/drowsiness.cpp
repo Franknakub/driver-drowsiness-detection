@@ -22,6 +22,7 @@ void DrowsinessJudge::reset() {
   curSec_ = 0;
   perclosLevel_ = 0;
   closedRun_ = gapRun_ = gapUncertain_ = gapOpen_ = openRun_ = 0;
+  seenClosed_ = seenOther_ = 0;
   eyeLevel_ = 0;
   uncertainRun_ = 0;
   qHead_ = qCount_ = 0;
@@ -111,23 +112,36 @@ const DrowsyResult& DrowsinessJudge::update(uint32_t nowMs, EyeState raw) {
   //    - Uncertain + ลืมตาสั้นๆ รวมไม่เกิน UNCERTAIN_BRIDGE_MS
   //    - ช่องว่างทั้งหมด (รวมหาหน้าไม่เจอ ซึ่งเกิดบ่อยตอนหลับตา) ไม่เกิน NOTVISIBLE_BRIDGE_MS
   //    เวลาที่เชื่อมไว้นับรวมเข้าไปตอนกลับมาเห็นตาปิดอีกครั้ง (ไม่นับระหว่างที่ยังไม่แน่ใจ)
+  //    ลืมตาสลับกับหาหน้าไม่เจอ (O . O) นับเป็นลืมตาต่อเนื่อง: หาหน้าไม่เจอไม่ใช่หลักฐานว่าตาปิด
   if (e == EyeState::Closed) {
+    if (!closedRun_) seenClosed_ = seenOther_ = 0;
     closedRun_ += gapRun_ + dt;
     gapRun_ = gapUncertain_ = gapOpen_ = 0;
   } else if (closedRun_) {
     gapRun_ += dt;
-    if (e == EyeState::NotVisible) gapOpen_ = 0;
-    else gapUncertain_ += dt;
+    if (e != EyeState::NotVisible) gapUncertain_ += dt;
     if (e == EyeState::Open) gapOpen_ += dt;
     else if (e == EyeState::Uncertain) gapOpen_ = 0;
     if (gapOpen_ >= OPEN_CONFIRM_MS || gapUncertain_ > UNCERTAIN_BRIDGE_MS || gapRun_ > NOTVISIBLE_BRIDGE_MS)
       closedRun_ = gapRun_ = gapUncertain_ = gapOpen_ = 0;
   }
-  r_.closedMs = closedRun_;
+  // หลักฐานในช่วงนี้นับจากเฟรมที่เห็นตาจริง (raw) ไม่นับเฟรมที่ถือค่าเดิม
+  if (closedRun_) {
+    if (raw == EyeState::Closed) seenClosed_ += dt;
+    else if (raw == EyeState::Open || raw == EyeState::Uncertain) seenOther_ += dt;
+  }
+  // ช่วงตาปิดจะนับเข้าเกณฑ์ระดับ 2/3 ได้ต่อเมื่อเฟรมตาปิดจริงเป็นส่วนใหญ่ของเฟรมที่เห็นตา (นำอยู่ ≥ CLOSED_SEEN_LEAD_MS
+  // กันกรณีปิด/ไม่แน่ใจสลับกันครึ่งต่อครึ่ง ซึ่งจะ "ชนะ" ทุกครั้งหลังเฟรมตาปิดแล้วระดับ latch ทันที)
+  // และมีเวลาตาปิดจริงอย่างน้อย CLOSED_SEEN_MIN_PCT % ของช่วง (Trip 411: ช่องว่างหาหน้าไม่เจอ +
+  // "ไม่แน่ใจ" p≈0.45 ถูกเชื่อมด้วยเฟรมตาปิด p≈0.5–0.6 ไม่กี่เฟรม จนเกิด Microsleep ทั้งที่ไม่ได้หันมาที่กล้อง)
+  bool credible = closedRun_ && seenClosed_ >= seenOther_ + CLOSED_SEEN_LEAD_MS &&
+                  seenClosed_ * 100 >= closedRun_ * CLOSED_SEEN_MIN_PCT;
+  uint32_t run = credible ? closedRun_ : 0;
+  r_.closedMs = run;
 
-  uint8_t el = closedRun_ >= MICROSLEEP_MS ? 3 : closedRun_ >= CLOSED_LEVEL2_MS ? 2 : 0;
+  uint8_t el = run >= MICROSLEEP_MS ? 3 : run >= CLOSED_LEVEL2_MS ? 2 : 0;
   if (el == 3 && eyeLevel_ < 3) {
-    DrowsyEvent ev = {nowMs, DrowsyEventType::Microsleep, DrowsinessLevel::Normal, DrowsinessLevel::Normal, closedRun_};
+    DrowsyEvent ev = {nowMs, DrowsyEventType::Microsleep, DrowsinessLevel::Normal, DrowsinessLevel::Normal, run};
     push(ev);
   }
   if (el > eyeLevel_) eyeLevel_ = el;
@@ -155,7 +169,7 @@ const DrowsyResult& DrowsinessJudge::update(uint32_t nowMs, EyeState raw) {
   // 6. ระดับรวม
   DrowsinessLevel lv = (DrowsinessLevel)(eyeLevel_ > pl ? eyeLevel_ : pl);
   if (lv != r_.level) {
-    DrowsyEvent ev = {nowMs, DrowsyEventType::LevelChange, r_.level, lv, closedRun_};
+    DrowsyEvent ev = {nowMs, DrowsyEventType::LevelChange, r_.level, lv, r_.closedMs};
     push(ev);
     r_.level = lv;
   }

@@ -7,7 +7,7 @@
 
 struct DrowsyResult {
   float           perclos;      // 0..1 · -1 = ยังไม่พร้อม (เห็นตาเปิด/ปิดรวมไม่ถึง PERCLOS_MIN_VALID_MS)
-  uint32_t        closedMs;     // ตาปิดต่อเนื่องขณะนี้ (รวมช่วง "ไม่แน่ใจ" ที่เชื่อมไว้) · 0 = ไม่ได้ปิดอยู่
+  uint32_t        closedMs;     // ตาปิดต่อเนื่องขณะนี้ (รวมช่องว่างที่เชื่อมไว้) · 0 = ไม่ได้ปิด หรือหลักฐานตาปิดจริงยังไม่พอ
   DrowsinessLevel level;        // max(ระดับจากตาปิดต่อเนื่อง, ระดับจาก PERCLOS)
   bool            distraction;  // มองไม่เห็นตา ≥ DISTRACTION_MS (หลังเคยเห็นตา และไม่เกิน DRIVER_ABSENT_MS)
   bool            unmonitored;  // เห็นหน้าแต่ "ไม่แน่ใจ" ต่อเนื่อง ≥ UNMONITORED_MS
@@ -57,6 +57,7 @@ private:
   // ตาปิดต่อเนื่อง
   uint32_t closedRun_, gapRun_;     // gapRun_ = ช่วงไม่ใช่ Closed ที่กำลังเชื่อมอยู่
   uint32_t gapUncertain_, gapOpen_; // ส่วนของช่องว่างที่เป็น Uncertain+Open / Open ต่อเนื่อง
+  uint32_t seenClosed_, seenOther_; // ในช่วงตาปิด: เวลาที่เห็นตาปิดจริง / เห็นตาเปิดหรือไม่แน่ใจ (raw)
   uint32_t openRun_;
   uint8_t  eyeLevel_;               // latch จนกว่าลืมตาต่อเนื่อง EYES_OPEN_CLEAR_MS
 

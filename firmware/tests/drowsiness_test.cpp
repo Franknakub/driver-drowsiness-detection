@@ -7,6 +7,7 @@
 #include <functional>
 #include "drowsiness.h"
 #include "drowsy_config.h"
+#include "trip411_frames.h"
 
 static int g_fail = 0, g_pass = 0;
 #define CHECK(cond, ...) do { if (cond) g_pass++; else { g_fail++; \
@@ -302,6 +303,42 @@ static void testMicrosleepHeadDropLong() {
   CHECK(s.r().level == L::Normal, "ลืมตา 1.2 s level=%d", (int)s.r().level);
 }
 
+static S frameState(char c) {
+  return c == 'O' ? S::Open : c == 'C' ? S::Closed : c == 'u' ? S::Uncertain : S::NotVisible;
+}
+
+static void testTrip411() {
+  puts("Trip 411 (driver at PC, not facing camera): no Microsleep");
+  Sim s;   // เฟรมขยายจาก Sample 1 Hz ของบอร์ด (วิธีขยายอยู่ใน make_trip411_frames.py)
+  int n = 0;
+  for (const char* p = TRIP411_FRAMES; *p; p++, n++) s.frame(frameState(*p));
+  CHECK(n > 9000, "frames=%d", n);
+  // กติกาเดิม (0.3.1) บนเฟรมชุดนี้ได้ Microsleep 2 ครั้ง + เข้าระดับ 2 สี่ครั้ง ตรงกับบอร์ด
+  CHECK(s.microsleeps == 0, "microsleep=%d (บอร์ด 0.3.1 ได้ 2) maxClosed=%u", s.microsleeps, s.maxClosed);
+  CHECK(s.maxClosed < MICROSLEEP_MS, "maxClosed=%u", s.maxClosed);
+}
+
+static void testRealClosureWithDropouts() {
+  puts("real closure 4.5 s with heavy face dropouts still reaches Microsleep");
+  // สัดส่วนเหมือนทดสอบหน้ากล้อง 0.2.8 ช่วงหลับ 4.5 s: ตาปิด ~30% · เปิด/ไม่แน่ใจ ~20% · หาหน้าไม่เจอ ~50%
+  // (เปิดผิดเฟรมเดียวตามด้วยตาปิด เหมือนบอร์ด: ถ้าตามด้วยหาหน้าไม่เจอ จะถูกถือเป็นเปิด 0.3 s และตัดช่วง)
+  Sim s;
+  s.run(S::Open, 3000);
+  const char* pat = "C.C..OC.u.";
+  for (int i = 0; i < 30; i++) s.frame(frameState(pat[i % 10]));
+  CHECK(s.r().level == L::Microsleep, "level=%d closed=%u", (int)s.r().level, s.r().closedMs);
+  CHECK(s.microsleeps == 1, "microsleep=%d", s.microsleeps);
+}
+
+static void testUncertainStitch() {
+  puts("Uncertain-dominated run with sparse Closed frames does not count");
+  Sim s;   // แบบ Microsleep ครั้งที่ 1 ของ Trip 411: "ไม่แน่ใจ" p≈0.45 + ตาปิดหลุดเกณฑ์ 0.5 บางเฟรม
+  s.run(S::Open, 3000);
+  const char* pat = "C.u..C.u..";      // ตาปิดจริง 20% = ไม่แน่ใจ 20% · กติกาเดิมเชื่อมได้จนถึง Microsleep
+  for (int i = 0; i < 40; i++) s.frame(frameState(pat[i % 10]));
+  CHECK(s.maxLevel == 0, "maxLevel=%d closed=%u", s.maxLevel, s.maxClosed);
+}
+
 static void testStallKeepsLatch() {
   puts("vision stall 3 s then open: latch must not clear on one frame");
   Sim s;   // เจอบนบอร์ด 0.2.6: vision ค้าง ~3 s เฟรมแรกหลังค้างได้ dt ใหญ่จนปลดระดับทันที
@@ -343,6 +380,9 @@ int main() {
   testBootNoFace();
   testDriverAbsent();
   testMicrosleepHeadDropLong();
+  testTrip411();
+  testRealClosureWithDropouts();
+  testUncertainStitch();
   testStallKeepsLatch();
   testEventQueue();
   printf("\n%d passed, %d failed\n", g_pass, g_fail);
