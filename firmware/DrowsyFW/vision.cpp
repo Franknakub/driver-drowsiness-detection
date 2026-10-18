@@ -297,6 +297,7 @@ static void visionTask(void*) {
       g_state.perclos = dr.perclos;
       g_state.perclosReady = dr.perclos >= 0;
       g_state.closedMs = dr.closedMs;
+      if (dr.closedMs > g_state.closedPeakMs) g_state.closedPeakMs = dr.closedMs;
       g_state.level = dr.level;
       g_state.distraction = dr.distraction;
       g_state.unmonitored = dr.unmonitored;

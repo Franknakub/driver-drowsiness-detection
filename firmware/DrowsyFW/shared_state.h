@@ -39,6 +39,7 @@ struct SharedState {
   float           perclos;     // 0..1 ในหน้าต่าง PERCLOS_WINDOW_MS · -1 = ยังไม่พร้อม
   bool            perclosReady;
   uint32_t        closedMs;    // ตาปิดต่อเนื่องขณะนี้
+  uint32_t        closedPeakMs; // ตาปิดต่อเนื่องสูงสุดตั้งแต่ log task เก็บ Sample ครั้งก่อน (log task รีเซ็ต)
   DrowsinessLevel level;
   bool            distraction;
   bool            unmonitored;

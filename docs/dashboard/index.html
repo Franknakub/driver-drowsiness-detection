@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DDD Cloud Dashboard</title>
+<meta name="description" content="ประวัติ Trip ของ Driver Drowsiness Detection จาก Supabase">
+<!-- Cloud Dashboard (GLOSSARY.md) · อ่านจาก Supabase ตาม cloud/sql/001_trip_history.sql · login ด้วยอีเมล
+     URL + publishable key เป็นค่าสาธารณะโดยออกแบบ สิทธิ์อ่านข้อมูลคุมด้วย RLS (เห็นเฉพาะ Device ของตัวเอง) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#f6f7f9;--surface:#fff;--ink:#16191d;--muted:#5d6670;--line:#e2e5ea;--accent:#2457c5;--accent-ink:#fff;
+  --l0:#9aa5b1;--l1:#d9a400;--l2:#e06a00;--l3:#d1243a;--dis:#7a3fc4;--unmon:#aab2bc;--perclos:#2457c5;--ok:#1f8a4c;--err:#b3261e;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1216;--surface:#171b21;--ink:#e8ebef;--muted:#99a3ad;--line:#2a3038;--accent:#7aa2ff;--accent-ink:#0f1216;
+  --l0:#6c7682;--l1:#f0c330;--l2:#ff8a2a;--l3:#ff5468;--dis:#b48cff;--unmon:#4d5560;--perclos:#7aa2ff;--ok:#4cc27e;--err:#ff7a70;
+  --shadow:none;}}
+:root[data-theme="dark"]{
+  --bg:#0f1216;--surface:#171b21;--ink:#e8ebef;--muted:#99a3ad;--line:#2a3038;--accent:#7aa2ff;--accent-ink:#0f1216;
+  --l0:#6c7682;--l1:#f0c330;--l2:#ff8a2a;--l3:#ff5468;--dis:#b48cff;--unmon:#4d5560;--perclos:#7aa2ff;--ok:#4cc27e;--err:#ff7a70;--shadow:none;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "IBM Plex Sans Thai",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+header h1{font-size:17px;margin:0;font-weight:600}
+header .sp{flex:1}
+main{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+h2{font-size:16px;margin:0 0 12px;font-weight:600}
+.muted{color:var(--muted)} small{font-size:13px}
+button,.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+button:disabled{opacity:.6;cursor:default}
+input{font:inherit;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{margin-top:10px;font-size:14px}.msg.err{color:var(--err)}.msg.ok{color:var(--ok)}
+.auth{max-width:380px;margin:40px auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-weight:500;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+tbody tr{cursor:pointer} tbody tr:hover{background:var(--bg)} tbody tr.sel{background:var(--bg);box-shadow:inset 3px 0 0 var(--accent)}
+.tablewrap{overflow-x:auto;margin:0 -18px;padding:0 18px}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line);color:var(--muted)}
+.pill.warn{color:var(--l3);border-color:var(--l3)}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:4px 0 16px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.stat .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .k{font-size:12px;color:var(--muted)}
+.levelbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line);margin:6px 0 4px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+#chart{width:100%;height:auto;display:block;touch-action:pan-y}
+#chart text{fill:var(--muted);font-size:11px;font-family:inherit}
+.tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;box-shadow:var(--shadow);display:none;z-index:5}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>DDD · ประวัติการขับ</h1><span class="sp"></span>
+  <span id="who" class="muted"></span>
+  <button id="logout" class="hidden">ออกจากระบบ</button>
+</header>
+
+<main>
+  <!-- login / สมัคร -->
+  <section id="auth" class="card auth hidden">
+    <h2 id="authTitle">เข้าสู่ระบบ</h2>
+    <form id="authForm">
+      <label for="email">อีเมล</label><input id="email" type="email" autocomplete="email" required>
+      <label for="pw">รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input id="pw" type="password" autocomplete="current-password" minlength="6" required>
+      <div class="row" style="margin-top:14px"><button class="primary" id="authBtn">เข้าสู่ระบบ</button>
+        <a href="#" id="authSwap" class="muted"><small>ยังไม่มีบัญชี? สมัคร</small></a></div>
+      <div id="authMsg" class="msg"></div>
+    </form>
+  </section>
+
+  <!-- เพิ่ม Device -->
+  <section id="claim" class="card hidden">
+    <h2>เพิ่ม Device</h2>
+    <p class="muted"><small>ดู Device ID ได้จาก <code>/api/status</code> ของ Device (ช่อง <code>device_id</code>) · รหัสลับ = ค่า <code>DEVICE_SECRET</code> ใน <code>secrets.h</code></small></p>
+    <form id="claimForm">
+      <label for="cid">Device ID</label><input id="cid" placeholder="28:84:85:65:63:44" required>
+      <label for="csec">รหัสลับของ Device</label><input id="csec" type="password" minlength="16" required>
+      <label for="cname">ชื่อเรียก (ไม่บังคับ)</label><input id="cname" placeholder="รถของฉัน">
+      <div class="row" style="margin-top:14px"><button class="primary">เพิ่ม Device</button><button type="button" id="claimCancel" class="hidden">ยกเลิก</button></div>
+      <div id="claimMsg" class="msg"></div>
+    </form>
+  </section>
+
+  <!-- รายการ Trip -->
+  <section id="trips" class="card hidden">
+    <div class="row" style="margin-bottom:8px"><h2 style="margin:0">Trip ทั้งหมด</h2><span class="sp" style="flex:1"></span>
+      <span id="devs" class="muted"><small></small></span><button id="addDev">เพิ่ม Device</button><button id="reload">โหลดใหม่</button></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Trip</th><th>เริ่ม</th><th>เวลาขับ</th><th>ง่วง (ระดับ 2–3)</th><th>Microsleep</th><th>ตาปิดนานสุด</th><th>PERCLOS เฉลี่ย</th><th>Unmonitored</th><th>Sync</th></tr></thead>
+      <tbody id="tripRows"></tbody>
+    </table></div>
+    <p id="tripsEmpty" class="muted hidden">ยังไม่มี Trip — เปิด Device แล้วต่อ WiFi/hotspot ให้ Sync ขึ้นมาก่อน</p>
+  </section>
+
+  <!-- รายละเอียด Trip -->
+  <section id="detail" class="card hidden">
+    <h2 id="dTitle"></h2>
+    <div class="stats" id="dStats"></div>
+    <div><small class="muted">เวลาในแต่ละ Drowsiness Level</small>
+      <div class="levelbar" id="dBar"></div>
+      <div class="legend" id="dBarLegend"></div></div>
+    <h2 style="margin-top:18px">ไทม์ไลน์</h2>
+    <svg id="chart" viewBox="0 0 1000 300" role="img" aria-label="กราฟ PERCLOS และ Drowsiness Level ตามเวลา"></svg>
+    <div class="legend">
+      <span><i style="background:var(--perclos)"></i>PERCLOS</span>
+      <span><i style="background:var(--l1)"></i>เริ่มล้า</span><span><i style="background:var(--l2)"></i>ง่วง</span><span><i style="background:var(--l3)"></i>Microsleep</span>
+      <span><i style="background:var(--dis)"></i>Distraction</span><span><i style="background:var(--unmon)"></i>Unmonitored</span>
+      <span>เส้นประ = เกณฑ์ PERCLOS 15% / 25%</span>
+    </div>
+  </section>
+</main>
+<div class="tip" id="tip"></div>
+
+<script>
+const SUPABASE_URL = 'https://wcuagguhwtprdnguiozn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_eR_UKx297yjqdHjC_W_SAA_l-lsoWsH';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const show = (id, on) => $(id).classList.toggle('hidden', !on);
+const LV = ['ปกติ', 'เริ่มล้า', 'ง่วง', 'Microsleep'];
+const LVC = ['var(--l0)', 'var(--l1)', 'var(--l2)', 'var(--l3)'];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const dur = s => { s = Math.round(s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60);
+  return h ? `${h} ชม. ${m} น.` : m ? `${m} น. ${s % 60} วิ` : `${s} วิ`; };
+const pct = v => v == null ? '–' : (v * 100).toFixed(1) + '%';
+const when = t => t.started_at ? new Date(t.started_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
+                               : '<span class="pill">ไม่ทราบเวลา</span>';
+
+// ---------- login ----------
+let signUp = false;
+$('authSwap').onclick = e => { e.preventDefault(); signUp = !signUp;
+  $('authTitle').textContent = signUp ? 'สมัครบัญชี' : 'เข้าสู่ระบบ';
+  $('authBtn').textContent = signUp ? 'สมัคร' : 'เข้าสู่ระบบ';
+  $('authSwap').innerHTML = `<small>${signUp ? 'มีบัญชีแล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัคร'}</small>`;
+  $('pw').autocomplete = signUp ? 'new-password' : 'current-password'; $('authMsg').textContent = ''; };
+$('authForm').onsubmit = async e => {
+  e.preventDefault(); const msg = $('authMsg'); msg.className = 'msg'; msg.textContent = '...'; $('authBtn').disabled = true;
+  const cred = { email: $('email').value.trim(), password: $('pw').value };
+  const { data, error } = signUp
+    ? await sb.auth.signUp({ ...cred, options: { emailRedirectTo: location.href.split('#')[0] } })
+    : await sb.auth.signInWithPassword(cred);
+  $('authBtn').disabled = false;
+  if (error) { msg.className = 'msg err'; msg.textContent = error.message; return; }
+  if (signUp && !data.session) { msg.className = 'msg ok'; msg.textContent = 'ส่งอีเมลยืนยันแล้ว กดลิงก์ในอีเมลแล้วกลับมาเข้าสู่ระบบ'; }
+};
+$('logout').onclick = () => sb.auth.signOut();
+sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => render(session), 0));
+
+// ---------- เพิ่ม Device ----------
+$('addDev').onclick = () => { show('claim', true); show('claimCancel', true); $('cid').focus(); };
+$('claimCancel').onclick = () => show('claim', false);
+$('claimForm').onsubmit = async e => {
+  e.preventDefault(); const msg = $('claimMsg'); msg.className = 'msg'; msg.textContent = '...';
+  const { error } = await sb.rpc('claim_device', { p_device_id: $('cid').value.trim(), p_secret: $('csec').value, p_name: $('cname').value.trim() || null });
+  if (error) { msg.className = 'msg err'; msg.textContent = error.message; return; }
+  msg.className = 'msg ok'; msg.textContent = 'เพิ่มแล้ว'; $('csec').value = ''; loadAll();
+};
+$('reload').onclick = () => loadAll();
+
+let current = null;
+async function render(session) {
+  show('auth', !session); show('logout', !!session);
+  $('who').textContent = session ? session.user.email : '';
+  if (!session) { ['claim', 'trips', 'detail'].forEach(id => show(id, false)); return; }
+  loadAll();
+}
+
+// ---------- รายการ Trip ----------
+let tripsCache = [];
+async function loadAll() {
+  const [{ data: devs, error: e1 }, { data: trips, error: e2 }] = await Promise.all([
+    sb.from('devices').select('device_id,name,last_seen'),
+    sb.from('trip_summary').select('*').order('started_at', { ascending: false, nullsFirst: false }).order('boot', { ascending: false }).limit(500),
+  ]);
+  if (e1 || e2) { show('trips', true); $('tripRows').innerHTML = `<tr><td colspan="9" class="msg err">${esc((e1 || e2).message)}</td></tr>`; return; }
+  show('claim', devs.length === 0); show('claimCancel', devs.length > 0);
+  show('trips', devs.length > 0);
+  $('devs').innerHTML = '<small>' + devs.map(d => esc(d.name || d.device_id) +
+    (d.last_seen ? ' · ส่งล่าสุด ' + new Date(d.last_seen).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '')).join(' / ') + '</small>';
+  tripsCache = trips.filter(t => t.duration_s > 0);
+  show('tripsEmpty', tripsCache.length === 0);
+  $('tripRows').innerHTML = tripsCache.map(t => {
+    const drowsy = t.duration_s ? (t.level2_s + t.level3_s) / t.duration_s : 0;
+    const synced = t.duration_s >= t.samples_on_device;
+    return `<tr data-id="${t.trip_id}" class="${current === t.trip_id ? 'sel' : ''}">
+      <td>#${t.boot}</td><td>${when(t)}</td><td>${dur(t.duration_s)}</td><td>${pct(drowsy)}</td>
+      <td>${t.microsleeps ? `<span class="pill warn">${t.microsleeps}</span>` : 0}</td>
+      <td>${(t.longest_closed_ms / 1000).toFixed(1)} วิ</td><td>${pct(t.perclos_mean)}</td><td>${dur(t.unmonitored_s)}</td>
+      <td>${synced ? '✓' : `<small class="muted">${t.duration_s}/${t.samples_on_device}</small>`}</td></tr>`;
+  }).join('');
+  [...$('tripRows').children].forEach(tr => tr.onclick = () => openTrip(+tr.dataset.id));
+  if (current && tripsCache.some(t => t.trip_id === current)) openTrip(current);
+}
+
+// ---------- รายละเอียด + กราฟ ----------
+async function openTrip(id) {
+  current = id;
+  [...$('tripRows').children].forEach(tr => tr.classList.toggle('sel', +tr.dataset.id === id));
+  const t = tripsCache.find(x => x.trip_id === id); if (!t) return;
+  const bucket = Math.max(1, Math.ceil(t.duration_s / 900));
+  const [{ data: series, error: e1 }, { data: events, error: e2 }] = await Promise.all([
+    sb.rpc('trip_series', { p_trip_id: id, p_bucket_s: bucket }),
+    sb.from('events').select('ms,type,from_level,to_level,value').eq('trip_id', id).order('i').limit(1000),
+  ]);
+  show('detail', true);
+  $('dTitle').innerHTML = `Trip #${t.boot} · ${when(t)}`;
+  if (e1 || e2) { $('dStats').innerHTML = `<div class="msg err">${esc((e1 || e2).message)}</div>`; return; }
+  const stat = (v, k) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`;
+  $('dStats').innerHTML = [
+    stat(dur(t.duration_s), 'เวลาขับ'),
+    stat(pct(t.duration_s ? (t.level2_s + t.level3_s) / t.duration_s : 0), 'เวลาที่ง่วง (ระดับ 2–3)'),
+    stat(t.microsleeps, 'Microsleep (ครั้ง)'),
+    stat((t.longest_closed_ms / 1000).toFixed(1) + ' วิ', 'ตาปิดนานที่สุด'),
+    stat(pct(t.perclos_mean), 'PERCLOS เฉลี่ย'),
+    stat(`${t.level1_enter} / ${t.level2_enter} / ${t.level3_enter}`, 'จำนวนครั้งที่ขึ้นระดับ 1 / 2 / 3'),
+    stat(t.distractions, 'Distraction (ครั้ง)'),
+    stat(dur(t.unmonitored_s), 'Unmonitored'),
+  ].join('');
+  const ls = [t.level0_s, t.level1_s, t.level2_s, t.level3_s], tot = ls.reduce((a, b) => a + b, 0) || 1;
+  $('dBar').innerHTML = ls.map((s, i) => s ? `<span title="${LV[i]} ${dur(s)}" style="width:${s / tot * 100}%;background:${LVC[i]}"></span>` : '').join('');
+  $('dBarLegend').innerHTML = ls.map((s, i) => `<span><i style="background:${LVC[i]}"></i>${LV[i]} ${dur(s)} (${(s / tot * 100).toFixed(0)}%)</span>`).join('');
+  drawChart(t, series, events, bucket);
+  $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function drawChart(t, series, events, bucket) {
+  const svg = $('chart'), W = 1000, H = 300, L = 44, R = 12, T = 12, BAND = 18, B = 34;
+  const plotTop = T + BAND + 8, plotBot = H - B;
+  const end = Math.max(1, (series.length ? series[series.length - 1].t_s + bucket : t.duration_s));
+  const X = s => L + (W - L - R) * s / end, Y = v => plotBot - (plotBot - plotTop) * Math.min(1, v);
+  const clock = s => t.started_at ? new Date(new Date(t.started_at).getTime() + s * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                                  : (s / 60).toFixed(0) + ' น.';
+  let g = '';
+  // แกน + เส้นกริด PERCLOS
+  for (const v of [0, .25, .5, .75, 1]) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${v * 100}%</text>`;
+  for (const v of [.15, .25]) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--muted)" stroke-dasharray="4 4" opacity=".6"/>`;
+  const ticks = 6; for (let i = 0; i <= ticks; i++) { const s = end * i / ticks; g += `<text x="${X(s)}" y="${H - 12}" text-anchor="middle">${clock(s)}</text>`; }
+  // แถบ Drowsiness Level ด้านบน + Unmonitored เป็นพื้นเทาในพื้นที่กราฟ
+  const bw = Math.max(1, X(bucket) - X(0));
+  for (const p of series) {
+    if (p.level > 0) g += `<rect x="${X(p.t_s)}" y="${T}" width="${bw + .5}" height="${BAND}" fill="${LVC[p.level]}"/>`;
+    if (p.unmonitored) g += `<rect x="${X(p.t_s)}" y="${plotTop}" width="${bw + .5}" height="${plotBot - plotTop}" fill="var(--unmon)" opacity=".35"/>`;
+  }
+  g += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${BAND}" fill="none" stroke="var(--line)"/><text x="${L - 6}" y="${T + 13}" text-anchor="end">ระดับ</text>`;
+  // PERCLOS (ช่วงที่ยังไม่พร้อมเว้นว่าง)
+  let d = '', pen = false;
+  for (const p of series) { if (p.perclos == null) { pen = false; continue; }
+    d += `${pen ? 'L' : 'M'}${X(p.t_s + bucket / 2).toFixed(1)},${Y(p.perclos).toFixed(1)}`; pen = true; }
+  g += `<path d="${d}" fill="none" stroke="var(--perclos)" stroke-width="2" stroke-linejoin="round"/>`;
+  // Event
+  for (const e of events || []) {
+    const x = X(e.ms / 1000);
+    if (e.type === 1) g += `<line x1="${x}" x2="${x}" y1="${plotTop}" y2="${plotBot}" stroke="var(--l3)" stroke-width="1.5"/><path d="M${x - 5},${plotTop - 2}L${x + 5},${plotTop - 2}L${x},${plotTop + 6}Z" fill="var(--l3)"/>`;
+    if (e.type === 2) g += `<line x1="${x}" x2="${x}" y1="${plotTop}" y2="${plotBot}" stroke="var(--dis)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+  }
+  g += `<line id="cursor" x1="0" x2="0" y1="${T}" y2="${plotBot}" stroke="var(--muted)" visibility="hidden"/>`;
+  svg.innerHTML = g;
+  // tooltip
+  const tip = $('tip'), cur = svg.querySelector('#cursor');
+  svg.onpointermove = ev => {
+    const r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * W;
+    if (sx < L || sx > W - R || !series.length) { tip.style.display = 'none'; cur.setAttribute('visibility', 'hidden'); return; }
+    const s = (sx - L) / (W - L - R) * end, p = series.reduce((a, b) => Math.abs(b.t_s - s) < Math.abs(a.t_s - s) ? b : a);
+    cur.setAttribute('x1', X(p.t_s + bucket / 2)); cur.setAttribute('x2', X(p.t_s + bucket / 2)); cur.setAttribute('visibility', 'visible');
+    tip.innerHTML = `<b>${clock(p.t_s)}</b><br>ระดับสูงสุด: ${LV[p.level]}<br>PERCLOS: ${pct(p.perclos)}` +
+      (p.closed_ms >= 1000 ? `<br>ตาปิดต่อเนื่อง ${(p.closed_ms / 1000).toFixed(1)} วิ` : '') +
+      (p.distraction ? '<br>Distraction' : '') + (p.unmonitored ? '<br>Unmonitored' : '');
+    tip.style.display = 'block';
+    tip.style.left = Math.min(ev.clientX + 12, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (ev.clientY + 12) + 'px';
+  };
+  svg.onpointerleave = () => { tip.style.display = 'none'; cur.setAttribute('visibility', 'hidden'); };
+}
+
+sb.auth.getSession().then(({ data }) => render(data.session));
+</script>
+</body>
+</html>

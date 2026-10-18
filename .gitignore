@@ -21,3 +21,9 @@ secrets.h
 # PC test binaries (firmware/tests)
 firmware/tests/*.exe
 firmware/tests/drowsiness_test
+
+# cloud/test (PGlite) dependencies + PC test output
+cloud/test/node_modules/
+cloud/test/package-lock.json
+firmware/tests/trip_record_test
+firmware/tests/trip_fixture.json

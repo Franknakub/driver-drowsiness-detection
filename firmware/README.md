@@ -4,7 +4,7 @@
 |---|---|
 | `DrowsinessDiag/` | ตรวจ Flash/PSRAM, ระบุรุ่นกล้อง, ทดสอบ IR-cut filter (ล็อก exposure แล้วนับพิกเซลสว่าง) |
 | `BenchTest/` | ทดสอบ LED, LDR, OLED, buzzer, IR (+ นับพิกเซลจากกล้อง) บนบอร์ด v1 แบบไม่เสียบโมดูล ต่อสายตาม [docs/bench-wiring-v1.md](../docs/bench-wiring-v1.md) |
-| `DrowsyFW/` | firmware ตัวจริง · ตอนนี้เป็นโครง: task ทั้งหมด, `shared_state`, Alert, LDR/IR, กล้อง (วัด fps), เลข Trip + FFat, AP/WiFi/NTP/mDNS, Device Dashboard ขั้นต้น และ OTA ผ่านเว็บ · ยังไม่มีหาหน้า/โมเดล/log/Sync · แผนอยู่ใน [docs/firmware-plan.html](../docs/firmware-plan.html) |
+| `DrowsyFW/` | firmware ตัวจริง: หาหน้า (ESP-DL) + โมเดลตา + logic ความง่วง + Alert + บันทึก Trip ลง FFat + Sync ขึ้น Supabase + Device Dashboard + OTA · ยังไม่มี OLED · แผนอยู่ใน [docs/firmware-plan.html](../docs/firmware-plan.html) · ฝั่ง cloud ดู [cloud/README.md](../cloud/README.md) |
 
 ## Toolchain
 

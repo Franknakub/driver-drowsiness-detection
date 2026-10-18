@@ -14,6 +14,7 @@ static const WifiCred WIFI_NETWORKS[] = {
 // รหัสหน้า OTA (/update) ผู้ใช้ชื่อ admin
 #define OTA_PASSWORD   "change-me-ota"
 
-// Supabase (ยังไม่ใช้ในโครงนี้)
-#define SUPABASE_INGEST_URL "https://<project>.supabase.co/functions/v1/ingest"
+// รหัสลับของ Device สำหรับ Sync ขึ้น Supabase (URL + publishable key อยู่ใน config.h)
+// ตั้งเอง: ตัวอักษร/ตัวเลขล้วน อย่างน้อย 16 ตัว แล้วกรอกค่าเดียวกันในหน้า Cloud Dashboard ตอนเพิ่ม Device
+// ยังเป็นค่านี้อยู่ = ไม่ Sync
 #define DEVICE_SECRET       "<device-secret>"

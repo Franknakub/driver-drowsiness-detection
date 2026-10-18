@@ -19,10 +19,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ไม่มี lint หรือ unit test บนบอร์ด · การตรวจคือ compile ผ่าน แล้วดู serial / `GET /api/status` จากบอร์ดจริง
 
-logic ความง่วง (`drowsiness.cpp`) ไม่พึ่ง Arduino มีเทสต์บน PC ด้วยลำดับเฟรมจำลอง · แก้ `drowsiness.*` / `drowsy_config.h` แล้วต้องรันผ่านก่อน:
+logic ความง่วง (`drowsiness.cpp`) และรูปแบบไฟล์ Trip (`trip_record.cpp`) ไม่พึ่ง Arduino มีเทสต์บน PC · แก้ไฟล์เหล่านี้แล้วต้องรันผ่านก่อน (SQL บน cloud ทดสอบด้วย `cloud/test/`, ดู [cloud/README.md](cloud/README.md)):
 
 ```bash
 cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW drowsiness_test.cpp ../DrowsyFW/drowsiness.cpp -o drowsiness_test && ./drowsiness_test
+cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW trip_record_test.cpp ../DrowsyFW/trip_record.cpp -o trip_record_test && ./trip_record_test
 ```
 
 ```bash
@@ -39,7 +40,7 @@ S=~/Documents/Arduino/DrowsyFW
 - **`PSRAM=opi` บังคับ** (N16R8 = Octal PSRAM)
 - ต้องมี `secrets.h` (คัดลอกจาก `secrets.example.h`) · **อย่าเปิดอ่าน `secrets.h` ของผู้ใช้** ให้แก้เฉพาะบรรทัดที่สั่ง
 - แฟลชผ่าน **USB ของโมดูล** เท่านั้น (USB-C บน PCB มีแค่ไฟ) · ลำดับเข้า download mode, VID:PID และ error ที่เจอบ่อยอยู่ใน [firmware/README.md](firmware/README.md)
-- **OTA:** อัปโหลด `build/.../DrowsyFW.ino.bin` ที่ `http://<ip>/update` (user `admin`, รหัส `OTA_PASSWORD`) · ผู้ใช้ต้องใส่รหัสเอง
+- **OTA:** อัปโหลด `build/.../DrowsyFW.ino.bin` ที่ `http://<ip>/update` (user `admin`, รหัส `OTA_PASSWORD`) · ผู้ใช้ต้องใส่รหัสเอง · ห้ามเลือก `DrowsyFW.ino.merged.bin` (16 MB) · ขณะ DrowsyFW รันอยู่และเสียบ USB (`303A:1001`) `upload -p COM6` รีเซ็ตเข้า download mode ได้เอง ไม่ต้องกดปุ่ม (ยืนยัน 18 ต.ค.) · 0.2.9 OTA ค้างถ้าอัปโหลดหลุดกลางทาง (แก้ใน 0.3.0: abort ของเก่าก่อน begin)
 - บอร์ดต่อ hotspot iPhone ได้ต่อเมื่อเปิด **Maximize Compatibility** (2.4 GHz) · AP ของบอร์ด `Drowsy-XXXX` → `192.168.4.1`
 - เปลี่ยน `FW_VERSION` ใน `config.h` ทุกครั้งที่แฟลช เพื่อยืนยันจาก `/api/status` ว่าบอร์ดรันตัวใหม่
 
@@ -59,7 +60,10 @@ S=~/Documents/Arduino/DrowsyFW
 - **endpoint ดีบัก:** `/api/status` (JSON ทุกค่าใน state รวมเวลา rotate/detect/classify) · `/snapshot.jpg` (ภาพตั้งตรงพร้อมกรอบหน้า/ตา) · `/eyes.jpg` (ภาพ 32×32 ที่เข้าโมเดลจริง ซ้าย = ตาซ้ายของภาพ)
 - RAM ภายในเหลือก้อนใหญ่สุดแค่ ~30 KB หลัง WiFi + esp-dl · arena ของ TFLM จึงตั้ง 28 KB และ fallback ไป PSRAM
 - **logic ความง่วง** อยู่ใน `drowsiness.{h,cpp}` (class `DrowsinessJudge`, เกณฑ์ใน `drowsy_config.h`) · vision เรียกทุกเฟรมหลังได้ Eye State · นับเป็นเวลา (dt) ไม่นับเฟรม · Event ส่งผ่านคิวให้ log task พิมพ์ — **ห้ามพิมพ์ Serial จาก vision task** (USB CDC ที่ไม่มีใครเปิดพอร์ตทำให้ค้าง ~3 วิ เจอใน 0.2.6)
-- **ยังไม่ได้ทำ:** เขียน Sample/Event ลง FFat, Sync ขึ้น Supabase, OLED
+- **ประวัติ Trip** (`trip_record.*` = รูปแบบไฟล์ + Trip Summary ไม่พึ่ง Arduino · `trip_log.*` = FFat + log task): 1 Trip = `/trips/<n>.s` (Sample 16 ไบต์/วิ) + `<n>.e` (Event) + `<n>.m` (ตำแหน่ง Sync + Summary + crc) · เวลาใน record = `millis()` แล้วเทียบเวลาจริงจาก Event `TimeKnown` · FFat ถึง 80% ลบ Trip ที่ Sync แล้ว · endpoint `/trips`, `/api/trips`, `/api/trips/<n>?from=&count=&step=`
+- **Sync** (`sync.cpp`): POST `/rest/v1/rpc/ingest` ของ Supabase ทีละ ≤ 300 Sample จาก Trip เก่าสุดที่ค้าง · Trip ปัจจุบันส่งทุก 30 วิ · สถานะอยู่ใน `/api/status` ช่อง `sync` · ตั้ง `DEVICE_SECRET` ใน `secrets.h` · SQL/ขั้นติดตั้ง/Cloud Dashboard อยู่ใน [cloud/README.md](cloud/README.md) (ADR 0003)
+- **TLS ต้องใช้ PSRAM:** RAM ภายในเหลือก้อนใหญ่สุด ~13 KB ไม่พอ buffer 16 KB ของ mbedTLS (0.3.0 ได้ `connection refused`) → `sync.cpp` เรียก `mbedtls_platform_set_calloc_free` ให้ก้อน ≥ 1 KB ไปอยู่ PSRAM
+- **ยังไม่ได้ทำ:** OLED
 
 ## ML (`ml/`)
 

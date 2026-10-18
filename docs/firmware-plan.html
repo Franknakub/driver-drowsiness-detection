@@ -138,7 +138,7 @@ flowchart LR
       <tr><td>Trip</td><td>เปิดไฟถึงไฟดับ</td></tr>
       <tr><td>เวลาจริง</td><td>NTP ผ่าน hotspot + เวลาจาก browser ตอนเปิด Device Dashboard · ถ้าไม่ได้ทั้งคู่ ให้ติดป้าย "ไม่ทราบเวลา" · ไม่เพิ่ม RTC</td></tr>
       <tr><td>Log</td><td>Sample ทุก 1 วิ + Event (~72 KB/ชม.)</td></tr>
-      <tr><td>Cloud</td><td>Supabase · Sync ระหว่างขับ · 1 แถวต่อ Sample · Driver login ด้วยอีเมล · Device เขียนผ่าน Edge Function</td></tr>
+      <tr><td>Cloud</td><td>Supabase · Sync ระหว่างขับ · 1 แถวต่อ Sample · Driver login ด้วยอีเมล · Device เขียนผ่านฟังก์ชัน Postgres <code>ingest</code> (RPC · ADR 0003)</td></tr>
       <tr><td>ลบข้อมูลบน Device</td><td>ลบเฉพาะที่ Sync แล้วเมื่อ FFat ถึง 80% (ลบเก่าสุดก่อน) · <b>ห้ามลบข้อมูลที่ยังไม่ได้ Sync</b></td></tr>
       <tr><td>เน็ตในรถ</td><td>hotspot มือถือ + WiFi บ้าน บันทึกได้หลายเครือข่าย</td></tr>
       <tr><td>Dashboard</td><td>Device = สถานะสด / ตั้งค่า / dataset / Trip ที่ยังไม่ Sync · Cloud = ประวัติ / Trip Summary / แนวโน้ม</td></tr>
@@ -181,7 +181,7 @@ flowchart LR
     <div><code>ir_light.cpp</code><span>LDR + IR</span></div>
     <div><code>trip_log.cpp</code><span>ไฟล์ Trip ใน FFat, cursor ของ Sync</span></div>
     <div><code>net.cpp</code><span>WiFi หลายเครือข่าย, AP, NTP</span></div>
-    <div><code>sync.cpp</code><span>ส่งข้อมูลขึ้น Supabase Edge Function</span></div>
+    <div><code>sync.cpp</code><span>ส่งข้อมูลขึ้น Supabase ผ่าน RPC <code>ingest</code></span></div>
     <div><code>web_server.cpp</code><span>Device Dashboard + OTA</span></div>
     <div><code>data/</code><span>ไฟล์หน้าเว็บ gzip + Chart.js (ต้องฝังในเครื่อง เพราะตอนต่อ AP ไม่มีเน็ต)</span></div>
   </div>
@@ -284,7 +284,7 @@ flowchart LR
         <li><code>samples</code> (trip, t วินาทีนับจากเริ่ม, eye_state, p_closed, perclos, level, lux, ir)</li>
         <li><code>events</code> (trip, t, type, value)</li>
         <li><code>trip_summary</code> เป็น SQL view คำนวณจาก samples</li>
-        <li>Device ส่งผ่าน Edge Function <code>ingest</code> ที่ตรวจ secret · Driver อ่านผ่าน Auth + RLS</li>
+        <li>Device ส่งผ่านฟังก์ชัน Postgres <code>ingest</code> (RPC) ที่ตรวจ secret (ADR 0003 · <code>cloud/sql/</code>) · Driver อ่านผ่าน Auth + RLS</li>
         <li>~0.3 MB ต่อชั่วโมง free 500 MB เก็บได้ราว 1,500 ชั่วโมง</li>
       </ul>
     </div>
@@ -336,7 +336,7 @@ flowchart LR
       <tr><td>16–17 ต.ค.</td><td>ทดลองทาง B ✅ · BenchTest บนบอร์ด v1 + ทดสอบ IR filter</td><td>ดาวน์โหลด MRL, ทำ split ตาม subject</td><td>—</td><td><span class="pill gate">gate</span> B ผ่านแล้ว · รู้ผล IR filter</td></tr>
       <tr><td>18–20 ต.ค.</td><td>โครง task, shared_state, OTA, alert/OLED/LED/buzzer, LDR+IR</td><td>train baseline · INT8 · วัด inference บนบอร์ด · golden test</td><td>—</td><td>OTA ใช้ได้ · โมเดลรันบนบอร์ดได้</td></tr>
       <tr><td>21–24 ต.ค.</td><td>vision pipeline ครบ · drowsiness.cpp · โหมด dataset + zip</td><td>เก็บภาพตัวเองกลางวัน/กลางคืน/แว่น</td><td>—</td><td><span class="pill gate">MVP</span> หลับตา 3 วิแล้ว buzzer ดัง</td></tr>
-      <tr><td>25–28 ต.ค.</td><td>trip_log, net (WiFi หลายตัว + AP + NTP), Device Dashboard, ปิดเสียง</td><td>fine-tune · วัดผลบนภาพของเรา</td><td>สร้างโปรเจกต์ Supabase · schema · Edge Function <code>ingest</code></td><td>ดูประวัติ Trip ใน Device Dashboard ได้</td></tr>
+      <tr><td>25–28 ต.ค.</td><td>trip_log, net (WiFi หลายตัว + AP + NTP), Device Dashboard, ปิดเสียง</td><td>fine-tune · วัดผลบนภาพของเรา</td><td>สร้างโปรเจกต์ Supabase · schema · RPC <code>ingest</code></td><td>ดูประวัติ Trip ใน Device Dashboard ได้</td></tr>
       <tr><td>29 ต.ค.–1 พ.ย.</td><td>sync.cpp · ประกอบลง PCB v2 ถ้ามาถึงแล้ว</td><td>—</td><td>Cloud Dashboard: login, รายการ Trip, กราฟ, Trip Summary</td><td>Trip ขึ้น cloud แล้วดูกราฟได้ · <b>หยุดเพิ่มฟีเจอร์ 1 พ.ย.</b></td></tr>
       <tr><td>2–4 พ.ย.</td><td colspan="3">ทดสอบตามสคริปต์ข้อ 9 · แก้บั๊ก · ถ่ายวิดีโอเดโม · เขียนรายงาน · เช็คว่า Supabase ไม่ถูก pause</td><td>ส่งงาน</td></tr>
     </tbody>

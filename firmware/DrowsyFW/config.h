@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.2.9-drowsiness"
+#define FW_VERSION "0.3.1-triplog"   // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47
@@ -56,3 +56,12 @@
 #define MDNS_NAME              "drowsy"
 #define TZ_THAILAND            "ICT-7"
 #define TIME_VALID_EPOCH       1767225600UL  // 1 ม.ค. 2026: ก่อนหน้านี้ถือว่ายังไม่มีเวลาจริง
+
+// ---- Sync ขึ้น Supabase (ADR 0002) · publishable key เป็นค่าสาธารณะโดยออกแบบ ใส่ใน repo ได้ ----
+// สิทธิ์เขียนมาจาก DEVICE_SECRET ใน secrets.h ซึ่งฟังก์ชัน ingest เทียบกับ hash ในตาราง devices
+#define SUPABASE_URL             "https://wcuagguhwtprdnguiozn.supabase.co"
+#define SUPABASE_PUBLISHABLE_KEY "sb_publishable_eR_UKx297yjqdHjC_W_SAA_l-lsoWsH"
+#define SYNC_BATCH_SAMPLES     300    // ต่อ 1 ครั้ง (~12 KB JSON)
+#define SYNC_BATCH_EVENTS      100
+#define SYNC_IDLE_MS           30000  // ส่งของใหม่ทุก 30 วิ เมื่อไม่มีค้าง
+#define SYNC_RETRY_MS          60000  // ส่งไม่สำเร็จ: รอเท่านี้ก่อนลองใหม่
