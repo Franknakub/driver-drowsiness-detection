@@ -5,6 +5,7 @@
 | `DrowsinessDiag/` | ตรวจ Flash/PSRAM, ระบุรุ่นกล้อง, ทดสอบ IR-cut filter (ล็อก exposure แล้วนับพิกเซลสว่าง) |
 | `BenchTest/` | ทดสอบ LED, LDR, OLED, buzzer, IR (+ นับพิกเซลจากกล้อง) บนบอร์ด v1 แบบไม่เสียบโมดูล ต่อสายตาม [docs/bench-wiring-v1.md](../docs/bench-wiring-v1.md) |
 | `DrowsyFW/` | firmware ตัวจริง: หาหน้า (ESP-DL) + โมเดลตา + logic ความง่วง + Alert + บันทึก Trip ลง FFat + Sync ขึ้น Supabase + Device Dashboard + OTA · ยังไม่มี OLED · แผนอยู่ใน [docs/firmware-plan.html](../docs/firmware-plan.html) · ฝั่ง cloud ดู [cloud/README.md](../cloud/README.md) |
+| `archive/DrowsyFW-pio/` | DrowsyFW รุ่นแรก (PlatformIO, 8 ต.ค. จาก PR #1): กรอบตาคงที่ + MobileNetV2 96×96 ~3 fps · เก็บไว้อ้างอิง ไม่ได้พัฒนาต่อ ดู [README](archive/DrowsyFW-pio/README.md) |
 
 ## Toolchain
 
