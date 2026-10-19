@@ -1,0 +1,8 @@
+{
+  "name": "ddd-cloud-sql-test",
+  "private": true,
+  "type": "module",
+  "description": "Runs cloud/sql against a local PGlite Postgres (no Supabase needed)",
+  "scripts": { "test": "node sql_test.mjs" },
+  "dependencies": { "@electric-sql/pglite": "0.3.11" }
+}

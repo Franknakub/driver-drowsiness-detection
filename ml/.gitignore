@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+golden_test/eye_preprocess.h
+golden_test/model_data.h
+golden_test/golden_data.h

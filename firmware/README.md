@@ -3,7 +3,9 @@
 | สเก็ตช์ | หน้าที่ |
 |---|---|
 | `DrowsinessDiag/` | ตรวจ Flash/PSRAM, ระบุรุ่นกล้อง, ทดสอบ IR-cut filter (ล็อก exposure แล้วนับพิกเซลสว่าง) |
-| `DrowsyFW/` | firmware ตัวจริง (PlatformIO) ตอนนี้มีกล้อง + โมเดลตาเปิด/ปิด ดู [DrowsyFW/README.md](DrowsyFW/README.md) |
+| `BenchTest/` | ทดสอบ LED, LDR, OLED, buzzer, IR (+ นับพิกเซลจากกล้อง) บนบอร์ด v1 แบบไม่เสียบโมดูล ต่อสายตาม [docs/bench-wiring-v1.md](../docs/bench-wiring-v1.md) |
+| `DrowsyFW/` | firmware ตัวจริง: หาหน้า (ESP-DL) + โมเดลตา + logic ความง่วง + Alert + บันทึก Trip ลง FFat + Sync ขึ้น Supabase + Device Dashboard + OTA · ยังไม่มี OLED · แผนอยู่ใน [docs/firmware-plan.html](../docs/firmware-plan.html) · ฝั่ง cloud ดู [cloud/README.md](../cloud/README.md) |
+| `archive/DrowsyFW-pio/` | DrowsyFW รุ่นแรก (PlatformIO, 8 ต.ค. จาก PR #1): กรอบตาคงที่ + MobileNetV2 96×96 ~3 fps · เก็บไว้อ้างอิง ไม่ได้พัฒนาต่อ ดู [README](archive/DrowsyFW-pio/README.md) |
 
 ## Toolchain
 
@@ -18,7 +20,20 @@ arduino-cli upload -p COM6 --fqbn "$FQBN" firmware/DrowsinessDiag
 
 - **`PSRAM=opi` ต้องตั้ง** N16R8 เป็น Octal PSRAM ถ้าตั้งเป็น QSPI `psramFound()` จะคืน false
 - **`upload` ไม่ compile ให้** แก้โค้ดแล้วต้อง compile ก่อน ไม่งั้นจะแฟลชไบนารีเก่า (สังเกตจาก `No changed sectors found`)
-- Partition `app3M_fat9M_16MB` มี `ota_0` / `ota_1` รองรับ OTA และมี FFat 9.9 MB
+- Partition `app3M_fat9M_16MB` ใช้กับสเก็ตช์ทดสอบได้ แต่ **DrowsyFW ใช้ `PartitionScheme=custom`** กับ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) เพราะ face detect + WiFi ใหญ่ 3.18 MB แล้ว
+
+### DrowsyFW
+
+```bash
+cp firmware/DrowsyFW/secrets.example.h firmware/DrowsyFW/secrets.h   # แล้วใส่ WiFi/รหัสจริง · ห้าม commit
+FQBN="esp32:esp32:esp32s3:PSRAM=opi,CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom"
+arduino-cli compile --fqbn "$FQBN" --export-binaries firmware/DrowsyFW
+arduino-cli upload -p COM6 --fqbn "$FQBN" firmware/DrowsyFW      # ครั้งแรกต้องผ่าน USB เพราะเปลี่ยน partition
+```
+
+- ครั้งต่อไปอัปเดตผ่านเว็บได้: ต่อ WiFi `Drowsy-XXXX` → เปิด `http://192.168.4.1/update` (ผู้ใช้ `admin` รหัส `OTA_PASSWORD`) → อัปโหลด `build/esp32.esp32.esp32s3/DrowsyFW.ino.bin`
+- `arduino-cli` แสดงขนาดสูงสุด 16 MB เมื่อใช้ `custom` แต่ช่องโปรแกรมจริงมี **6 MB** ต้องดูขนาดเองทุกครั้ง
+- ไลบรารีที่ต้องลง: `arduino-cli lib install "Async TCP" "ESP Async WebServer"` (ของ ESP32Async)
 
 ## แฟลชผ่าน USB
 

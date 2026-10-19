@@ -13,3 +13,17 @@ build/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Credentials (WiFi, Supabase, device secret) - repo is public
+secrets.h
+.env
+
+# PC test binaries (firmware/tests)
+firmware/tests/*.exe
+firmware/tests/drowsiness_test
+
+# cloud/test (PGlite) dependencies + PC test output
+cloud/test/node_modules/
+cloud/test/package-lock.json
+firmware/tests/trip_record_test
+firmware/tests/trip_fixture.json
