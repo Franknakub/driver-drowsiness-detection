@@ -36,7 +36,7 @@ S=~/Documents/Arduino/DrowsyFW
 
 - core `esp32 by Espressif Systems` **3.3.12** · ไลบรารี: `Async TCP` + `ESP Async WebServer` (ของ ESP32Async) · `esp-dl`, `esp-tflite-micro`, `esp-nn` มากับ core แล้ว ไม่ต้องลงเพิ่ม
 - **`upload` ไม่ compile ให้** ต้อง compile ก่อนทุกครั้ง ไม่งั้นแฟลชไบนารีเก่า (`No changed sectors found`)
-- **`PartitionScheme=custom`** ใช้ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) · arduino-cli จะเช็คขนาดเทียบ 16 MB ไม่ใช่ 6 MB ต้องดูขนาดเอง (ตอนนี้ ~3.4 MB) · สเก็ตช์ทดสอบอื่น (`DrowsinessDiag`, `BenchTest`) ใช้ `PartitionScheme=app3M_fat9M_16MB`
+- **`PartitionScheme=custom`** ใช้ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) · arduino-cli จะเช็คขนาดเทียบ 16 MB ไม่ใช่ 6 MB ต้องดูขนาดเอง (ตอนนี้ ~3.4 MB) · สเก็ตช์ทดสอบอื่น (`DrowsinessDiag`, `BenchTest`) ใช้ `PartitionScheme=app3M_fat9M_16MB` · ⚠️ แฟลชด้วยตารางนี้จะทับ partition ของ DrowsyFW (FFat/Trip หายได้) · ถ้าจะแฟลชสเก็ตช์ทดสอบแล้วกลับมา DrowsyFW ให้ build ด้วย `PartitionScheme=custom` และคัดลอก `partitions.csv` ของ DrowsyFW ไปไว้ข้างสเก็ตช์ (ทำแบบนี้เมื่อ 23 ต.ค. เลข trip ต่อเนื่องไม่รีเซ็ต)
 - **`PSRAM=opi` บังคับ** (N16R8 = Octal PSRAM)
 - ต้องมี `secrets.h` (คัดลอกจาก `secrets.example.h`) · **อย่าเปิดอ่าน `secrets.h` ของผู้ใช้** ให้แก้เฉพาะบรรทัดที่สั่ง
 - แฟลชผ่าน **USB ของโมดูล** เท่านั้น (USB-C บน PCB มีแค่ไฟ) · ลำดับเข้า download mode, VID:PID และ error ที่เจอบ่อยอยู่ใน [firmware/README.md](firmware/README.md)
@@ -97,7 +97,17 @@ GPIO map อยู่ใน [README.md](README.md) · เพิ่มเติ�
 - **OLED:** จอจริงเรียงขา `VCC GND SCL SDA` ต่อกับ H1 (`3V3 GND IO1 IO42`) เส้นต่อเส้นด้วยสาย dupont · ใช้ `Wire.begin(42, 1)` (SDA=42, SCL=1)
 - **ภาพจากกล้องตะแคง 90°** ตามการวางโมดูลบน PCB → `CAM_ROTATE_CW` ใน `config.h` · ถ้ากล่องวางให้ภาพตั้งตรงได้ ตั้งเป็น 0 จะประหยัด 17–38 ms ต่อเฟรม
 - กล้อง: ไม่ต้องโหลด AF (fixed-focus ตั้งใจไว้) · เวลาวัดความสว่างให้ล็อก AEC/AGC และนับจำนวนพิกเซลที่เกินเกณฑ์ ไม่ใช้ peak
-- **PCB v2 ยังไม่มาถึง** · บอร์ด v1 ห้ามเสียบโมดูล (header เป็นภาพกระจก) · ทดสอบอุปกรณ์รอบตัวด้วยการต่อสายตาม [docs/bench-wiring-v1.md](docs/bench-wiring-v1.md) + สเก็ตช์ `BenchTest`
+- **PCB v2 = บอร์ดสุดท้าย** (ได้รับและทดสอบผ่านแล้ว 23 ต.ค. · ไม่ทำ v3) ดูผลทดสอบด้านล่าง · บอร์ด v1 ห้ามเสียบโมดูล (header เป็นภาพกระจก) · ทดสอบอุปกรณ์รอบตัวด้วยการต่อสายตาม [docs/bench-wiring-v1.md](docs/bench-wiring-v1.md) + สเก็ตช์ `BenchTest`
+
+## ผลทดสอบบอร์ด v2 (23 ต.ค.)
+
+ผ่าน: บูต · กล้อง · IR ×4 · buzzer · LED เขียว/แดง · LDR · OLED (เจอที่ 0x3C) · ไฟเข้าทาง USB-C บน PCB + SW1 · WiFi + Sync Supabase · ความร้อนที่อุณหภูมิห้อง (มีแค่ฝาโมดูลอุ่น)
+
+- **SW1: ขวา = ON, ซ้าย = OFF** (มองจากด้านบน โมดูลกล้องหงาย ปลาย USB โมดูลหันขอบบน)
+- **กล้อง OV5640 เห็น IR 940 nm** (ไม่มี IR-cut) · วัดด้วยโหมดความสว่างเฉลี่ยของ `BenchTest`: IR เปิดสว่างขึ้น +12 / +31 ระดับที่ exposure กลาง/สูง · **ต้องมีกระดาษขาวสะท้อนห่าง ~5 ซม. ในห้องมืด** ไม่มีของสะท้อนจะวัดไม่ขึ้นและสรุปผิดได้
+- **`cam_hal: FB-SIZE` เฟรมเสีย ~17%** (~140–150 ครั้ง/2 นาที ที่ ~7 fps) · **ไม่เกี่ยวกับ PCB** (เท่ากันตอนถอดโมดูลออกจากบอร์ด) · เฟรมขาดทีละ 16 แถวพอดี · ลด XCLK เป็น 10 MHz แย่กว่า (fps ตกเหลือ ~3) จึงคง 20 MHz · เฟรมเสียถูกทิ้ง fps ยังได้ ~7 ยังไม่ได้ไล่สาเหตุ (สงสัย PSRAM/WiFi แย่งบัส)
+- **ค่า LDR:** ห้องมืดอ่าน ~2900–3000 (เกินเกณฑ์ `LDR_DARK_ON_RAW` 2800 → IR ติด) · ปิดมือ ~3900–4095 · สว่าง ~500–700 · เกณฑ์ยังไม่ได้คาลิเบรตในรถ
+- hotspot iPhone ต้องเปิด Maximize Compatibility ถึงต่อได้ (ก่อนเปิด บอร์ดวนลองแต่ไม่ติด)
 
 ## เอกสารที่ล้าสมัยบางส่วน
 
