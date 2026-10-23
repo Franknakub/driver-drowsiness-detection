@@ -68,6 +68,9 @@ td:first-child { font-weight: 600; white-space: nowrap; font-variant-numeric: ta
 .pill.fix { background: var(--copper-soft); color: var(--copper); }
 .pill.gate { background: var(--mask); color: var(--surface); }
 .pill.todo { background: var(--warn-soft); color: var(--warn); }
+.pill.ask { background: var(--warn); color: var(--surface); }
+.pill.low { background: var(--code-bg); color: var(--muted); }
+tr.grp td { background: var(--code-bg); font-family: var(--f-display); padding-block: 6px; }
 .callout { border: 1px solid var(--line); border-left: 4px solid var(--copper); background: var(--copper-soft); padding: 14px 18px; border-radius: 6px; display: grid; gap: 6px; }
 .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
 .callout.ok { border-left-color: var(--mask); background: var(--mask-soft); }
@@ -90,33 +93,65 @@ footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line)
   <h1>แผน Firmware ระบบตรวจจับความง่วงของคนขับ</h1>
   <p class="lede">workflow ของอุปกรณ์ตั้งแต่กล้องเห็นหน้าจนถึง dashboard ประวัติ พร้อมแผนรายวันถึงวันส่ง firmware, ML และ dashboard ทำคนเดียวบน branch <code>firmware</code> คำศัพท์ทุกคำในหน้านี้ใช้ตาม <a href="../GLOSSARY.md">GLOSSARY.md</a></p>
   <div class="meta">
-    <span>อัปเดต <b>18 ต.ค. 2026</b></span>
+    <span>อัปเดต <b>23 ต.ค. 2026</b></span>
     <span>ส่งงาน <b>3–5 พ.ย. 2026</b></span>
     <span>Core <b>esp32 3.3.12</b> (มี ESP-DL 3.3.11 + TFLite Micro 1.4.0)</span>
     <span>Partition <b>custom</b> (app 6 MB × 2 + FFat 3.9 MB)</span>
-    <span>บนบอร์ด <b>DrowsyFW 0.3.1</b></span>
+    <span>บนบอร์ด <b>DrowsyFW 0.3.4</b></span>
   </div>
 </header>
 
 <section>
-  <h2><span class="n">0</span>สถานะ ณ 18 ต.ค.</h2>
-  <p>pipeline ทั้งเส้นทำงานบนบอร์ดแล้ว ตั้งแต่กล้องจนถึง Cloud Dashboard ที่เหลือส่วนใหญ่เป็นงานที่ต้องต่อสายจริง ทดสอบในรถ และเก็บงาน</p>
+  <h2><span class="n">0</span>สถานะ ณ 23 ต.ค.</h2>
+  <p>pipeline ทั้งเส้นทำงานบนบอร์ดแล้ว ตั้งแต่กล้องจนถึง Cloud Dashboard (DrowsyFW 0.3.4 · PCB v2 ทดสอบฮาร์ดแวร์ผ่านครบ 23 ต.ค.) ตารางนี้คืองานที่เหลือ ส่วนใหญ่เป็นการทดสอบในรถ ซึ่งงานอื่นหลายข้อต้องรอผลจากตรงนี้</p>
   <div class="scroll"><table>
-    <thead><tr><th>งาน</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
+    <thead><tr><th>#</th><th>งาน</th><th>สถานะ</th><th>อธิบาย</th><th>ใครทำ</th></tr></thead>
     <tbody>
-      <tr><td>หาหน้า + โมเดลตา</td><td><span class="pill rec">เสร็จ</span></td><td>0.2.5 · หมุนภาพรวมในขั้นหาหน้า (rotate + detect 82.7 → 52 ms) · โมเดล deep2_half จับตาปิดได้ 14/17 บนบอร์ด</td></tr>
-      <tr><td>Logic ความง่วง</td><td><span class="pill fix">โค้ดเสร็จ</span></td><td>0.2.9 · เทสต์บน PC 74 ข้อ · ยังไม่ได้ฟัง buzzer / ดู LED จริง</td></tr>
-      <tr><td>ประวัติบน FFat + Trip Summary</td><td><span class="pill rec">เสร็จ</span></td><td>0.3.0–0.3.1 · หน้า <code>/trips</code> บน Device</td></tr>
-      <tr><td>Supabase + Sync</td><td><span class="pill rec">เสร็จ</span></td><td>RPC <code>ingest</code> (ADR 0003) · Trip #410 ขึ้น cloud พร้อม Summary ตรงกัน</td></tr>
-      <tr><td>Cloud Dashboard</td><td><span class="pill rec">เสร็จ</span></td><td>GitHub Pages <code>/dashboard/</code> · ยังไม่ได้ลอง login จากหน้า Pages จริง</td></tr>
-      <tr><td>OLED</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>ต้องต่อจอด้วยสาย dupont</td></tr>
-      <tr><td>BenchTest + IR filter</td><td><span class="pill fix">สเก็ตช์พร้อม</span></td><td>รอต่อสายตาม <a href="bench-wiring-v1.md">bench-wiring-v1.md</a></td></tr>
-      <tr><td>ทดสอบในรถ (จอด)</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>ติดขาดูดกระจก · ตัดสินว่าต้องทำโหมด dataset + fine-tune หรือไม่</td></tr>
-      <tr><td>กล่อง 3D</td><td><span class="pill fix">ส่งร้านปริ้น</span></td><td>ASA ดำ · แนวนอน แถว IR อยู่บน · อุปกรณ์ประกอบซื้อครบ</td></tr>
-      <tr><td>PCB v2</td><td><span class="pill fix">รอของ</span></td><td>คาดว่าถึงก่อน 29 ต.ค.</td></tr>
-      <tr><td>สคริปต์ทดสอบ · วิดีโอ · รายงาน</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>ข้อ 9</td></tr>
+      <tr class="grp"><td colspan="5">1. ทดสอบในรถและโมเดล (สำคัญที่สุด)</td></tr>
+      <tr><td>1.1</td><td>เก็บภาพตาในรถตอนจอด</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>โมเดลตอนนี้ train จาก MRL ซึ่งพลาดกับกล้องเรา (ตาซ้ายของภาพตอบว่าปิดถูกแค่ 19–29%) ต้องใช้ภาพจริงจากตำแหน่งติดกระจก · สคริปต์เก็บภาพเตรียมไว้แล้ว</td><td>ผู้ใช้</td></tr>
+      <tr><td>1.2</td><td>ทดสอบหาหน้าจากมุมกล้องจริง</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>กล้องบนกระจกอยู่สูงกว่าตาและมองลง มุมนี้ยังไม่เคยลอง ถ้าหาหน้าไม่เจอ ระบบทั้งหมดก็ใช้ไม่ได้ · ทำพร้อม 1.1</td><td>ผู้ใช้</td></tr>
+      <tr><td>1.3</td><td>fine-tune โมเดลแล้วใส่ลงบอร์ด</td><td><span class="pill fix">รอ 1.1</span></td><td>train ต่อจากโมเดลเดิมด้วยภาพในรถเท่านั้น ที่โต๊ะเคยลองแล้ว ตาซ้ายดีขึ้นเป็น 93–95%</td><td>Claude</td></tr>
+      <tr><td>1.4</td><td>ปรับเกณฑ์จากข้อมูลจริง (วิธี ข)</td><td><span class="pill fix">รอ 1.1</span></td><td>เกณฑ์ส่วนใหญ่ เช่น PERCLOS 15/25% และตาปิด 1.5/3 วิ ตั้งไว้ที่โต๊ะ ต้องเล่นข้อมูลในรถซ้ำเพื่อหาค่าที่เตือนพลาดน้อยสุด</td><td>Claude</td></tr>
+      <tr><td>1.5</td><td>คาลิเบรต LDR ในรถ</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>ห้องมืดอ่านได้ ~2900 ส่วนเกณฑ์เปิด IR คือ 2800 · ในรถกลางวันกับกลางคืนอาจต่างจากนี้มาก</td><td>ผู้ใช้วัด · Claude แก้ค่า</td></tr>
+      <tr><td>1.6</td><td>ขับจริง 20–30 นาที</td><td><span class="pill fix">รอ 1.3 + 4.1</span></td><td>ทดสอบว่าเตือนผิดบ่อยแค่ไหนตอนขับปกติ · <b>ห้ามหลับตาขณะรถวิ่ง</b> ให้ทดสอบหลับตาตอนจอดเท่านั้น</td><td>ผู้ใช้</td></tr>
+      <tr class="grp"><td colspan="5">2. เรื่องที่รอผู้ใช้ตัดสินใจ</td></tr>
+      <tr><td>2.1</td><td>ก้มหัวหลับทันที</td><td><span class="pill ask">รอตัดสินใจ</span></td><td>ถ้าตาปิดไม่ถึง ~1.2 วิแล้วหน้าหายไปเลย ระบบเตือนแค่ Distraction (เสียงสั้น) · ข้อเสนอคือ "ตาปิดแล้วหน้าหาย ≥3 วิ = ระดับ 3" (เสียงยาว ปิดเสียงไม่ได้)</td><td>ผู้ใช้</td></tr>
+      <tr><td>2.2</td><td>ท่าเพิ่มในสคริปต์เก็บภาพ</td><td><span class="pill ask">รอตัดสินใจ</span></td><td>เพิ่ม "หลับแล้วก้ม" และ "ก้มดูมือถือ" เพื่อใช้แยกสองกรณีนี้ใน 1.4 · <b>ควรตัดสินก่อนทำ 1.1</b> จะได้ไปรถครั้งเดียวจบ</td><td>ผู้ใช้</td></tr>
+      <tr class="grp"><td colspan="5">3. Firmware</td></tr>
+      <tr><td>3.1</td><td>จอ OLED</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>ฮาร์ดแวร์ผ่านแล้ว (เจอที่ 0x3C) แต่ DrowsyFW ยังไม่แสดงอะไรบนจอ · เสนอให้แสดงระดับความง่วง, PERCLOS และสถานะ WiFi/Sync</td><td>Claude</td></tr>
+      <tr><td>3.2</td><td>ทดสอบ buzzer/LED กับ DrowsyFW</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>ที่ผ่านเมื่อ 23 ต.ค. คือ BenchTest ยังไม่ได้ดูว่าหลับตาแล้ว LED แดงกะพริบ (ระดับ 1) และ buzzer ดังเป็นจังหวะหรือดังยาว (ระดับ 2/3) ถูกต้องไหม · ใช้เวลาไม่ถึง 10 นาทีที่โต๊ะ</td><td>ผู้ใช้ + Claude</td></tr>
+      <tr><td>3.3</td><td>แจ้งเตือนผ่าน Telegram</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>อยู่ในแผนเดิม (LINE Notify ปิดบริการแล้ว) ยังไม่ได้ทำ · ถ้าเวลาไม่พอตัดออกได้</td><td>Claude</td></tr>
+      <tr><td>3.4</td><td>ปุ่มบนบอร์ด</td><td><span class="pill low">ไม่รีบ</span></td><td>ไม่มีปุ่ม USER ตอนนี้ปิดเสียงได้ทางเว็บอย่างเดียว · ทางเลือกคือใช้ปุ่ม BOOT บนโมดูล</td><td>Claude</td></tr>
+      <tr><td>3.5</td><td>เฟรมกล้องเสีย ~17%</td><td><span class="pill low">ไม่รีบ</span></td><td>ไม่เกี่ยวกับ PCB และยังได้ ~7 fps ไม่กระทบการทำงาน</td><td>—</td></tr>
+      <tr><td>3.6</td><td>buzzer เบาที่ 3.3V</td><td><span class="pill low">ไม่รีบ</span></td><td>ตัวเป็นรุ่น 5V ถ้าในรถได้ยินไม่ชัดให้เปลี่ยนเป็น TMB12A03</td><td>ผู้ใช้</td></tr>
+      <tr class="grp"><td colspan="5">4. กล่อง</td></tr>
+      <tr><td>4.1</td><td>รับกล่องจากร้านแล้วประกอบ</td><td><span class="pill fix">รอร้าน</span></td><td>ASA สีดำ · ขัดกระดาษทรายเบอร์ 600 → ใส่ insert M3 → ใส่บอร์ด → ติดขาดูดกระจก · อะไหล่ซื้อครบแล้ว</td><td>ผู้ใช้</td></tr>
+      <tr><td>4.2</td><td>ป้าย SW1</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>ขวา = ON เมื่อมองบอร์ดจากด้านบน แต่กล่องวางแนวนอนโดยแถว IR อยู่บน ต้องหมุนทิศตามก่อนเขียนป้าย</td><td>ผู้ใช้</td></tr>
+      <tr class="grp"><td colspan="5">5. Cloud และเว็บ</td></tr>
+      <tr><td>5.1</td><td>Device Dashboard: หน้าตั้งค่า + กราฟ</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>ตอนนี้มีสถานะสด ภาพสด และปุ่มปิดเสียง แต่ยังไม่มีกราฟย้อนหลังและหน้าปรับค่า</td><td>Claude</td></tr>
+      <tr><td>5.2</td><td>Cloud Dashboard</td><td><span class="pill rec">เสร็จ</span></td><td>ใช้ได้แล้ว · GitHub Pages ดึงจาก <code>main</code> /docs</td><td>—</td></tr>
+      <tr class="grp"><td colspan="5">6. เอกสารที่ล้าสมัย</td></tr>
+      <tr><td>6.1</td><td><code>docs/firmware-plan.html</code></td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>หัวข้อ 1–9 ยังเป็นสถานะ 18 ต.ค. ไม่มีบอร์ด v2 และ 0.3.2–0.3.4</td><td>Claude</td></tr>
+      <tr><td>6.2</td><td><code>firmware/README.md</code></td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>หัวข้อกล้องเขียน SVGA และ 96×96 (ของจริงคือ HVGA และ 32×32)</td><td>Claude</td></tr>
+      <tr><td>6.3</td><td>BOM</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>เขียนว่า TSAL6200 = 850nm ที่ถูกคือ 940nm</td><td>Claude</td></tr>
+      <tr><td>6.4</td><td><code>PCB_REVIEW_PROMPT.md</code></td><td><span class="pill low">ไม่รีบ</span></td><td>อ้าง uuid โปรเจกต์ที่เลิกใช้แล้ว</td><td>Claude</td></tr>
+      <tr class="grp"><td colspan="5">7. ส่งงาน</td></tr>
+      <tr><td>7.1</td><td>วิดีโอสาธิต</td><td><span class="pill fix">รอ 1.6</span></td><td>ถ่ายตอนจอด หลับตาให้ดูการเตือนครบ 3 ระดับ</td><td>ผู้ใช้</td></tr>
+      <tr><td>7.2</td><td>รายงาน</td><td><span class="pill todo">ยังไม่เริ่ม</span></td><td>ร่างได้เลยตอนนี้ แล้วเติมผลในรถทีหลัง · ต้องระบุข้อจำกัด: อุณหภูมิในรถเกินพิกัดชิป (ต้องถอดเก็บเมื่อจอด) · กรณีก้มหัวหลับ · เกณฑ์ปรับที่โต๊ะ</td><td>Claude ร่าง · ผู้ใช้ตรวจ</td></tr>
+      <tr><td>7.3</td><td>merge <code>firmware</code> → <code>main</code></td><td><span class="pill fix">ทำตอนท้าย</span></td><td>ครั้งสุดท้ายก่อนส่ง</td><td>Claude</td></tr>
+      <tr class="grp"><td colspan="5">8. เก็บกวาด</td></tr>
+      <tr><td>8.1</td><td>ลบสำเนาโมเดลชั่วคราว</td><td><span class="pill low">ไม่รีบ</span></td><td><code>~/Documents/Arduino/DrowsyFW_model</code> เลิกใช้แล้ว · รออนุญาต</td><td>Claude</td></tr>
+      <tr><td>8.2</td><td>ปิด session ที่ไม่ใช้</td><td><span class="pill low">ไม่รีบ</span></td><td>ตอนนี้ว่างอยู่ 8 session</td><td>Claude</td></tr>
     </tbody>
   </table></div>
+  <h3>ลำดับที่แนะนำ</h3>
+  <ol>
+    <li>ตัดสินใจข้อ 2.1–2.2</li>
+    <li>ทำ 3.2 ที่โต๊ะ</li>
+    <li>ทำ 1.1–1.2 ในรถ</li>
+    <li>ระหว่างนั้น Claude ทำ 1.3–1.4, 3.1, หมวด 6 และร่างรายงาน (7.2)</li>
+    <li>รับกล่องมาแล้วทำ 1.6 และ 7.1</li>
+  </ol>
 </section>
 
 <section>
