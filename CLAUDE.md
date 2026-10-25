@@ -19,12 +19,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ไม่มี lint หรือ unit test บนบอร์ด · การตรวจคือ compile ผ่าน แล้วดู serial / `GET /api/status` จากบอร์ดจริง
 
-logic ความง่วง (`drowsiness.cpp`) และรูปแบบไฟล์ Trip (`trip_record.cpp`) ไม่พึ่ง Arduino มีเทสต์บน PC · แก้ไฟล์เหล่านี้แล้วต้องรันผ่านก่อน (SQL บน cloud ทดสอบด้วย `cloud/test/`, ดู [cloud/README.md](cloud/README.md)):
+logic ความง่วง (`drowsiness.cpp`) และรูปแบบไฟล์ Trip (`trip_record.cpp`) ไม่พึ่ง Arduino มีเทสต์บน PC · แก้ไฟล์เหล่านี้แล้วต้องรันผ่านก่อน · แก้ SQL ใน `cloud/sql/` แล้วรันเทสต์ cloud:
 
 ```bash
 cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW drowsiness_test.cpp ../DrowsyFW/drowsiness.cpp -o drowsiness_test && ./drowsiness_test
-cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW trip_record_test.cpp ../DrowsyFW/trip_record.cpp -o trip_record_test && ./trip_record_test
+cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW trip_record_test.cpp ../DrowsyFW/trip_record.cpp -o trip_record_test && ./trip_record_test   # สร้าง trip_fixture.json ด้วย
+cd cloud/test && npm install && node sql_test.mjs   # รัน cloud/sql บน PGlite (Postgres จำลอง ไม่ต้องใช้ Supabase): RLS, ส่งซ้ำ, Trip Summary ตรงกับ Device
 ```
+
+Cloud Dashboard เปิดในเครื่อง: `cd docs && python -m http.server 8765 --bind 127.0.0.1` → `http://127.0.0.1:8765/dashboard/` · บนเว็บจริง GitHub Pages สร้างจาก branch **`main`** โฟลเดอร์ `/docs` (งานใน `docs/` ต้อง merge เข้า main ก่อนจึงขึ้นเว็บ)
 
 ```bash
 CLI="$LOCALAPPDATA/Programs/Arduino IDE/resources/app/lib/backend/resources/arduino-cli.exe"
@@ -82,12 +85,16 @@ cd ml
 ```bash
 cd enclosure/cad
 PYTHONIOENCODING=utf-8 "$LOCALAPPDATA/ddd-enclosure-venv/Scripts/python.exe" enclosure.py   # → out/*.step, out/*.stl
-PYTHONIOENCODING=utf-8 "$LOCALAPPDATA/ddd-enclosure-venv/Scripts/python.exe" check.py       # ต้องได้ "no clashes"
+PYTHONIOENCODING=utf-8 "$LOCALAPPDATA/ddd-enclosure-venv/Scripts/python.exe" check.py       # ต้องได้ "no clashes" และทุกบรรทัด SW1 เป็น ok
+PYTHONIOENCODING=utf-8 "$LOCALAPPDATA/ddd-enclosure-venv/Scripts/python.exe" assembly.py    # → out/assembly/*.stl ชิ้นทั้งชุด (รวมหุ่นบอร์ด/สาย) สำหรับหน้าดู 3D
 ```
 
 - สคริปต์ build123d · ค่าทุกตัวอยู่หัว `enclosure.py` พร้อมป้าย `MEAS` (วัดจริง) / `DESIGN` (จาก Gerber/PnP) / `ASSUMED` (ต้องวัดก่อนปริ้นตัวจริง)
-- พิกัด: x จากขอบซ้าย PCB, y จากขอบบน (ฝั่ง `MODULE USB`), z จากใต้พื้นกล่อง · ยึดกับขาดูดกระจกด้วยน็อต 1/4"-20
+- พิกัด: x จากขอบซ้าย PCB, y จากขอบบน (ฝั่ง `MODULE USB`), z จากใต้พื้นกล่อง · ใน CAD แกน Y กลับทิศ (CAD Y = −y) · ยึดกับขาดูดกระจกด้วยน็อต 1/4"-20
 - ตัวจริงต้อง PETG/ASA (ในรถร้อน 70–80°C) · ข้อกำหนดอยู่ใน `enclosure/README.md` และ `DESIGN_INPUTS.md`
+- **ชุดส่งร้านเป็นสำเนาคงที่** ไม่เปลี่ยนตาม `cad/out/`: `print_2026-10-18/` = ฝา + ฐาน (ปริ้นแล้ว) · `print_2026-10-26/` = ชิ้น SW1 (ด้ามโยก + ขาแขวน + หมุด) · ด้ามต่อ SW1 ในชุด 18 ต.ค. ใช้ไม่ได้
+- **SW1 ขับด้วยด้ามโยก** (`make_sw_rocker` / `make_sw_bracket` / `make_sw_pin`): ก้าน SW1 งอ/เอียงได้มาก ดันปลายก้านสวิตช์ไม่เลื่อน ต้องดันโคนก้านชิดตัวสวิตช์เท่านั้น → ง่ามแตะก้านเฉพาะแถบล่าง 1 มม. · ด้ามหมุนรอบหมุดในขาแขวนที่ติดกาวใต้ฝา **หัวด้ามขยับกลับทิศกับก้าน** · ด้ามต่อแบบเลื่อนทุกแบบ (สวมปลายก้าน) ล้มเหลวเพราะแรงงัด/แรงเสียดทาน · `check.py` ตรวจด้ามโยกที่ OFF/กลาง/ON กับฝา ขาแขวน หมุด ก้าน และหุ่นชิ้นส่วน · รายละเอียดและตัวเลขอยู่ใน `enclosure/README.md`
+- รัน `enclosure.py` แล้ว `cad/out/lid.step` / `base.step` เปลี่ยนแค่วันเวลาในหัวไฟล์ → `git checkout` คืนก่อน commit ถ้ารูปทรงไม่ได้แก้
 
 ## ฮาร์ดแวร์ที่ต้องระวังเวลาเขียนโค้ด
 
@@ -111,5 +118,6 @@ GPIO map อยู่ใน [README.md](README.md) · เพิ่มเติ�
 
 ## เอกสารที่ล้าสมัยบางส่วน
 
+- `README.md`: ตารางสถานะและโครงสร้าง repo ยังเป็นของ 3 ต.ค. (firmware "ยังไม่เริ่ม", กล่อง "ยังไม่ออกแบบ", pipeline crop 96×96 / PERCLOS) · GPIO map ยังถูก · สถานะล่าสุดอยู่ใน `docs/STATUS.md`
 - `docs/PROJECT_STATUS.md` (ส.ค.): ขนาดบอร์ด, เกณฑ์ alert นับเป็นเฟรม, PERCLOS 80%, EAR, LINE Notify, MobileNetV2 96×96 ล้าสมัยแล้ว · GPIO map ยังถูก
 - `docs/archive/early-design/` ดีไซน์ช่วงแรก (ไฟ 12V, IMU) ตัดออกแล้ว
