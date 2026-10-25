@@ -19,7 +19,8 @@ def make_groups():
     g = {}
     g["lid"] = E.make_lid()
     g["base"] = E.make_base()
-    g["switch_knob"] = Pos(E.SW1[0], -E.SW1[1], zp + E.SW_H - 3.0) * E.make_sw_ext()
+    g["switch_knob"] = E.place_sw_rocker(E.make_sw_rocker(), -E.SW_TRAVEL / 2)   # SW1 = OFF
+    g["switch_bracket"] = E.make_sw_bracket()
 
     g["pcb"] = box(0, E.PCB_W, 0, E.PCB_H, E.Z_PCB_BOT, zp)
 

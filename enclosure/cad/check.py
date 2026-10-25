@@ -78,19 +78,33 @@ for a, b in (("LED1 rod D3", "module"), ("LED2 rod D3", "module"), ("LED1 rod D3
     v = (dummies[a] & dummies[b]).volume
     print(f"  {'CLASH' if v > 0.01 else 'ok   '} {a} x {b}: {v:.2f} mm3")
 
-# ด้ามต่อ SW1 ตลอดระยะเลื่อน ต้องไม่ชนฝา (ปีกอยู่ใต้ฝา หัวโผล่ผ่านร่อง)
-ext = E.make_sw_ext()
+# ด้ามโยก SW1 + ขาแขวน: ตลอดระยะโยก ต้องไม่ชนฝา ขาแขวน ตัวสวิตช์ ก้าน และชิ้นอื่น
+vol = lambda a, b: (lambda r: r.volume if r is not None else 0.0)(a & b)
+def report_clash(label, v):
+    print(f"  {'CLASH' if v > 0.01 else 'ok   '} {label}: {v:.2f} mm3")
+bracket, rocker = E.make_sw_bracket(), E.make_sw_rocker()
+report_clash("SW1 bracket x lid", vol(bracket, lid))
+for name, d in dummies.items():
+    if vol(bracket, d) > 0.01:
+        report_clash(f"SW1 bracket x {name}", vol(bracket, d))
+posts = [cyl(x, y, E.INSERT_POST_R, E.Z_PCB, E.Z_LID_IN) for x, y in E.MH]
+print(f"        SW1 bracket gap to nearest MH post {min(bracket.distance_to(p) for p in posts):.2f} mm")
 for dx in (-E.SW_TRAVEL / 2, 0, E.SW_TRAVEL / 2):
-    placed = Pos(E.SW1[0] + dx, -E.SW1[1], E.Z_PCB + E.SW_H - 3.0) * ext
-    v = (placed & lid).volume if (placed & lid) is not None else 0.0
-    print(f"  {'CLASH' if v > 0.01 else 'ok   '} SW1 extender at {dx:+.2f} x lid: {v:.2f} mm3")
+    placed = E.place_sw_rocker(rocker, dx)
+    lever = box(E.SW1[0] + dx - E.SW_LEVER[0] / 2, E.SW1[0] + dx + E.SW_LEVER[0] / 2,
+                E.SW1[1] - E.SW_LEVER[1] / 2, E.SW1[1] + E.SW_LEVER[1] / 2, zp + E.SW_BODY[2], zp + E.SW_H)
+    tag = f"SW1 rocker at {dx:+.2f} ({E.sw_rocker_angle(dx):+.1f} deg)"
+    for pname, part in (("lid", lid), ("bracket", bracket), ("lever", lever)):
+        report_clash(f"{tag} x {pname}", vol(placed, part))
     for name, d in dummies.items():
-        r = placed & d
-        v = r.volume if r is not None else 0.0
-        if v > 0.01:
-            print(f"  CLASH SW1 extender at {dx:+.2f} x {name}: {v:.2f} mm3")
-    gap = min(placed.distance_to(cyl(x, y, E.INSERT_POST_R, E.Z_PCB, E.Z_LID_IN)) for x, y in E.MH)
-    print(f"        SW1 extender at {dx:+.2f}: gap to nearest MH post {gap:.2f} mm")
+        if vol(placed, d) > 0.01:
+            report_clash(f"{tag} x {name}", vol(placed, d))
+    a = E.math.radians(E.sw_rocker_angle(dx))
+    at = lambda z: (z - E.SW_PIVOT_Z) * E.math.sin(a)       # x ของแกนด้ามที่ความสูง z (จากกลางร่อง)
+    zc = E.sw_fork_z()[1]
+    ok = abs(at(zc) - dx) < 0.05
+    print(f"  {'ok   ' if ok else 'WRONG'} {tag}: fork centre {at(zc):+.2f} vs lever {dx:+.2f} · knob {at(E.Z_TOP + 1.75):+.2f} · "
+          f"gap to MH posts {min(placed.distance_to(p) for p in posts):.2f} mm")
 
 # หัวสาย USB-C (ขนาดวัดจริง) เสียบที่ USB1 ต้องไม่ชนฐาน/ฝา
 zc = E.Z_PCB + E.USB1_H / 2
