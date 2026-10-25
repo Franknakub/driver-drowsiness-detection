@@ -82,8 +82,13 @@ for a, b in (("LED1 rod D3", "module"), ("LED2 rod D3", "module"), ("LED1 rod D3
 vol = lambda a, b: (lambda r: r.volume if r is not None else 0.0)(a & b)
 def report_clash(label, v):
     print(f"  {'CLASH' if v > 0.01 else 'ok   '} {label}: {v:.2f} mm3")
-bracket, rocker = E.make_sw_bracket(), E.make_sw_rocker()
+bracket, rocker, pin = E.make_sw_bracket(), E.make_sw_rocker(), E.make_sw_pin()
 report_clash("SW1 bracket x lid", vol(bracket, lid))
+report_clash("SW1 pin x bracket", vol(pin, bracket))
+report_clash("SW1 pin x lid", vol(pin, lid))
+for name, d in dummies.items():
+    if vol(pin, d) > 0.01:
+        report_clash(f"SW1 pin x {name}", vol(pin, d))
 for name, d in dummies.items():
     if vol(bracket, d) > 0.01:
         report_clash(f"SW1 bracket x {name}", vol(bracket, d))
@@ -94,7 +99,7 @@ for dx in (-E.SW_TRAVEL / 2, 0, E.SW_TRAVEL / 2):
     lever = box(E.SW1[0] + dx - E.SW_LEVER[0] / 2, E.SW1[0] + dx + E.SW_LEVER[0] / 2,
                 E.SW1[1] - E.SW_LEVER[1] / 2, E.SW1[1] + E.SW_LEVER[1] / 2, zp + E.SW_BODY[2], zp + E.SW_H)
     tag = f"SW1 rocker at {dx:+.2f} ({E.sw_rocker_angle(dx):+.1f} deg)"
-    for pname, part in (("lid", lid), ("bracket", bracket), ("lever", lever)):
+    for pname, part in (("lid", lid), ("bracket", bracket), ("lever", lever), ("pin", pin)):
         report_clash(f"{tag} x {pname}", vol(placed, part))
     for name, d in dummies.items():
         if vol(placed, d) > 0.01:
