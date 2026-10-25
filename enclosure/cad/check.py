@@ -84,6 +84,13 @@ for dx in (-E.SW_TRAVEL / 2, 0, E.SW_TRAVEL / 2):
     placed = Pos(E.SW1[0] + dx, -E.SW1[1], E.Z_PCB + E.SW_H - 3.0) * ext
     v = (placed & lid).volume if (placed & lid) is not None else 0.0
     print(f"  {'CLASH' if v > 0.01 else 'ok   '} SW1 extender at {dx:+.2f} x lid: {v:.2f} mm3")
+    for name, d in dummies.items():
+        r = placed & d
+        v = r.volume if r is not None else 0.0
+        if v > 0.01:
+            print(f"  CLASH SW1 extender at {dx:+.2f} x {name}: {v:.2f} mm3")
+    gap = min(placed.distance_to(cyl(x, y, E.INSERT_POST_R, E.Z_PCB, E.Z_LID_IN)) for x, y in E.MH)
+    print(f"        SW1 extender at {dx:+.2f}: gap to nearest MH post {gap:.2f} mm")
 
 # หัวสาย USB-C (ขนาดวัดจริง) เสียบที่ USB1 ต้องไม่ชนฐาน/ฝา
 zc = E.Z_PCB + E.USB1_H / 2

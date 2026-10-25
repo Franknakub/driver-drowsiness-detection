@@ -39,8 +39,14 @@ SW_H = 8.3                       # MEAS sw_h ปลายก้าน
 SW_TRAVEL = 3.76                 # MEAS sw_travel
 SW_BODY = (8.55, 3.85, 4.3)      # MEAS sw_bw (แนวเลื่อน x) · sw_bl · sw_bh
 SW_LEVER = (1.5, 1.5)            # MEAS sw_lw (แนวเลื่อน x) × sw_lt
-SW_SOCKET_FIT = 0.3              # เผื่อรูสวมก้าน (แน่นกว่า FIT ทั่วไป)
-SW_FLANGE_W, SW_FLANGE_T, SW_FLANGE_GAP = 5.4, 1.2, 0.4   # ปีกขังด้ามต่อใต้ฝา: กว้าง (แนว y) · หนา · ห่างผิวในฝา
+SW_SOCKET_FIT = 0.3              # เผื่อรูสวมก้าน (แน่นกว่า FIT ทั่วไป) · ชุด 18 ต.ค. ใช้ค่านี้ สวมลงได้ดี
+SW_SOCKET_DEPTH = 3.0
+# ด้ามต่อ v2 (26 ต.ค.): v1 ดันที่ปลายแล้วเอียงงัดก้าน สวิตช์ไม่เลื่อน (ดันที่โคนเลื่อนได้ — ผู้ใช้ทดสอบ)
+# → ปีกใต้ฝาเป็นแผ่นยาวตามแนวเลื่อน แนบใต้ฝา: จะเอียงทางไหนปลายแผ่นก็ชนใต้ฝา ด้ามจึงต้องเลื่อนทั้งชิ้น
+SW_STEM_X = 3.6                  # ตัวด้ามตามแนวเลื่อน (v1 3.0) · ร่องยาว SW_TRAVEL + 3.9 → เหลือระยะเลื่อน 4.06
+SW_STEM_Y = 3.0                  # ขวางแนวเลื่อน (ร่องกว้าง 3.9)
+SW_PLATE = (12.0, 5.0, 1.2)      # แผ่นใต้ฝา: ยาว (แนว x) · กว้าง (แนว y) · หนา — กว้าง 5.0 ห่างเสาฝา MH3 ~0.4
+SW_PLATE_GAP = 0.2               # ห่างผิวในฝา (v1 0.4)
 
 # ---------------------------------------------------------------- โมดูล + กล้อง
 HDR_H = 8.51                     # MEAS hdr_h (กรอกใหม่ จากเดิม 11.7)
@@ -326,17 +332,17 @@ def make_base():
 
 
 # ---------------------------------------------------------------- ด้ามต่อ SW1
-def make_sw_ext():
-    z0 = Z_PCB + SW_H - 3.0          # สวมก้านลึก 3
+def make_sw_ext(fit=SW_SOCKET_FIT):
+    z0 = Z_PCB + SW_H - SW_SOCKET_DEPTH   # สวมก้านลึก 3
     z1 = Z_TOP + 2.5                 # โผล่พ้นฝา 2.5
     c = (Align.CENTER, Align.CENTER, Align.MIN)
-    ext = Box(3.0, 3.0, z1 - z0, align=c)
-    # รูสวมก้านเผื่อแค่ 0.3 ให้จับก้านแน่น (ผู้ใช้เลือก 18 ต.ค.)
-    ext -= Box(SW_LEVER[0] + SW_SOCKET_FIT, SW_LEVER[1] + SW_SOCKET_FIT, 3.0, align=c)
+    ext = Box(SW_STEM_X, SW_STEM_Y, z1 - z0, align=c)
+    ext -= Box(SW_LEVER[0] + fit, SW_LEVER[1] + fit, SW_SOCKET_DEPTH, align=c)
     ext += Pos(0, 0, z1 - z0 - 1.5) * Box(5.0, 3.0, 1.5, align=c)
-    # ปีกใต้ฝา กว้างกว่าร่องในแนว y → ด้ามต่อถูกขังระหว่างฝากับก้าน หลุดออกหน้ากล่องไม่ได้
-    zf = Z_LID_IN - SW_FLANGE_GAP - SW_FLANGE_T - z0
-    ext += Pos(0, 0, zf) * Box(3.0, SW_FLANGE_W, SW_FLANGE_T, align=c)
+    # แผ่นใต้ฝา กว้างกว่าร่องทั้งสองแนว → ขังด้ามต่อไว้ใต้ฝา และกันด้ามเอียงตอนดันปลาย
+    # ปริ้นแนวตั้งแล้วแผ่นยื่นเกิน 45° → ต้องมี support ใต้แผ่น (ผิวบนที่แนบฝาไม่โดน support)
+    zf = Z_LID_IN - SW_PLATE_GAP - SW_PLATE[2] - z0
+    ext += Pos(0, 0, zf) * Box(*SW_PLATE, align=c)
     return ext
 
 
@@ -354,7 +360,8 @@ def report():
 if __name__ == "__main__":
     OUT.mkdir(exist_ok=True)
     report()
-    parts = {"lid": make_lid(), "base": make_base(), "sw1_extender": make_sw_ext()}
+    parts = {"lid": make_lid(), "base": make_base(), "sw1_extender": make_sw_ext(),
+             "sw1_extender_fit020": make_sw_ext(0.2)}
     for name, p in parts.items():
         export_step(p, str(OUT / f"{name}.step"))
         export_stl(p, str(OUT / f"{name}.stl"))
