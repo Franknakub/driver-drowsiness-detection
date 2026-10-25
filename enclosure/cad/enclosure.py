@@ -360,8 +360,7 @@ def report():
 if __name__ == "__main__":
     OUT.mkdir(exist_ok=True)
     report()
-    parts = {"lid": make_lid(), "base": make_base(), "sw1_extender": make_sw_ext(),
-             "sw1_extender_fit020": make_sw_ext(0.2)}
+    parts = {"lid": make_lid(), "base": make_base(), "sw1_extender": make_sw_ext()}
     for name, p in parts.items():
         export_step(p, str(OUT / f"{name}.step"))
         export_stl(p, str(OUT / f"{name}.stl"))
