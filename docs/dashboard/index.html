@@ -301,7 +301,14 @@ $('authForm').onsubmit = async e => {
   if (signUp && !data.session) { msg.className = 'msg ok'; msg.textContent = 'ส่งอีเมลยืนยันแล้ว กดลิงก์ในอีเมลแล้วกลับมาเข้าสู่ระบบ'; }
   else msg.textContent = '';
 };
-$('logout').onclick = () => sb.auth.signOut();
+// scope local: ล้าง session ในเครื่องทันที · แบบ global ต้องเรียกเซิร์ฟเวอร์ก่อน ถ้าเน็ตสะดุด/token หมดอายุ
+// supabase-js คืน error แล้วไม่ล้าง session ปุ่มเลยดูเหมือนกดไม่ติด
+$('logout').onclick = async () => {
+  $('logout').disabled = true;
+  await sb.auth.signOut({ scope: 'local' });
+  current = null; render(null);
+  $('logout').disabled = false;
+};
 sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => render(session), 0));
 
 // ---------- เชื่อมอุปกรณ์ ----------
