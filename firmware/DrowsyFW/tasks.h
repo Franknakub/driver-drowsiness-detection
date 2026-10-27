@@ -8,10 +8,15 @@ void startVisionTask();
 void startLogTask();
 void startNetTask();
 void startSyncTask();
+void startOledTask();
 void startWebServer();  // AsyncWebServer ทำงานบน task ของ AsyncTCP เอง
 
 // ใช้ร่วมระหว่าง task
 void alertMute(uint32_t durationMs);
+enum class IrMode : uint8_t;
+enum class HwTest : uint8_t;
+void irSetMode(IrMode m);                           // ตั้งแล้วจำใน NVS
+void hwTestStart(HwTest t, uint32_t durationMs);    // ปุ่มทดสอบในหน้าเว็บ
 bool timeSetFromEpoch(time_t epoch, const char* source);
 bool snapshotJpeg(uint8_t** out, size_t* outLen);   // ผู้เรียกต้อง free(*out)
 struct DrowsyEvent;

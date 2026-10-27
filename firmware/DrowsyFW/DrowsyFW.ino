@@ -25,6 +25,7 @@ void setup() {
   startVisionTask();
   startNetTask();               // เปิด AP + เว็บ + OTA
   startSyncTask();
+  startOledTask();
 }
 
 void loop() {

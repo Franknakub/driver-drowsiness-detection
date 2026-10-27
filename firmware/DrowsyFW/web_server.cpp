@@ -3,6 +3,8 @@
 //   GET  /api/status  JSON สถานะ
 //   POST /api/time    epoch=<วินาที>  เวลาจาก browser (ใช้เมื่อไม่มี NTP)
 //   POST /api/mute    ปิดเสียง buzzer ระดับ 1–2 ตาม MUTE_DEFAULT_MS
+//   POST /api/ir      mode=auto|on|off  โหมด IR (จำใน NVS)
+//   POST /api/test    what=buzzer|green|red|ir|oled  ทดสอบฮาร์ดแวร์ HW_TEST_MS
 //   GET/POST /update  อัปโหลด .bin (ต้องใส่รหัส admin / OTA_PASSWORD)
 //   GET  /trips       ประวัติ Trip บน Device (รายการ + Trip Summary + กราฟ)
 //   GET  /api/trips   JSON รายการ Trip ทั้งหมดบน FFat พร้อม Trip Summary
@@ -24,24 +26,101 @@ static AsyncWebServer server(80);
 static const char INDEX_HTML[] PROGMEM = R"HTML(<!doctype html>
 <html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DrowsyFW</title>
-<style>body{font-family:system-ui,sans-serif;margin:16px;max-width:520px}pre{background:#eee;padding:12px;border-radius:6px;white-space:pre-wrap}button{font-size:16px;padding:8px 14px}</style>
-</head><body>
-<h2>DrowsyFW</h2>
-<p><img id="v" alt="ภาพจากกล้อง" style="width:100%;max-width:360px;image-rendering:pixelated;background:#000"><br>
-<small>กรอบเขียว = หน้า · กรอบตา: แดง = ปิด, น้ำเงิน = เปิด, เหลือง = ไม่แน่ใจ</small></p>
-<p><b>ภาพตาที่เข้าโมเดล (32×32)</b> <span id="pe"></span><br>
-<img id="e" alt="ภาพตา" style="width:100%;max-width:390px;image-rendering:pixelated;background:#333"><br>
-<small>ซ้าย = ตาซ้ายของภาพ (ตาขวาของคนขับ) · ขวา = ตาขวาของภาพ</small></p>
-<pre id="s">loading...</pre>
-<p><button onclick="fetch('/api/mute',{method:'POST'})">ปิดเสียง 5 นาที (ระดับ 1–2)</button> <a href="/trips">ประวัติ Trip</a> · <a href="/update">อัปเดต firmware</a></p>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--fg:#1d2330;--mut:#6b7280;--line:#e3e6eb;--ok:#1f9d55;--l1:#d6a100;--l2:#e8590c;--l3:#d61f1f;--dis:#7048e8;--pc:#2f6fed}
+@media(prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1c2029;--fg:#e6e8ec;--mut:#9aa3b2;--line:#2c3240}}
+*{box-sizing:border-box}body{font-family:system-ui,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
+main{max-width:720px;margin:0 auto;padding:12px 16px 32px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}h1{font-size:20px;margin:4px 0}
+.mut{color:var(--mut);font-size:13px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px}
+#lvl{border:none;color:#fff;text-align:center;padding:18px 12px;background:var(--ok)}#lvl b{display:block;font-size:30px}#lvl span{font-size:14px;opacity:.9}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}@media(max-width:520px){.grid{grid-template-columns:repeat(2,1fr)}}
+.grid .card{margin:0}.k{font-size:12px;color:var(--mut)}.v{font-size:20px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}.s{font-size:12px;color:var(--mut);margin-top:2px}
+canvas{width:100%;height:180px;display:block}.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:6px}.lg i{display:inline-block;width:12px;height:3px;vertical-align:middle;margin-right:4px}
+.imgs{display:flex;gap:12px;flex-wrap:wrap}.imgs div{flex:1 1 260px}img{width:100%;image-rendering:pixelated;background:#000;border-radius:6px;display:block}
+button,select{font:inherit;font-size:15px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+#mute{width:100%;margin-top:12px;background:var(--fg);color:var(--bg);border:none;padding:12px}
+#off{display:none;background:var(--l3);color:#fff;padding:8px 12px;border-radius:8px;margin-top:12px}
+pre{white-space:pre-wrap;font-size:12px;margin:8px 0 0}a{color:var(--pc)}h2{font-size:15px;margin:0 0 8px}
+</style>
+</head><body><main>
+<header><h1>DrowsyFW</h1><span class="mut" id="hd">กำลังเชื่อมต่อ...</span></header>
+<div id="off">ขาดการเชื่อมต่อกับ Device · ข้อมูลด้านล่างอาจไม่ใช่ล่าสุด</div>
+<div class="card" id="lvl"><b id="lt">--</b><span id="ls"></span></div>
+<button id="mute" onclick="post('/api/mute')">ปิดเสียง 5 นาที (ระดับ 1–2 และ Distraction)</button>
+<div class="grid">
+<div class="card"><div class="k">ตา</div><div class="v" id="c-eye">--</div><div class="s" id="c-eye2"></div></div>
+<div class="card"><div class="k">PERCLOS (60 วิ)</div><div class="v" id="c-pc">--</div><div class="s">ระดับ 1 ≥ 15% · ระดับ 2 ≥ 25%</div></div>
+<div class="card"><div class="k">หาหน้า</div><div class="v" id="c-face">--</div><div class="s" id="c-face2"></div></div>
+<div class="card"><div class="k">ความเร็ว</div><div class="v" id="c-fps">--</div><div class="s" id="c-fps2"></div></div>
+<div class="card"><div class="k">IR</div><div class="v" id="c-ir">--</div><div class="s" id="c-ir2"></div></div>
+<div class="card"><div class="k">เครือข่าย / Sync</div><div class="v" id="c-net">--</div><div class="s" id="c-net2"></div></div>
+</div>
+<div class="card"><h2>ย้อนหลัง 2 นาที</h2><canvas id="g"></canvas>
+<div class="lg"><span><i style="background:var(--l3)"></i>P(ตาปิด)</span><span><i style="background:var(--pc)"></i>PERCLOS</span><span><i style="background:var(--mut)"></i>เกณฑ์ปิด 0.5 / เปิด 0.3</span><span>แถบล่าง = ระดับ · เว้นว่าง = มองไม่เห็นตา</span></div></div>
+<div class="card imgs"><div><h2>กล้อง</h2><img id="v" alt="ภาพจากกล้อง"><div class="s">กรอบเขียว = หน้า · กรอบตา: แดง = ปิด, น้ำเงิน = เปิด, เหลือง = ไม่แน่ใจ</div></div>
+<div><h2>ภาพตาที่เข้าโมเดล (32×32)</h2><img id="e" alt="ภาพตา"><div class="s" id="pe">ซ้าย = ตาซ้ายของภาพ (ตาขวาของคนขับ)</div></div></div>
+<div class="card"><h2>ฮาร์ดแวร์</h2><div class="s" id="hw"></div>
+<p>IR: <select id="irm" onchange="post('/api/ir?mode='+this.value)"><option value="auto">อัตโนมัติตาม LDR</option><option value="on">เปิดค้าง</option><option value="off">ปิด</option></select></p>
+<p>ทดสอบ 3 วิ: <button onclick="post('/api/test?what=buzzer')">buzzer</button> <button onclick="post('/api/test?what=green')">LED เขียว</button>
+<button onclick="post('/api/test?what=red')">LED แดง</button> <button onclick="post('/api/test?what=ir')">IR</button> <button onclick="post('/api/test?what=oled')">จอ OLED</button></p>
+<div class="s">IR กะพริบ 1 วิ ดูภาพสว่างขึ้นลงในภาพกล้อง (ต้องมีของสะท้อนใกล้ๆ ในที่มืด) · ปุ่ม BOOT บนโมดูล = ปิดเสียง 5 นาที</div></div>
+<div class="card"><a href="/trips">ประวัติ Trip</a> · <a href="/update">อัปเดต firmware</a>
+<details><summary class="mut">ข้อมูลดิบ (/api/status)</summary><pre id="s">loading...</pre></details></div>
+</main>
 <script>
 fetch('/api/time',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'epoch='+Math.floor(Date.now()/1000)});
-async function tick(){try{const r=await fetch('/api/status');const d=await r.json();document.getElementById('s').textContent=JSON.stringify(d,null,2);
-document.getElementById('pe').textContent='P(ปิด) ซ้าย '+d.p_left.toFixed(2)+' · ขวา '+d.p_right.toFixed(2)+' · '+d.eye_state;}catch(e){}}
+const $=id=>document.getElementById(id);
+function post(u){fetch(u,{method:'POST'}).then(tick);}
+const LV={normal:['ปกติ','var(--ok)',0],fatigue:['เริ่มล้า · ระดับ 1','var(--l1)',1],drowsy:['ง่วง · ระดับ 2','var(--l2)',2],microsleep:['หลับใน · ระดับ 3','var(--l3)',3]};
+const EYE={open:'ลืมตา',closed:'หลับตา',uncertain:'ไม่แน่ใจ',not_visible:'มองไม่เห็น',unknown:'--'};
+const hist=[];let lastOk=0;
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function ago(s){return s<60?s+' วิ':Math.floor(s/60)+' นาที';}
+async function tick(){try{const r=await fetch('/api/status');const d=await r.json();lastOk=Date.now();show(d);}catch(e){}}
+function show(d){
+$('s').textContent=JSON.stringify(d,null,2);
+$('hd').textContent='v'+d.fw+' · Trip '+d.trip+' · เปิดมา '+ago(d.uptime_s);
+let lv=LV[d.level]||LV.normal,t=lv[0],c=lv[1],sub='';
+if(lv[2]<2&&d.distraction){t='ไม่มองถนน';c='var(--dis)';sub='มองไม่เห็นตาเกิน 3 วิ';}
+else if(lv[2]==0&&d.unmonitored){t='มองไม่ชัด';c='var(--mut)';sub='ตาอยู่ในสถานะไม่แน่ใจเกิน 5 วิ';}
+else if(d.closed_ms>0)sub='ตาปิดต่อเนื่อง '+(d.closed_ms/1000).toFixed(1)+' วิ';
+if(d.mute_left_s>0)sub+=(sub?' · ':'')+'ปิดเสียงอยู่อีก '+ago(d.mute_left_s);
+$('lt').textContent=t;$('ls').textContent=sub;$('lvl').style.background=c;
+const seen=d.eye_state=='open'||d.eye_state=='closed'||d.eye_state=='uncertain';
+$('c-eye').textContent=EYE[d.eye_state]||d.eye_state;$('c-eye2').textContent=seen?'P(ตาปิด) '+d.p_closed.toFixed(2):'';
+$('c-pc').textContent=d.perclos_ready?Math.round(d.perclos*100)+'%':'กำลังเก็บ';
+$('c-face').textContent=d.face?'เจอ':'ไม่เจอ';$('c-face2').textContent=d.face?'คะแนน '+d.face_score.toFixed(2)+' · ระยะตา '+d.eye_dist_px+' px':'';
+$('c-fps').textContent=d.fps.toFixed(1)+' fps';$('c-fps2').textContent='หาหน้า '+d.detect_ms.toFixed(0)+' ms · ตา '+d.classify_ms.toFixed(0)+' ms';
+$('c-ir').textContent=d.ir_on?'ติด':'ดับ';$('c-ir2').textContent={auto:'อัตโนมัติ',on:'เปิดค้าง',off:'ปิด'}[d.ir_mode]+' · LDR '+d.ldr_raw;
+$('c-net').textContent=d.sta?d.sta:'AP เท่านั้น';
+const sy=d.sync;$('c-net2').textContent=(d.sta?d.sta_ip+' · ':'')+(!sy.configured?'Sync ปิด':sy.last_ok_age_s>=0?'Sync ล่าสุด '+ago(sy.last_ok_age_s)+' · ค้าง '+sy.pending_samples:sy.fail?'Sync ผิดพลาด '+sy.last_http:'Sync รอส่ง');
+$('pe').textContent='P(ปิด) ซ้าย '+d.p_left.toFixed(2)+' · ขวา '+d.p_right.toFixed(2);
+$('hw').textContent='OLED '+(d.oled_ok?'เจอจอ':'ไม่เจอจอ')+(d.hw_test!=='none'?' · กำลังทดสอบ '+d.hw_test:'');
+if(document.activeElement!==$('irm'))$('irm').value=d.ir_mode;
+hist.push({t:Date.now(),p:seen?d.p_closed:null,pc:d.perclos_ready?d.perclos:null,l:lv[2],dis:d.distraction});
+while(hist.length&&hist[0].t<Date.now()-120000)hist.shift();
+draw();}
+function draw(){
+const cv=$('g'),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
+cv.width=W*dpr;cv.height=H*dpr;const x=cv.getContext('2d');x.scale(dpr,dpr);
+const L=28,B=24,T=6,ph=H-B-T-4,now=Date.now();
+const X=t=>L+(W-L-4)*(1-(now-t)/120000),Y=v=>T+ph*(1-v);
+x.font='11px system-ui';x.fillStyle=css('--mut');x.strokeStyle=css('--line');x.lineWidth=1;
+for(const v of [0,.5,1]){x.beginPath();x.moveTo(L,Y(v));x.lineTo(W-4,Y(v));x.stroke();x.fillText(v.toFixed(1),2,Y(v)+4);}
+x.setLineDash([4,4]);x.strokeStyle=css('--mut');for(const v of [.5,.3]){x.beginPath();x.moveTo(L,Y(v));x.lineTo(W-4,Y(v));x.stroke();}x.setLineDash([]);
+const cols=['--ok','--l1','--l2','--l3'];
+for(let i=0;i<hist.length;i++){const h=hist[i],n=hist[i+1],x1=X(h.t),x2=n?X(n.t):W-4;x.fillStyle=css(h.dis&&h.l<2?'--dis':cols[h.l]);x.fillRect(x1,H-B+2,Math.max(1,x2-x1),8);}
+x.fillStyle=css('--mut');x.fillText('-2 นาที',L,H-2);x.textAlign='right';x.fillText('ตอนนี้',W-4,H-2);x.textAlign='left';
+function line(k,c){x.strokeStyle=css(c);x.lineWidth=2;x.beginPath();let on=false;
+for(const h of hist){if(h[k]==null){on=false;continue;}const px=X(h.t),py=Y(h[k]);if(on)x.lineTo(px,py);else x.moveTo(px,py);on=true;}x.stroke();}
+line('pc','--pc');line('p','--l3');}
+setInterval(()=>{$('off').style.display=lastOk&&Date.now()-lastOk>3000?'block':'none';},1000);
+window.addEventListener('resize',draw);
 tick();setInterval(tick,1000);
-const v=document.getElementById('v');function next(){v.src='/snapshot.jpg?'+Date.now();}
+const v=$('v');function next(){v.src='/snapshot.jpg?'+Date.now();}
 v.onload=()=>setTimeout(next,150);v.onerror=()=>setTimeout(next,1000);next();
-const ei=document.getElementById('e');function nextE(){ei.src='/eyes.jpg?'+Date.now();}
+const ei=$('e');function nextE(){ei.src='/eyes.jpg?'+Date.now();}
 ei.onload=()=>setTimeout(nextE,300);ei.onerror=()=>setTimeout(nextE,1000);nextE();
 </script></body></html>)HTML";
 
@@ -75,11 +154,31 @@ static const char* eyeStateName(EyeState e) {
   return "?";
 }
 
+static const char* irModeName(IrMode m) {
+  switch (m) {
+    case IrMode::On:  return "on";
+    case IrMode::Off: return "off";
+    default:          return "auto";
+  }
+}
+
+static const char* hwTestName(HwTest t) {
+  switch (t) {
+    case HwTest::Buzzer:   return "buzzer";
+    case HwTest::LedGreen: return "green";
+    case HwTest::LedRed:   return "red";
+    case HwTest::Ir:       return "ir";
+    case HwTest::Oled:     return "oled";
+    default:               return "none";
+  }
+}
+
 static void handleStatus(AsyncWebServerRequest* req) {
   SharedState s = stateSnapshot();
   uint32_t now = millis();
   long muteLeft = s.mutedUntilMs ? (long)(int32_t)(s.mutedUntilMs - now) / 1000 : 0;
-  static char buf[1600];          // handler ทุกตัวรันบน task ของ AsyncTCP ตัวเดียว ใช้ static ได้
+  bool testing = s.hwTestUntilMs && (int32_t)(s.hwTestUntilMs - now) > 0;
+  static char buf[1800];          // handler ทุกตัวรันบน task ของ AsyncTCP ตัวเดียว ใช้ static ได้
   LogStatus ls = logStatus();
   SyncStatus ss = syncStatus();
   int n = snprintf(buf, sizeof(buf),
@@ -88,7 +187,7 @@ static void handleStatus(AsyncWebServerRequest* req) {
     "\"p_left\":%.2f,\"p_right\":%.2f,\"eye_dist_px\":%d,\"tilt_comp_deg\":%d,"
     "\"rotate_ms\":%.2f,\"detect_ms\":%.1f,\"pre_ms\":%.1f,\"classify_ms\":%.1f,\"perclos\":%.2f,\"perclos_ready\":%s,\"closed_ms\":%lu,\"frame_age_ms\":%lu,\"level\":\"%s\","
     "\"distraction\":%s,\"unmonitored\":%s,\"mute_left_s\":%ld,"
-    "\"ldr_raw\":%u,\"ir_on\":%s,\"ap\":\"%s\",\"sta\":\"%s\",\"sta_ip\":\"%s\",\"free_psram_kb\":%u,"
+    "\"ldr_raw\":%u,\"ir_on\":%s,\"ir_mode\":\"%s\",\"oled_ok\":%s,\"hw_test\":\"%s\",\"ap\":\"%s\",\"sta\":\"%s\",\"sta_ip\":\"%s\",\"free_psram_kb\":%u,"
     "\"free_internal_kb\":%u,\"largest_internal_kb\":%u,"
     "\"log\":{\"fs_ok\":%s,\"used_kb\":%lu,\"total_kb\":%lu,\"samples_paused\":%s,\"trips\":%lu,\"deleted\":%lu},"
     "\"sync\":{\"configured\":%s,\"busy\":%s,\"ok\":%lu,\"fail\":%lu,\"last_ok_age_s\":%ld,\"last_http\":%d,"
@@ -98,7 +197,8 @@ static void handleStatus(AsyncWebServerRequest* req) {
     eyeStateName(s.eyeState), s.pClosed, s.pLeft, s.pRight, s.eyeDistPx, s.tiltCompDeg,
     s.rotateMs, s.detectMs, s.preMs, s.classifyMs, s.perclos, s.perclosReady ? "true" : "false", (unsigned long)s.closedMs, (unsigned long)(now - s.lastFrameMs),
     levelName(s.level), s.distraction ? "true" : "false", s.unmonitored ? "true" : "false",
-    muteLeft > 0 ? muteLeft : 0L, s.ldrRaw, s.irOn ? "true" : "false", s.apSsid, s.staSsid, s.staIp,
+    muteLeft > 0 ? muteLeft : 0L, s.ldrRaw, s.irOn ? "true" : "false", irModeName(s.irMode),
+    s.oledOk ? "true" : "false", testing ? hwTestName(s.hwTest) : "none", s.apSsid, s.staSsid, s.staIp,
     (unsigned)(ESP.getFreePsram() / 1024),
     (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024),
     (unsigned)(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) / 1024),
@@ -347,6 +447,26 @@ void startWebServer() {
   server.on("/api/mute", HTTP_POST, [](AsyncWebServerRequest* r) {
     alertMute(MUTE_DEFAULT_MS);
     r->send(200, "application/json", "{\"muted\":true}");
+  });
+
+  // POST /api/ir?mode=auto|on|off · จำใน NVS
+  server.on("/api/ir", HTTP_POST, [](AsyncWebServerRequest* r) {
+    String m = r->hasParam("mode") ? r->getParam("mode")->value() : "";
+    if (m == "auto")     irSetMode(IrMode::Auto);
+    else if (m == "on")  irSetMode(IrMode::On);
+    else if (m == "off") irSetMode(IrMode::Off);
+    else { r->send(400, "text/plain", "mode must be auto, on or off"); return; }
+    r->send(200, "application/json", "{\"ir_mode\":\"" + m + "\"}");
+  });
+
+  // POST /api/test?what=buzzer|green|red|ir|oled · ทำงาน HW_TEST_MS
+  server.on("/api/test", HTTP_POST, [](AsyncWebServerRequest* r) {
+    String w = r->hasParam("what") ? r->getParam("what")->value() : "";
+    HwTest t = w == "buzzer" ? HwTest::Buzzer : w == "green" ? HwTest::LedGreen : w == "red" ? HwTest::LedRed
+             : w == "ir" ? HwTest::Ir : w == "oled" ? HwTest::Oled : HwTest::None;
+    if (t == HwTest::None) { r->send(400, "text/plain", "what must be buzzer, green, red, ir or oled"); return; }
+    hwTestStart(t, HW_TEST_MS);
+    r->send(200, "application/json", "{\"testing\":\"" + w + "\"}");
   });
 
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest* r) {

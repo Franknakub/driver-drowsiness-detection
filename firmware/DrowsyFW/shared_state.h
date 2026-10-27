@@ -18,6 +18,9 @@ struct AbStats {
   float    msrPreOldMs, msrPreNewMs;                 // preprocess ขั้น MSR อย่างเดียว ทางเดิม/ทางใหม่ บนเฟรมเดียวกัน
 };
 
+enum class IrMode : uint8_t { Auto = 0, On = 1, Off = 2 };   // ค่าเก็บใน NVS ห้ามเปลี่ยนลำดับ
+enum class HwTest : uint8_t { None, Buzzer, LedGreen, LedRed, Ir, Oled };
+
 struct SharedState {
   // vision (Core 1)
   float    fps;
@@ -49,7 +52,15 @@ struct SharedState {
 
   // sensor
   uint16_t ldrRaw;
-  bool     irOn;
+  bool     irOn;               // ขา IR จริงตอนนี้
+  IrMode   irMode;             // web ตั้ง (จำใน NVS) · sensor อ่าน
+
+  // ทดสอบฮาร์ดแวร์จากหน้าเว็บ · alert/sensor/oled อ่าน
+  HwTest   hwTest;
+  uint32_t hwTestUntilMs;      // millis() ที่การทดสอบหมด · 0 = ไม่ได้ทดสอบ
+
+  // oled
+  bool     oledOk;             // เจอจอที่ I2C
 
   // trip / time
   uint32_t bootCount;          // = หมายเลข Trip บน Device นี้
