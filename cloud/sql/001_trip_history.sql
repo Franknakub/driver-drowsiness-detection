@@ -222,6 +222,13 @@ create policy "driver reads own trips" on public.trips
   for select to authenticated using (
     exists (select 1 from public.devices d where d.device_id = trips.device_id and d.owner = (select auth.uid())));
 
+-- Driver ลบ Trip ของตัวเองได้จาก Cloud Dashboard · samples/events หายตาม on delete cascade
+-- (Device ไม่ส่ง Trip ที่ Sync ครบแล้วซ้ำ · Trip ที่กำลังบันทึกอยู่ dashboard ไม่ให้ลบ)
+drop policy if exists "driver deletes own trips" on public.trips;
+create policy "driver deletes own trips" on public.trips
+  for delete to authenticated using (
+    exists (select 1 from public.devices d where d.device_id = trips.device_id and d.owner = (select auth.uid())));
+
 drop policy if exists "driver reads own samples" on public.samples;
 create policy "driver reads own samples" on public.samples
   for select to authenticated using (
@@ -237,6 +244,7 @@ create policy "driver reads own events" on public.events
 revoke all on public.devices, public.trips, public.samples, public.events, public.trip_summary from anon, authenticated;
 grant select (device_id, owner, name, created_at, last_seen) on public.devices to authenticated;   -- ไม่ให้เห็น secret_hash
 grant select on public.trips, public.samples, public.events, public.trip_summary to authenticated;
+grant delete on public.trips to authenticated;
 
 revoke all on function public.ingest(jsonb) from public, anon, authenticated;
 revoke all on function public.claim_device(text, text, text) from public, anon, authenticated;

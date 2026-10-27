@@ -3,127 +3,241 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DDD Cloud Dashboard</title>
-<meta name="description" content="ประวัติ Trip ของ Driver Drowsiness Detection จาก Supabase">
-<!-- Cloud Dashboard (GLOSSARY.md) · อ่านจาก Supabase ตาม cloud/sql/001_trip_history.sql · login ด้วยอีเมล
-     URL + publishable key เป็นค่าสาธารณะโดยออกแบบ สิทธิ์อ่านข้อมูลคุมด้วย RLS (เห็นเฉพาะ Device ของตัวเอง) -->
+<title>ตื่นตัว · ประวัติการขับ</title>
+<meta name="description" content="ดูประวัติการขับ ความง่วง และคะแนนความปลอดภัยจากอุปกรณ์เฝ้าระวังความง่วง">
+<!-- Cloud Dashboard (GLOSSARY.md) สำหรับผู้ใช้ทั่วไป · อ่านจาก Supabase ตาม cloud/sql/001_trip_history.sql · login ด้วยอีเมล
+     URL + publishable key เป็นค่าสาธารณะโดยออกแบบ สิทธิ์อ่าน/ลบคุมด้วย RLS (เห็นเฉพาะ Device ของตัวเอง)
+     คะแนนความปลอดภัยคิดฝั่งหน้าเว็บจาก trip_summary (ดู score() ด้านล่าง) ไม่ได้เก็บในฐานข้อมูล -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <style>
 :root{
-  --bg:#f6f7f9;--surface:#fff;--ink:#16191d;--muted:#5d6670;--line:#e2e5ea;--accent:#2457c5;--accent-ink:#fff;
-  --l0:#9aa5b1;--l1:#d9a400;--l2:#e06a00;--l3:#d1243a;--dis:#7a3fc4;--unmon:#aab2bc;--perclos:#2457c5;--ok:#1f8a4c;--err:#b3261e;
-  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --bg:#f3f5f9;--surface:#fff;--surface2:#f7f8fb;--ink:#141821;--muted:#626b7a;--line:#e3e7ee;
+  --accent:#3f5bd8;--accent-soft:#e8ecfc;--accent-ink:#fff;
+  --good:#1f9d63;--good-soft:#e3f5ec;--ok:#c99400;--ok-soft:#fbf3dc;--warn:#e2701b;--warn-soft:#fdeee2;--bad:#d4314a;--bad-soft:#fbe6ea;
+  --l0:#2fb57a;--l1:#e8b524;--l2:#ef7d2a;--l3:#de3a52;--dis:#7c55d8;--eye:#3f5bd8;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 4px 16px rgba(16,24,40,.06);--r:16px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0f1216;--surface:#171b21;--ink:#e8ebef;--muted:#99a3ad;--line:#2a3038;--accent:#7aa2ff;--accent-ink:#0f1216;
-  --l0:#6c7682;--l1:#f0c330;--l2:#ff8a2a;--l3:#ff5468;--dis:#b48cff;--unmon:#4d5560;--perclos:#7aa2ff;--ok:#4cc27e;--err:#ff7a70;
-  --shadow:none;}}
+  --bg:#0e1117;--surface:#171b23;--surface2:#1d222c;--ink:#e8ebf1;--muted:#9aa3b2;--line:#2a303c;
+  --accent:#8199ff;--accent-soft:#232b48;--accent-ink:#0e1117;
+  --good:#4cc98d;--good-soft:#173528;--ok:#f0c64a;--ok-soft:#362f17;--warn:#ff9a52;--warn-soft:#3a2617;--bad:#ff6b80;--bad-soft:#3a1b22;
+  --l0:#4cc98d;--l1:#f0c64a;--l2:#ff9a52;--l3:#ff6b80;--dis:#a98bff;--eye:#8199ff;--shadow:none;}}
 :root[data-theme="dark"]{
-  --bg:#0f1216;--surface:#171b21;--ink:#e8ebef;--muted:#99a3ad;--line:#2a3038;--accent:#7aa2ff;--accent-ink:#0f1216;
-  --l0:#6c7682;--l1:#f0c330;--l2:#ff8a2a;--l3:#ff5468;--dis:#b48cff;--unmon:#4d5560;--perclos:#7aa2ff;--ok:#4cc27e;--err:#ff7a70;--shadow:none;}
+  --bg:#0e1117;--surface:#171b23;--surface2:#1d222c;--ink:#e8ebf1;--muted:#9aa3b2;--line:#2a303c;
+  --accent:#8199ff;--accent-soft:#232b48;--accent-ink:#0e1117;
+  --good:#4cc98d;--good-soft:#173528;--ok:#f0c64a;--ok-soft:#362f17;--warn:#ff9a52;--warn-soft:#3a2617;--bad:#ff6b80;--bad-soft:#3a1b22;
+  --l0:#4cc98d;--l1:#f0c64a;--l2:#ff9a52;--l3:#ff6b80;--dis:#a98bff;--eye:#8199ff;--shadow:none;}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "IBM Plex Sans Thai",system-ui,sans-serif}
-header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
-header h1{font-size:17px;margin:0;font-weight:600}
-header .sp{flex:1}
-main{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
-h2{font-size:16px;margin:0 0 12px;font-weight:600}
-.muted{color:var(--muted)} small{font-size:13px}
-button,.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 14px;cursor:pointer}
-button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
-button:disabled{opacity:.6;cursor:default}
-input{font:inherit;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
-label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.msg{margin-top:10px;font-size:14px}.msg.err{color:var(--err)}.msg.ok{color:var(--ok)}
-.auth{max-width:380px;margin:40px auto}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th{font-weight:500;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
-tbody tr{cursor:pointer} tbody tr:hover{background:var(--bg)} tbody tr.sel{background:var(--bg);box-shadow:inset 3px 0 0 var(--accent)}
-.tablewrap{overflow-x:auto;margin:0 -18px;padding:0 18px}
-.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line);color:var(--muted)}
-.pill.warn{color:var(--l3);border-color:var(--l3)}
-.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:4px 0 16px}
-.stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
-.stat .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
-.stat .k{font-size:12px;color:var(--muted)}
-.levelbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line);margin:6px 0 4px}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin-top:8px}
-.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-#chart{width:100%;height:auto;display:block;touch-action:pan-y}
-#chart text{fill:var(--muted);font-size:11px;font-family:inherit}
-.tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;box-shadow:var(--shadow);display:none;z-index:5}
+:root{color-scheme:light dark}:root[data-theme="light"]{color-scheme:light}:root[data-theme="dark"]{color-scheme:dark}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Thai",system-ui,sans-serif;font-size:15px;line-height:1.55}
+header{position:sticky;top:0;z-index:4;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.brand small{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:-3px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#7b5cf0);display:grid;place-items:center;color:#fff}
+.sp{flex:1}
+main{max-width:1080px;margin:0 auto;padding:20px 16px 48px}
 .hidden{display:none!important}
+.muted{color:var(--muted)}
+h2{font-size:18px;margin:0 0 4px;font-weight:600}
+h3{font-size:15px;margin:0 0 10px;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:20px}
+section+section{margin-top:18px}
+button,.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 14px;cursor:pointer}
+button:hover{background:var(--surface2)}
+button:disabled{opacity:.55;cursor:default}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.primary:hover{filter:brightness(1.06)}
+button.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+button.danger.solid{background:var(--bad);color:#fff;border-color:var(--bad)}
+input{font:inherit;width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--ink)}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+.msg{font-size:13px;margin-top:10px;min-height:1em}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* หน้า login */
+.auth{max-width:420px;margin:6vh auto 0}
+.auth .lead{color:var(--muted);margin:2px 0 6px}
+/* ภาพรวม */
+.overview{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:18px}
+@media (max-width:780px){.overview{grid-template-columns:1fr}}
+.scorecard{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.ring{position:relative;width:170px;height:170px}
+.ring svg{transform:rotate(-90deg)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;align-content:center}
+.ring .num b{font-size:44px;line-height:1;font-weight:700}
+.ring .num span{font-size:12px;color:var(--muted)}
+.grade{display:inline-block;padding:3px 12px;border-radius:999px;font-weight:600;font-size:14px}
+.g-good{background:var(--good-soft);color:var(--good)}.g-ok{background:var(--ok-soft);color:var(--ok)}
+.g-warn{background:var(--warn-soft);color:var(--warn)}.g-bad{background:var(--bad-soft);color:var(--bad)}.g-none{background:var(--surface2);color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:560px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--surface2);border-radius:12px;padding:12px 14px}
+.tile .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.tile .k{font-size:12px;color:var(--muted)}
+.tips{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.tips li{display:flex;gap:10px;align-items:flex-start;background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:14px}
+.tips li i{font-style:normal;font-size:18px;line-height:1.3}
+/* รายการทริป */
+.trips{display:grid;gap:10px}
+.trip{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--surface);cursor:pointer;transition:border-color .15s,transform .15s}
+.trip:hover{border-color:var(--accent)}
+.trip.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.badge{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-weight:700;font-size:18px}
+.trip .t1{font-weight:600}
+.trip .t2{font-size:13px;color:var(--muted);display:flex;gap:6px 12px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--surface2);color:var(--muted)}
+.chip.red{background:var(--bad-soft);color:var(--bad)}.chip.orange{background:var(--warn-soft);color:var(--warn)}.chip.purple{background:color-mix(in srgb,var(--dis) 15%,transparent);color:var(--dis)}
+.chip.live{background:var(--good-soft);color:var(--good)}
+.chev{color:var(--muted);font-size:20px}
+/* รายละเอียด */
+.dhead{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.dhead .ring{width:110px;height:110px}.dhead .ring .num b{font-size:30px}
+.summary{font-size:16px;margin:6px 0 0}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:16px}
+.fact{background:var(--surface2);border-radius:12px;padding:12px 14px}
+.fact .v{font-size:20px;font-weight:700}.fact .k{font-size:13px;color:var(--muted)}.fact .h{font-size:12px;color:var(--muted);margin-top:2px}
+.stack{display:flex;height:14px;border-radius:999px;overflow:hidden;background:var(--surface2);margin-top:8px}
+.stack span{height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:0}
+.chartbox{margin-top:8px}
+svg text{fill:var(--muted);font-family:inherit;font-size:12px}
+.log{list-style:none;margin:0;padding:0;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+.log li{display:grid;grid-template-columns:64px 26px 1fr;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);font-size:14px}
+.log li:last-child{border-bottom:0}
+.log .tm{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.advice{border-radius:12px;padding:12px 14px;background:var(--accent-soft);margin-top:16px;font-size:14px}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-top:18px}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;box-shadow:var(--shadow);display:none;z-index:9;max-width:240px}
+dialog{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);padding:22px;max-width:380px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(10,12,18,.45)}
+.empty{text-align:center;padding:28px 10px;color:var(--muted)}
+.how{font-size:13px;color:var(--muted);margin-top:10px}
+.how summary{cursor:pointer}
 </style>
 </head>
 <body>
-<header>
-  <h1>DDD · ประวัติการขับ</h1><span class="sp"></span>
-  <span id="who" class="muted"></span>
+<header><div class="bar">
+  <div class="brand"><div class="logo" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>
+  </div><div>ตื่นตัว<small>ผู้ช่วยเฝ้าความง่วงขณะขับ</small></div></div>
+  <span class="sp"></span>
+  <span id="who" class="muted" style="font-size:13px"></span>
   <button id="logout" class="hidden">ออกจากระบบ</button>
-</header>
+</div></header>
 
 <main>
   <!-- login / สมัคร -->
   <section id="auth" class="card auth hidden">
     <h2 id="authTitle">เข้าสู่ระบบ</h2>
+    <p class="lead">ดูประวัติการขับและความง่วงของคุณจากอุปกรณ์ในรถ</p>
     <form id="authForm">
       <label for="email">อีเมล</label><input id="email" type="email" autocomplete="email" required>
       <label for="pw">รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input id="pw" type="password" autocomplete="current-password" minlength="6" required>
-      <div class="row" style="margin-top:14px"><button class="primary" id="authBtn">เข้าสู่ระบบ</button>
-        <a href="#" id="authSwap" class="muted"><small>ยังไม่มีบัญชี? สมัคร</small></a></div>
+      <div class="row" style="margin-top:16px"><button class="primary" id="authBtn">เข้าสู่ระบบ</button>
+        <a href="#" id="authSwap" class="muted" style="font-size:13px">ยังไม่มีบัญชี? สมัคร</a></div>
       <div id="authMsg" class="msg"></div>
     </form>
   </section>
 
-  <!-- เพิ่ม Device -->
-  <section id="claim" class="card hidden">
-    <h2>เพิ่ม Device</h2>
-    <p class="muted"><small>ดู Device ID ได้จาก <code>/api/status</code> ของ Device (ช่อง <code>device_id</code>) · รหัสลับ = ค่า <code>DEVICE_SECRET</code> ใน <code>secrets.h</code></small></p>
+  <!-- เพิ่มอุปกรณ์ -->
+  <section id="claim" class="card hidden" style="max-width:520px;margin-left:auto;margin-right:auto">
+    <h2>เชื่อมอุปกรณ์ในรถ</h2>
+    <p class="muted" style="margin:2px 0 0;font-size:14px">ใส่รหัสอุปกรณ์และรหัสลับที่ได้จากผู้ติดตั้ง ทำครั้งเดียว ข้อมูลการขับจะขึ้นมาเองหลังจากนั้น</p>
     <form id="claimForm">
-      <label for="cid">Device ID</label><input id="cid" placeholder="28:84:85:65:63:44" required>
-      <label for="csec">รหัสลับของ Device</label><input id="csec" type="password" minlength="16" required>
-      <label for="cname">ชื่อเรียก (ไม่บังคับ)</label><input id="cname" placeholder="รถของฉัน">
-      <div class="row" style="margin-top:14px"><button class="primary">เพิ่ม Device</button><button type="button" id="claimCancel" class="hidden">ยกเลิก</button></div>
+      <label for="cid">รหัสอุปกรณ์ (Device ID)</label><input id="cid" placeholder="เช่น 14:C1:9F:2C:8D:A4" required>
+      <label for="csec">รหัสลับของอุปกรณ์</label><input id="csec" type="password" minlength="16" required>
+      <label for="cname">ตั้งชื่อ (ไม่บังคับ)</label><input id="cname" placeholder="เช่น รถของฉัน">
+      <div class="row" style="margin-top:16px"><button class="primary">เชื่อมอุปกรณ์</button><button type="button" id="claimCancel" class="hidden">ยกเลิก</button></div>
       <div id="claimMsg" class="msg"></div>
     </form>
   </section>
 
-  <!-- รายการ Trip -->
-  <section id="trips" class="card hidden">
-    <div class="row" style="margin-bottom:8px"><h2 style="margin:0">Trip ทั้งหมด</h2><span class="sp" style="flex:1"></span>
-      <span id="devs" class="muted"><small></small></span><button id="addDev">เพิ่ม Device</button><button id="reload">โหลดใหม่</button></div>
-    <div class="tablewrap"><table>
-      <thead><tr><th>Trip</th><th>เริ่ม</th><th>เวลาขับ</th><th>ง่วง (ระดับ 2–3)</th><th>Microsleep</th><th>ตาปิดนานสุด</th><th>PERCLOS เฉลี่ย</th><th>Unmonitored</th><th>Sync</th></tr></thead>
-      <tbody id="tripRows"></tbody>
-    </table></div>
-    <p id="tripsEmpty" class="muted hidden">ยังไม่มี Trip — เปิด Device แล้วต่อ WiFi/hotspot ให้ Sync ขึ้นมาก่อน</p>
-  </section>
-
-  <!-- รายละเอียด Trip -->
-  <section id="detail" class="card hidden">
-    <h2 id="dTitle"></h2>
-    <div class="stats" id="dStats"></div>
-    <div><small class="muted">เวลาในแต่ละ Drowsiness Level</small>
-      <div class="levelbar" id="dBar"></div>
-      <div class="legend" id="dBarLegend"></div></div>
-    <h2 style="margin-top:18px">ไทม์ไลน์</h2>
-    <svg id="chart" viewBox="0 0 1000 300" role="img" aria-label="กราฟ PERCLOS และ Drowsiness Level ตามเวลา"></svg>
-    <div class="legend">
-      <span><i style="background:var(--perclos)"></i>PERCLOS</span>
-      <span><i style="background:var(--l1)"></i>เริ่มล้า</span><span><i style="background:var(--l2)"></i>ง่วง</span><span><i style="background:var(--l3)"></i>Microsleep</span>
-      <span><i style="background:var(--dis)"></i>Distraction</span><span><i style="background:var(--unmon)"></i>Unmonitored</span>
-      <span>เส้นประ = เกณฑ์ PERCLOS 15% / 25%</span>
+  <!-- ภาพรวม -->
+  <section id="home" class="hidden">
+    <div class="overview">
+      <div class="card scorecard">
+        <h3 style="margin:0">คะแนนความปลอดภัย</h3>
+        <div class="muted" id="scoreRange" style="font-size:13px;margin-top:-6px"></div>
+        <div class="ring" id="ring"></div>
+        <span class="grade" id="grade"></span>
+        <div class="muted" id="gradeMsg" style="font-size:14px"></div>
+        <details class="how"><summary>คะแนนคิดจากอะไร?</summary>
+          เริ่มที่ 100 แล้วหักตามสิ่งที่เกิดขึ้นระหว่างขับ: เวลาที่ง่วง, ช่วงที่เริ่มล้า, การหลับใน (หักมากที่สุด) และการละสายตาจากถนน
+          คิดเป็นสัดส่วนกับความยาวทริป ทริปสั้นกว่า 2 นาทีไม่นำมาคิด</details>
+      </div>
+      <div class="card">
+        <div class="row"><h3 style="margin:0">สรุปการขับ</h3><span class="sp"></span>
+          <span class="muted" id="devs" style="font-size:13px"></span>
+          <button id="addDev" style="font-size:13px;padding:6px 10px">+ อุปกรณ์</button>
+          <button id="reload" style="font-size:13px;padding:6px 10px">รีเฟรช</button></div>
+        <div class="tiles" style="margin-top:12px">
+          <div class="tile"><div class="v" id="tTime">–</div><div class="k">เวลาขับรวม</div></div>
+          <div class="tile"><div class="v" id="tTrips">–</div><div class="k">จำนวนทริป</div></div>
+          <div class="tile"><div class="v" id="tMicro">–</div><div class="k">หลับใน (ครั้ง)</div></div>
+          <div class="tile"><div class="v" id="tDis">–</div><div class="k">ละสายตา (ครั้ง)</div></div>
+        </div>
+        <h3 style="margin:18px 0 4px">คะแนนแต่ละทริป</h3>
+        <svg id="trend" viewBox="0 0 640 150" width="100%" role="img" aria-label="คะแนนความปลอดภัยของทริปล่าสุด"></svg>
+        <ul class="tips" id="tips"></ul>
+      </div>
     </div>
   </section>
+
+  <!-- รายการทริป + รายละเอียด -->
+  <section id="tripsSec" class="hidden">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">ประวัติการขับ</h2><span class="sp"></span><span class="muted" id="tripCount" style="font-size:13px"></span></div>
+    <div class="trips" id="tripList"></div>
+    <div id="tripsEmpty" class="card empty hidden">ยังไม่มีข้อมูลการขับ เปิดอุปกรณ์ในรถแล้วต่ออินเทอร์เน็ต ข้อมูลจะขึ้นมาเองภายในไม่กี่นาที</div>
+  </section>
+
+  <section id="detail" class="card hidden">
+    <div class="row"><button id="back">← กลับ</button><span class="sp"></span><button id="del" class="danger">ลบทริปนี้</button></div>
+    <div class="dhead" style="margin-top:14px">
+      <div class="ring" id="dRing"></div>
+      <div style="flex:1;min-width:220px">
+        <h2 id="dTitle"></h2>
+        <span class="grade" id="dGrade"></span>
+        <p class="summary" id="dSummary"></p>
+      </div>
+    </div>
+    <div class="facts" id="dFacts"></div>
+    <div style="margin-top:18px">
+      <h3 style="margin-bottom:0">ช่วงเวลาที่อยู่ในแต่ละสภาวะ</h3>
+      <div class="stack" id="dStack"></div>
+      <div class="legend" id="dStackLegend"></div>
+    </div>
+    <div class="grid2">
+      <div>
+        <h3>ระหว่างทาง</h3>
+        <div class="legend" style="margin:0 0 4px">
+          <span><i style="background:var(--eye)"></i>ความถี่การหลับตา</span>
+          <span><i style="background:var(--l3)"></i>หลับใน</span><span><i style="background:var(--dis)"></i>ละสายตา</span>
+          <span>แถบด้านบน = สภาวะความง่วง</span></div>
+        <div class="chartbox"><svg id="chart" viewBox="0 0 1000 300" width="100%" role="img" aria-label="กราฟความถี่การหลับตาและความง่วงตามเวลา"></svg></div>
+      </div>
+      <div>
+        <h3>บันทึกเหตุการณ์</h3>
+        <ul class="log" id="dLog"></ul>
+      </div>
+    </div>
+    <div class="advice" id="dAdvice"></div>
+  </section>
 </main>
-<div class="tip" id="tip"></div>
+<div id="tip" class="tip"></div>
+
+<dialog id="confirmDel">
+  <h3 style="margin-top:0">ลบทริปนี้?</h3>
+  <p class="muted" style="font-size:14px" id="confirmText">ข้อมูลทั้งหมดของทริปนี้จะถูกลบถาวร กู้คืนไม่ได้</p>
+  <div class="row" style="justify-content:flex-end;margin-top:16px">
+    <button id="cancelDel">ยกเลิก</button><button id="okDel" class="danger solid">ลบ</button></div>
+  <div id="delMsg" class="msg"></div>
+</dialog>
 
 <script>
 const SUPABASE_URL = 'https://iatzjmxjbxcakotczoko.supabase.co';
@@ -131,160 +245,314 @@ const SUPABASE_KEY = 'sb_publishable_ri55GXYeKSjVqd664DQpYg_l-1KVoK6';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const show = (id, on) => $(id).classList.toggle('hidden', !on);
-const LV = ['ปกติ', 'เริ่มล้า', 'ง่วง', 'Microsleep'];
-const LVC = ['var(--l0)', 'var(--l1)', 'var(--l2)', 'var(--l3)'];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LV = ['ปกติ', 'เริ่มล้า', 'ง่วง', 'หลับใน'];
+const LVC = ['var(--l0)', 'var(--l1)', 'var(--l2)', 'var(--l3)'];
+const LIVE_MS = 3 * 60 * 1000;   // ทริปที่อัปเดตภายในเท่านี้ = กำลังบันทึก ห้ามลบ (Device จะส่งต่อแล้วสร้างทริปใหม่ครึ่งๆ)
 
 const dur = s => { s = Math.round(s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60);
-  return h ? `${h} ชม. ${m} น.` : m ? `${m} น. ${s % 60} วิ` : `${s} วิ`; };
-const pct = v => v == null ? '–' : (v * 100).toFixed(1) + '%';
-const when = t => t.started_at ? new Date(t.started_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
-                               : '<span class="pill">ไม่ทราบเวลา</span>';
+  return h ? `${h} ชม. ${m} นาที` : m ? `${m} นาที` : `${s} วินาที`; };
+const durShort = s => { s = Math.round(s || 0); const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60);
+  return h ? `${h}:${String(m).padStart(2, '0')} ชม.` : `${m || (s ? '<1' : 0)} นาที`; };
+const dateOf = t => t.started_at ? new Date(t.started_at) : null;
+const whenLong = t => { const d = dateOf(t); return d ? d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' +
+  d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.' : `ทริป #${t.boot} (ไม่ทราบเวลา)`; };
+
+// ---------- คะแนนความปลอดภัย 0–100 ----------
+// หักตามสัดส่วนเวลา (ไม่ลงโทษทริปยาว): ง่วง (ระดับ 2–3) หนักสุดตามเวลา · หลับในหักต่อครั้ง · ละสายตาคิดต่อชั่วโมง
+function score(t) {
+  const d = t.duration_s;
+  if (d < 120) return null;
+  const drowsy = (t.level2_s + t.level3_s) / d, fatigue = t.level1_s / d, perHour = t.distractions / (d / 3600);
+  const s = 100 - Math.min(35, drowsy * 150) - Math.min(15, fatigue * 40)
+                - Math.min(40, t.microsleeps * 12) - Math.min(15, perHour * 1.5);
+  return Math.max(0, Math.round(s));
+}
+function grade(s) {
+  if (s == null) return { cls: 'g-none', name: 'ยังประเมินไม่ได้', color: 'var(--muted)', msg: 'ทริปสั้นเกินไปที่จะประเมิน' };
+  if (s >= 85) return { cls: 'g-good', name: 'ปลอดภัยดี', color: 'var(--good)', msg: 'ตื่นตัวตลอดการขับ ทำได้ดีมาก' };
+  if (s >= 70) return { cls: 'g-ok', name: 'พอใช้', color: 'var(--ok)', msg: 'มีช่วงเหนื่อยล้าบ้าง ควรพักเป็นระยะ' };
+  if (s >= 50) return { cls: 'g-warn', name: 'ควรระวัง', color: 'var(--warn)', msg: 'ง่วงหลายครั้ง ควรพักให้พอก่อนขับ' };
+  return { cls: 'g-bad', name: 'อันตราย', color: 'var(--bad)', msg: 'มีการหลับในหรือง่วงมาก เสี่ยงอุบัติเหตุสูง' };
+}
+function ring(el, s, size) {
+  const g = grade(s), r = size / 2 - 9, c = 2 * Math.PI * r, f = s == null ? 0 : s / 100;
+  el.innerHTML = `<svg width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="12"/>
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${g.color}" stroke-width="12" stroke-linecap="round"
+      stroke-dasharray="${c * f} ${c}" style="transition:stroke-dasharray .6s"/></svg>
+    <div class="num"><b>${s == null ? '–' : s}</b><span>จาก 100</span></div>`;
+}
 
 // ---------- login ----------
 let signUp = false;
 $('authSwap').onclick = e => { e.preventDefault(); signUp = !signUp;
   $('authTitle').textContent = signUp ? 'สมัครบัญชี' : 'เข้าสู่ระบบ';
   $('authBtn').textContent = signUp ? 'สมัคร' : 'เข้าสู่ระบบ';
-  $('authSwap').innerHTML = `<small>${signUp ? 'มีบัญชีแล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัคร'}</small>`;
+  $('authSwap').textContent = signUp ? 'มีบัญชีแล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัคร';
   $('pw').autocomplete = signUp ? 'new-password' : 'current-password'; $('authMsg').textContent = ''; };
 $('authForm').onsubmit = async e => {
-  e.preventDefault(); const msg = $('authMsg'); msg.className = 'msg'; msg.textContent = '...'; $('authBtn').disabled = true;
+  e.preventDefault(); const msg = $('authMsg'); msg.className = 'msg'; msg.textContent = 'กำลังดำเนินการ...'; $('authBtn').disabled = true;
   const cred = { email: $('email').value.trim(), password: $('pw').value };
   const { data, error } = signUp
     ? await sb.auth.signUp({ ...cred, options: { emailRedirectTo: location.href.split('#')[0] } })
     : await sb.auth.signInWithPassword(cred);
   $('authBtn').disabled = false;
-  if (error) { msg.className = 'msg err'; msg.textContent = error.message; return; }
+  if (error) { msg.className = 'msg err'; msg.textContent = error.message === 'Invalid login credentials' ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : error.message; return; }
   if (signUp && !data.session) { msg.className = 'msg ok'; msg.textContent = 'ส่งอีเมลยืนยันแล้ว กดลิงก์ในอีเมลแล้วกลับมาเข้าสู่ระบบ'; }
+  else msg.textContent = '';
 };
 $('logout').onclick = () => sb.auth.signOut();
 sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => render(session), 0));
 
-// ---------- เพิ่ม Device ----------
-$('addDev').onclick = () => { show('claim', true); show('claimCancel', true); $('cid').focus(); };
+// ---------- เชื่อมอุปกรณ์ ----------
+$('addDev').onclick = () => { show('claim', true); show('claimCancel', true); $('claim').scrollIntoView({ behavior: 'smooth' }); $('cid').focus(); };
 $('claimCancel').onclick = () => show('claim', false);
 $('claimForm').onsubmit = async e => {
-  e.preventDefault(); const msg = $('claimMsg'); msg.className = 'msg'; msg.textContent = '...';
+  e.preventDefault(); const msg = $('claimMsg'); msg.className = 'msg'; msg.textContent = 'กำลังเชื่อม...';
   const { error } = await sb.rpc('claim_device', { p_device_id: $('cid').value.trim(), p_secret: $('csec').value, p_name: $('cname').value.trim() || null });
   if (error) { msg.className = 'msg err'; msg.textContent = error.message; return; }
-  msg.className = 'msg ok'; msg.textContent = 'เพิ่มแล้ว'; $('csec').value = ''; loadAll();
+  msg.className = 'msg ok'; msg.textContent = 'เชื่อมแล้ว'; $('csec').value = ''; loadAll();
 };
 $('reload').onclick = () => loadAll();
 
-let current = null;
-async function render(session) {
+function render(session) {
   show('auth', !session); show('logout', !!session);
   $('who').textContent = session ? session.user.email : '';
-  if (!session) { ['claim', 'trips', 'detail'].forEach(id => show(id, false)); return; }
+  if (!session) { ['claim', 'home', 'tripsSec', 'detail'].forEach(id => show(id, false)); return; }
   loadAll();
 }
 
-// ---------- รายการ Trip ----------
-let tripsCache = [];
+// ---------- โหลดข้อมูล ----------
+let trips = [], current = null;
 async function loadAll() {
-  const [{ data: devs, error: e1 }, { data: trips, error: e2 }] = await Promise.all([
+  const [{ data: devs, error: e1 }, { data: sum, error: e2 }, { data: rows, error: e3 }] = await Promise.all([
     sb.from('devices').select('device_id,name,last_seen'),
     sb.from('trip_summary').select('*').order('started_at', { ascending: false, nullsFirst: false }).order('boot', { ascending: false }).limit(500),
+    sb.from('trips').select('id,updated_at').limit(500),
   ]);
-  if (e1 || e2) { show('trips', true); $('tripRows').innerHTML = `<tr><td colspan="9" class="msg err">${esc((e1 || e2).message)}</td></tr>`; return; }
+  const err = e1 || e2 || e3;
+  if (err) { show('tripsSec', true); $('tripList').innerHTML = `<div class="card msg err">${esc(err.message)}</div>`; return; }
   show('claim', devs.length === 0); show('claimCancel', devs.length > 0);
-  show('trips', devs.length > 0);
-  $('devs').innerHTML = '<small>' + devs.map(d => esc(d.name || d.device_id) +
-    (d.last_seen ? ' · ส่งล่าสุด ' + new Date(d.last_seen).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '')).join(' / ') + '</small>';
-  tripsCache = trips.filter(t => t.duration_s > 0);
-  show('tripsEmpty', tripsCache.length === 0);
-  $('tripRows').innerHTML = tripsCache.map(t => {
-    const drowsy = t.duration_s ? (t.level2_s + t.level3_s) / t.duration_s : 0;
-    const synced = t.duration_s >= t.samples_on_device;
-    return `<tr data-id="${t.trip_id}" class="${current === t.trip_id ? 'sel' : ''}">
-      <td>#${t.boot}</td><td>${when(t)}</td><td>${dur(t.duration_s)}</td><td>${pct(drowsy)}</td>
-      <td>${t.microsleeps ? `<span class="pill warn">${t.microsleeps}</span>` : 0}</td>
-      <td>${(t.longest_closed_ms / 1000).toFixed(1)} วิ</td><td>${pct(t.perclos_mean)}</td><td>${dur(t.unmonitored_s)}</td>
-      <td>${synced ? '✓' : `<small class="muted">${t.duration_s}/${t.samples_on_device}</small>`}</td></tr>`;
-  }).join('');
-  [...$('tripRows').children].forEach(tr => tr.onclick = () => openTrip(+tr.dataset.id));
-  if (current && tripsCache.some(t => t.trip_id === current)) openTrip(current);
+  show('home', devs.length > 0); show('tripsSec', devs.length > 0);
+  $('devs').textContent = devs.map(d => d.name || d.device_id).join(', ');
+  const upd = new Map(rows.map(r => [r.id, new Date(r.updated_at).getTime()]));
+  trips = sum.filter(t => t.duration_s > 0).map(t => ({ ...t, score: score(t), live: Date.now() - (upd.get(t.trip_id) || 0) < LIVE_MS }));
+  renderOverview(); renderList();
+  if (current && trips.some(t => t.trip_id === current)) openTrip(current, false);
+  else { current = null; show('detail', false); }
 }
 
-// ---------- รายละเอียด + กราฟ ----------
-async function openTrip(id) {
-  current = id;
-  [...$('tripRows').children].forEach(tr => tr.classList.toggle('sel', +tr.dataset.id === id));
-  const t = tripsCache.find(x => x.trip_id === id); if (!t) return;
+function renderOverview() {
+  const now = Date.now(), week = trips.filter(t => dateOf(t) && now - dateOf(t) < 7 * 864e5);
+  const base = week.length ? week : trips.slice(0, 10);
+  $('scoreRange').textContent = week.length ? '7 วันล่าสุด' : base.length ? `${base.length} ทริปล่าสุด` : '';
+  const scored = base.filter(t => t.score != null), w = scored.reduce((a, t) => a + t.duration_s, 0);
+  const s = w ? Math.round(scored.reduce((a, t) => a + t.score * t.duration_s, 0) / w) : null;
+  ring($('ring'), s, 170);
+  const g = grade(s); $('grade').className = 'grade ' + g.cls; $('grade').textContent = g.name;
+  $('gradeMsg').textContent = s == null ? 'ยังไม่มีทริปที่ยาวพอ' : g.msg;
+  const tot = k => base.reduce((a, t) => a + t[k], 0);
+  $('tTime').textContent = durShort(tot('duration_s')); $('tTrips').textContent = base.length;
+  $('tMicro').textContent = tot('microsleeps'); $('tDis').textContent = tot('distractions');
+  drawTrend();
+  $('tips').innerHTML = tips(base).map(([ic, tx]) => `<li><i>${ic}</i><span>${tx}</span></li>`).join('');
+}
+
+function tips(list) {
+  const out = [], micro = list.reduce((a, t) => a + t.microsleeps, 0);
+  if (!list.length) return [['🚗', 'เริ่มขับพร้อมอุปกรณ์ แล้วข้อมูลจะขึ้นที่นี่']];
+  if (micro) out.push(['⚠️', `พบการหลับใน ${micro} ครั้ง การหลับในแม้ 2–3 วินาทีที่ความเร็ว 90 กม./ชม. รถจะวิ่งไปกว่า 50 เมตร เมื่อเครื่องเตือนควรจอดพักทันที`]);
+  if (list.some(t => t.duration_s > 2 * 3600)) out.push(['⏱️', 'มีทริปที่ขับต่อเนื่องเกิน 2 ชั่วโมง ควรแวะพักอย่างน้อย 15 นาทีทุก 2 ชั่วโมง']);
+  const part = [0, 0, 0, 0], name = ['ช่วงดึก (00–06 น.)', 'ช่วงเช้า (06–12 น.)', 'ช่วงบ่าย (12–18 น.)', 'ช่วงค่ำ (18–24 น.)'];
+  for (const t of list) { const d = dateOf(t); if (d) part[Math.floor(d.getHours() / 6)] += t.level2_s + t.level3_s; }
+  const mx = part.indexOf(Math.max(...part));
+  if (part[mx] > 30) out.push(['🌙', `คุณมักง่วงใน${name[mx]} ถ้าเลี่ยงได้ ลองวางแผนเดินทางช่วงอื่น`]);
+  const hrs = list.reduce((a, t) => a + t.duration_s, 0) / 3600, dis = list.reduce((a, t) => a + t.distractions, 0);
+  if (hrs > 0 && dis / hrs > 6) out.push(['📱', 'ละสายตาจากถนนค่อนข้างบ่อย ลองวางโทรศัพท์ไว้ให้พ้นมือขณะขับ']);
+  if (!out.length) out.push(['✅', 'ช่วงนี้ขับได้ตื่นตัวดี รักษาการพักผ่อนให้เพียงพอแบบนี้ต่อไป']);
+  return out;
+}
+
+function drawTrend() {
+  const svg = $('trend'), list = trips.filter(t => t.score != null).slice(0, 14).reverse(), W = 640, H = 150, B = 22, T = 8;
+  if (!list.length) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">ยังไม่มีทริปที่ยาวพอจะให้คะแนน</text>`; return; }
+  const bw = Math.min(36, (W - 20) / list.length - 8), step = (W - 20) / list.length;
+  let g = '';
+  for (const v of [50, 85]) { const y = T + (H - B - T) * (1 - v / 100);
+    g += `<line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-dasharray="4 4"/><text x="${W - 2}" y="${y - 4}" text-anchor="end">${v}</text>`; }
+  list.forEach((t, i) => {
+    const h = Math.max(4, (H - B - T) * t.score / 100), x = 10 + step * i + (step - bw) / 2, y = H - B - h, d = dateOf(t);
+    g += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="6" fill="${grade(t.score).color}" data-id="${t.trip_id}" style="cursor:pointer"><title>${esc(whenLong(t))}: ${t.score} คะแนน</title></rect>`;
+    g += `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${d ? d.getDate() + '/' + (d.getMonth() + 1) : '#' + t.boot}</text>`;
+  });
+  svg.innerHTML = g;
+  svg.querySelectorAll('rect[data-id]').forEach(r => r.onclick = () => openTrip(+r.dataset.id, true));
+}
+
+function chipsOf(t) {
+  const c = [];
+  if (t.live) c.push('<span class="chip live">● กำลังบันทึก</span>');
+  if (t.microsleeps) c.push(`<span class="chip red">หลับใน ${t.microsleeps}</span>`);
+  if (t.level2_s + t.level3_s >= 10) c.push(`<span class="chip orange">ง่วง ${durShort(t.level2_s + t.level3_s)}</span>`);
+  if (t.distractions) c.push(`<span class="chip purple">ละสายตา ${t.distractions}</span>`);
+  return c.join('');
+}
+
+function renderList() {
+  show('tripsEmpty', !trips.length);
+  $('tripCount').textContent = trips.length ? `${trips.length} ทริป` : '';
+  $('tripList').innerHTML = trips.map(t => {
+    const g = grade(t.score);
+    return `<div class="trip ${current === t.trip_id ? 'sel' : ''}" data-id="${t.trip_id}" tabindex="0">
+      <div class="badge ${g.cls}">${t.score ?? '–'}</div>
+      <div><div class="t1">${esc(whenLong(t))}</div>
+        <div class="t2"><span>ขับ ${dur(t.duration_s)}</span><span>${g.name}</span>${chipsOf(t)}</div></div>
+      <div class="chev">›</div></div>`;
+  }).join('');
+  [...$('tripList').children].forEach(el => {
+    el.onclick = () => openTrip(+el.dataset.id, true);
+    el.onkeydown = e => { if (e.key === 'Enter') openTrip(+el.dataset.id, true); };
+  });
+}
+
+// ---------- รายละเอียดทริป ----------
+$('back').onclick = () => { show('detail', false); current = null; renderList(); $('tripsSec').scrollIntoView({ behavior: 'smooth' }); };
+
+function plainSummary(t) {
+  const d = t.duration_s, alert = d ? t.level0_s / d : 1, parts = [`ขับ ${dur(d)}`];
+  parts.push(alert >= .9 ? 'ตื่นตัวเกือบตลอดทาง' : alert >= .7 ? `ตื่นตัว ${Math.round(alert * 100)}% ของเวลา` : `ตื่นตัวแค่ ${Math.round(alert * 100)}% ของเวลา`);
+  if (t.microsleeps) parts.push(`หลับใน ${t.microsleeps} ครั้ง`);
+  else if (t.level2_s + t.level3_s) parts.push(`ง่วงรวม ${dur(t.level2_s + t.level3_s)}`);
+  if (t.distractions) parts.push(`ละสายตาจากถนน ${t.distractions} ครั้ง`);
+  return parts.join(' · ');
+}
+function adviceOf(t) {
+  if (t.score == null) return '💡 ทริปสั้นเกินไปที่จะประเมิน ขับนานกว่า 2 นาทีเพื่อให้ระบบให้คะแนนได้';
+  if (t.microsleeps) return '🛑 ทริปนี้มีการหลับใน ซึ่งอันตรายมาก ครั้งหน้าถ้าเครื่องเตือนให้หาที่จอดพักทันที งีบ 15–20 นาทีช่วยได้มากกว่าดื่มกาแฟอย่างเดียว';
+  if (t.level2_s + t.level3_s > 60) return '☕ ง่วงหลายช่วง ควรพักผ่อนให้พอก่อนเดินทาง และแวะพักทุก 2 ชั่วโมง';
+  if (t.distractions / Math.max(t.duration_s / 3600, .05) > 6) return '📱 ละสายตาจากถนนบ่อย ลองตั้งโทรศัพท์ไว้ที่ขาตั้งและใช้คำสั่งเสียงแทน';
+  if (t.level1_s > 120) return '🙂 มีช่วงเริ่มล้าบ้าง เปิดหน้าต่างให้อากาศถ่ายเท หรือแวะพักยืดเส้นสักครู่';
+  return '🌟 ขับได้ตื่นตัวดีตลอดทริป ทำแบบนี้ต่อไป';
+}
+const PERCLOS_HELP = 'สัดส่วนเวลาที่ตาปิดในแต่ละนาที คนที่ตื่นตัวปกติจะต่ำกว่า 15%';
+
+async function openTrip(id, scroll) {
+  current = id; renderList();
+  const t = trips.find(x => x.trip_id === id); if (!t) return;
+  show('detail', true);
+  const g = grade(t.score);
+  ring($('dRing'), t.score, 110);
+  $('dTitle').textContent = whenLong(t);
+  $('dGrade').className = 'grade ' + g.cls; $('dGrade').textContent = g.name;
+  $('dSummary').textContent = plainSummary(t);
+  const fact = (v, k, h) => `<div class="fact"><div class="v">${v}</div><div class="k">${k}</div>${h ? `<div class="h">${h}</div>` : ''}</div>`;
+  $('dFacts').innerHTML = [
+    fact(dur(t.duration_s), 'เวลาขับ'),
+    fact(t.microsleeps + ' ครั้ง', 'หลับใน', 'ตาปิดค้างตั้งแต่ 3 วินาทีขึ้นไป'),
+    fact((t.longest_closed_ms / 1000).toFixed(1) + ' วินาที', 'ตาปิดนานที่สุด', 'การกะพริบตาปกติใช้ไม่ถึง 0.4 วินาที'),
+    fact(t.perclos_mean == null ? '–' : Math.round(t.perclos_mean * 100) + '%', 'ความถี่การหลับตาเฉลี่ย', PERCLOS_HELP),
+    fact(t.distractions + ' ครั้ง', 'ละสายตาจากถนน', 'มองไม่เห็นตานานกว่า 3 วินาที'),
+  ].join('');
+  const ls = [t.level0_s, t.level1_s, t.level2_s, t.level3_s], tot = ls.reduce((a, b) => a + b, 0) || 1;
+  $('dStack').innerHTML = ls.map((s, i) => s ? `<span title="${LV[i]} ${dur(s)}" style="width:${s / tot * 100}%;background:${LVC[i]}"></span>` : '').join('');
+  $('dStackLegend').innerHTML = ls.map((s, i) => `<span><i style="background:${LVC[i]}"></i>${LV[i]} ${durShort(s)} (${Math.round(s / tot * 100)}%)</span>`).join('');
+  $('dAdvice').textContent = adviceOf(t);
+  $('del').disabled = t.live; $('del').title = t.live ? 'ทริปนี้ยังบันทึกอยู่ ลบได้หลังอุปกรณ์หยุดส่งข้อมูล' : '';
+  if (scroll) $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
   const bucket = Math.max(1, Math.ceil(t.duration_s / 900));
   const [{ data: series, error: e1 }, { data: events, error: e2 }] = await Promise.all([
     sb.rpc('trip_series', { p_trip_id: id, p_bucket_s: bucket }),
     sb.from('events').select('ms,type,from_level,to_level,value').eq('trip_id', id).order('i').limit(1000),
   ]);
-  show('detail', true);
-  $('dTitle').innerHTML = `Trip #${t.boot} · ${when(t)}`;
-  if (e1 || e2) { $('dStats').innerHTML = `<div class="msg err">${esc((e1 || e2).message)}</div>`; return; }
-  const stat = (v, k) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`;
-  $('dStats').innerHTML = [
-    stat(dur(t.duration_s), 'เวลาขับ'),
-    stat(pct(t.duration_s ? (t.level2_s + t.level3_s) / t.duration_s : 0), 'เวลาที่ง่วง (ระดับ 2–3)'),
-    stat(t.microsleeps, 'Microsleep (ครั้ง)'),
-    stat((t.longest_closed_ms / 1000).toFixed(1) + ' วิ', 'ตาปิดนานที่สุด'),
-    stat(pct(t.perclos_mean), 'PERCLOS เฉลี่ย'),
-    stat(`${t.level1_enter} / ${t.level2_enter} / ${t.level3_enter}`, 'จำนวนครั้งที่ขึ้นระดับ 1 / 2 / 3'),
-    stat(t.distractions, 'Distraction (ครั้ง)'),
-    stat(dur(t.unmonitored_s), 'Unmonitored'),
-  ].join('');
-  const ls = [t.level0_s, t.level1_s, t.level2_s, t.level3_s], tot = ls.reduce((a, b) => a + b, 0) || 1;
-  $('dBar').innerHTML = ls.map((s, i) => s ? `<span title="${LV[i]} ${dur(s)}" style="width:${s / tot * 100}%;background:${LVC[i]}"></span>` : '').join('');
-  $('dBarLegend').innerHTML = ls.map((s, i) => `<span><i style="background:${LVC[i]}"></i>${LV[i]} ${dur(s)} (${(s / tot * 100).toFixed(0)}%)</span>`).join('');
+  if (current !== id) return;
+  if (e1 || e2) { $('dLog').innerHTML = `<li class="msg err">${esc((e1 || e2).message)}</li>`; return; }
   drawChart(t, series, events, bucket);
-  $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  renderLog(t, events);
+  lastChart = [t, series, events, bucket];
+}
+let lastChart = null, resizeT = 0;
+addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => lastChart && drawChart(...lastChart), 150); });
+
+const clockOf = (t, s) => t.started_at ? new Date(new Date(t.started_at).getTime() + s * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                                       : `นาที ${Math.floor(s / 60)}`;
+function renderLog(t, events) {
+  const items = [];
+  for (const e of events) {
+    const s = e.ms / 1000;
+    if (e.type === 1) items.push([s, '😴', `<b>หลับใน</b> ตาปิด ${(e.value / 1000).toFixed(1)} วินาที`]);
+    else if (e.type === 2) items.push([s, '👀', 'ละสายตาจากถนน']);
+    else if (e.type === 0) {
+      // ขึ้นระดับ 3 มี Event Microsleep (พร้อมเวลาตาปิด) คู่กันเสมอ ไม่แสดงซ้ำ
+      if (e.to_level > e.from_level && e.to_level < 3) items.push([s, e.to_level >= 2 ? '🥱' : '😐', `เข้าสู่สภาวะ<b>${LV[e.to_level]}</b>`]);
+      else if (e.to_level === 0) items.push([s, '🙂', 'กลับมาตื่นตัวปกติ']);
+    }
+  }
+  $('dLog').innerHTML = items.length
+    ? items.map(([s, ic, tx]) => `<li><span class="tm">${clockOf(t, s)}</span><span>${ic}</span><span>${tx}</span></li>`).join('')
+    : '<li style="grid-template-columns:1fr" class="muted">ไม่มีเหตุการณ์ผิดปกติ ขับได้ตื่นตัวตลอดทาง</li>';
 }
 
 function drawChart(t, series, events, bucket) {
-  const svg = $('chart'), W = 1000, H = 300, L = 44, R = 12, T = 12, BAND = 18, B = 34;
-  const plotTop = T + BAND + 8, plotBot = H - B;
-  const end = Math.max(1, (series.length ? series[series.length - 1].t_s + bucket : t.duration_s));
-  const X = s => L + (W - L - R) * s / end, Y = v => plotBot - (plotBot - plotTop) * Math.min(1, v);
-  const clock = s => t.started_at ? new Date(new Date(t.started_at).getTime() + s * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                                  : (s / 60).toFixed(0) + ' น.';
+  // จอแคบใช้ viewBox แคบลง ตัวหนังสือในกราฟจะไม่เล็กจนอ่านไม่ออก
+  const svg = $('chart'), W = svg.clientWidth && svg.clientWidth < 640 ? 560 : 1000, H = W < 1000 ? 260 : 300, L = 46, R = 12, T = 8, BAND = 16, B = 30;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const top = T + BAND + 12, bot = H - B;
+  const end = Math.max(1, series.length ? series[series.length - 1].t_s + bucket : t.duration_s);
+  const X = s => L + (W - L - R) * s / end, Y = v => bot - (bot - top) * Math.min(1, v / .6);
   let g = '';
-  // แกน + เส้นกริด PERCLOS
-  for (const v of [0, .25, .5, .75, 1]) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${v * 100}%</text>`;
-  for (const v of [.15, .25]) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--muted)" stroke-dasharray="4 4" opacity=".6"/>`;
-  const ticks = 6; for (let i = 0; i <= ticks; i++) { const s = end * i / ticks; g += `<text x="${X(s)}" y="${H - 12}" text-anchor="middle">${clock(s)}</text>`; }
-  // แถบ Drowsiness Level ด้านบน + Unmonitored เป็นพื้นเทาในพื้นที่กราฟ
+  for (const v of [0, .15, .3, .45, .6]) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" ${v === .15 ? 'stroke-dasharray="5 5"' : ''}/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`;
+  g += `<text x="${W - R}" y="${Y(.15) - 6}" text-anchor="end">เกณฑ์เริ่มล้า</text>`;
+  const nt = W < 1000 ? 3 : 5;
+  for (let i = 0; i <= nt; i++) { const s = end * i / nt;
+    g += `<text x="${X(s)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === nt ? 'end' : 'middle'}">${clockOf(t, s)}</text>`; }
   const bw = Math.max(1, X(bucket) - X(0));
-  for (const p of series) {
-    if (p.level > 0) g += `<rect x="${X(p.t_s)}" y="${T}" width="${bw + .5}" height="${BAND}" fill="${LVC[p.level]}"/>`;
-    if (p.unmonitored) g += `<rect x="${X(p.t_s)}" y="${plotTop}" width="${bw + .5}" height="${plotBot - plotTop}" fill="var(--unmon)" opacity=".35"/>`;
-  }
-  g += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${BAND}" fill="none" stroke="var(--line)"/><text x="${L - 6}" y="${T + 13}" text-anchor="end">ระดับ</text>`;
-  // PERCLOS (ช่วงที่ยังไม่พร้อมเว้นว่าง)
-  let d = '', pen = false;
-  for (const p of series) { if (p.perclos == null) { pen = false; continue; }
-    d += `${pen ? 'L' : 'M'}${X(p.t_s + bucket / 2).toFixed(1)},${Y(p.perclos).toFixed(1)}`; pen = true; }
-  g += `<path d="${d}" fill="none" stroke="var(--perclos)" stroke-width="2" stroke-linejoin="round"/>`;
-  // Event
+  g += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${BAND}" rx="5" fill="var(--l0)" opacity=".85"/>`;
+  for (const p of series) if (p.level > 0) g += `<rect x="${X(p.t_s)}" y="${T}" width="${bw + .6}" height="${BAND}" fill="${LVC[p.level]}"/>`;
+  // ความถี่การหลับตา (PERCLOS) เป็นพื้นที่ · ช่วงยังไม่พร้อม/มองไม่เห็นตาเว้นว่าง
+  let seg = [], area = '', line = '';
+  const flush = () => { if (seg.length > 1) {
+      const pts = seg.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L');
+      line += `M${pts}`; area += `M${seg[0][0].toFixed(1)},${bot}L${pts}L${seg[seg.length - 1][0].toFixed(1)},${bot}Z`; }
+    seg = []; };
+  for (const p of series) { if (p.perclos == null) { flush(); continue; } seg.push([X(p.t_s + bucket / 2), Y(p.perclos)]); }
+  flush();
+  g += `<path d="${area}" fill="var(--eye)" opacity=".14"/><path d="${line}" fill="none" stroke="var(--eye)" stroke-width="2.4" stroke-linejoin="round"/>`;
   for (const e of events || []) {
     const x = X(e.ms / 1000);
-    if (e.type === 1) g += `<line x1="${x}" x2="${x}" y1="${plotTop}" y2="${plotBot}" stroke="var(--l3)" stroke-width="1.5"/><path d="M${x - 5},${plotTop - 2}L${x + 5},${plotTop - 2}L${x},${plotTop + 6}Z" fill="var(--l3)"/>`;
-    if (e.type === 2) g += `<line x1="${x}" x2="${x}" y1="${plotTop}" y2="${plotBot}" stroke="var(--dis)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+    if (e.type === 1) g += `<line x1="${x}" x2="${x}" y1="${top}" y2="${bot}" stroke="var(--l3)" stroke-width="2"/><circle cx="${x}" cy="${top}" r="6" fill="var(--l3)"/>`;
+    if (e.type === 2) g += `<line x1="${x}" x2="${x}" y1="${top}" y2="${bot}" stroke="var(--dis)" stroke-width="1.5" stroke-dasharray="3 4"/>`;
   }
-  g += `<line id="cursor" x1="0" x2="0" y1="${T}" y2="${plotBot}" stroke="var(--muted)" visibility="hidden"/>`;
+  if (!series.length) g += `<text x="${W / 2}" y="${(top + bot) / 2}" text-anchor="middle">ยังไม่มีข้อมูลรายนาที</text>`;
+  g += `<line id="cursor" x1="0" x2="0" y1="${T}" y2="${bot}" stroke="var(--muted)" visibility="hidden"/>`;
   svg.innerHTML = g;
-  // tooltip
   const tip = $('tip'), cur = svg.querySelector('#cursor');
   svg.onpointermove = ev => {
     const r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * W;
     if (sx < L || sx > W - R || !series.length) { tip.style.display = 'none'; cur.setAttribute('visibility', 'hidden'); return; }
     const s = (sx - L) / (W - L - R) * end, p = series.reduce((a, b) => Math.abs(b.t_s - s) < Math.abs(a.t_s - s) ? b : a);
-    cur.setAttribute('x1', X(p.t_s + bucket / 2)); cur.setAttribute('x2', X(p.t_s + bucket / 2)); cur.setAttribute('visibility', 'visible');
-    tip.innerHTML = `<b>${clock(p.t_s)}</b><br>ระดับสูงสุด: ${LV[p.level]}<br>PERCLOS: ${pct(p.perclos)}` +
-      (p.closed_ms >= 1000 ? `<br>ตาปิดต่อเนื่อง ${(p.closed_ms / 1000).toFixed(1)} วิ` : '') +
-      (p.distraction ? '<br>Distraction' : '') + (p.unmonitored ? '<br>Unmonitored' : '');
+    const cx = X(p.t_s + bucket / 2); cur.setAttribute('x1', cx); cur.setAttribute('x2', cx); cur.setAttribute('visibility', 'visible');
+    tip.innerHTML = `<b>${clockOf(t, p.t_s)}</b><br>สภาวะ: ${LV[p.level]}<br>ความถี่การหลับตา: ${p.perclos == null ? '–' : Math.round(p.perclos * 100) + '%'}` +
+      (p.closed_ms >= 1000 ? `<br>ตาปิดต่อเนื่อง ${(p.closed_ms / 1000).toFixed(1)} วินาที` : '') + (p.distraction ? '<br>ละสายตาจากถนน' : '');
     tip.style.display = 'block';
-    tip.style.left = Math.min(ev.clientX + 12, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (ev.clientY + 12) + 'px';
+    tip.style.left = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (ev.clientY + 14) + 'px';
   };
   svg.onpointerleave = () => { tip.style.display = 'none'; cur.setAttribute('visibility', 'hidden'); };
 }
+
+// ---------- ลบทริป ----------
+$('del').onclick = () => {
+  const t = trips.find(x => x.trip_id === current); if (!t) return;
+  $('confirmText').textContent = `ทริป ${whenLong(t)} (${dur(t.duration_s)}) และบันทึกทั้งหมดของทริปนี้จะถูกลบถาวร กู้คืนไม่ได้`;
+  $('delMsg').textContent = ''; $('okDel').disabled = false; $('confirmDel').showModal();
+};
+$('cancelDel').onclick = () => $('confirmDel').close();
+$('okDel').onclick = async () => {
+  $('okDel').disabled = true; $('delMsg').className = 'msg'; $('delMsg').textContent = 'กำลังลบ...';
+  const { data, error } = await sb.from('trips').delete().eq('id', current).select('id');
+  if (error || !data.length) { $('delMsg').className = 'msg err'; $('delMsg').textContent = error ? error.message : 'ลบไม่ได้ (ไม่มีสิทธิ์ลบทริปนี้)'; $('okDel').disabled = false; return; }
+  $('confirmDel').close(); current = null; show('detail', false); loadAll();
+};
 
 sb.auth.getSession().then(({ data }) => render(data.session));
 </script>
