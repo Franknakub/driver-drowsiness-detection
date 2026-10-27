@@ -8,7 +8,7 @@ Device (FFat) --sync.cpp--> POST /rest/v1/rpc/ingest (publishable key + DEVICE_S
 Cloud Dashboard (docs/dashboard/) --login อีเมล--> trip_summary (view) + trip_series() + events
 ```
 
-- โปรเจกต์: `https://wcuagguhwtprdnguiozn.supabase.co` · publishable key อยู่ใน `config.h` และหน้า dashboard (เป็นค่าสาธารณะโดยออกแบบ)
+- โปรเจกต์: `https://iatzjmxjbxcakotczoko.supabase.co` · publishable key อยู่ใน `config.h` และหน้า dashboard (เป็นค่าสาธารณะโดยออกแบบ)
 - **ห้ามใส่ใน repo:** service_role / secret key, รหัสฐานข้อมูล, `DEVICE_SECRET`
 
 ## ติดตั้ง (ครั้งเดียว)
@@ -30,7 +30,7 @@ cd cloud/test && npm install && node sql_test.mjs     # รัน SQL บน Pos
 เช็คจากภายนอกว่า SQL ขึ้นแล้ว (ควรได้ 403 `unknown device or wrong secret`):
 
 ```bash
-curl -s -X POST https://wcuagguhwtprdnguiozn.supabase.co/rest/v1/rpc/ingest -H "apikey: <publishable key>" -H "Content-Type: application/json" -d '{"payload":{"device":"00:00:00:00:00:00","secret":"x","trip":{"boot":1,"nonce":1}}}'
+curl -s -X POST https://iatzjmxjbxcakotczoko.supabase.co/rest/v1/rpc/ingest -H "apikey: <publishable key>" -H "Content-Type: application/json" -d '{"payload":{"device":"00:00:00:00:00:00","secret":"x","trip":{"boot":1,"nonce":1}}}'
 ```
 
 ## หมายเหตุ
