@@ -6,6 +6,7 @@
 //   POST /api/ir      mode=auto|on|off  โหมด IR (จำใน NVS)
 //   POST /api/test    what=buzzer|green|red|ir|oled  ทดสอบฮาร์ดแวร์ HW_TEST_MS
 //   GET/POST /update  อัปโหลด .bin (ต้องใส่รหัส admin / OTA_PASSWORD)
+//   GET  /wifi        หน้าตั้งค่า WiFi (admin / OTA_PASSWORD) · GET /api/wifi[?scan=1] · POST /api/wifi/save ssid,pass · POST /api/wifi/forget ssid
 //   GET  /trips       ประวัติ Trip บน Device (รายการ + Trip Summary + กราฟ)
 //   GET  /api/trips   JSON รายการ Trip ทั้งหมดบน FFat พร้อม Trip Summary
 //   GET  /api/trips/<n>?from=0&count=600&step=1   Sample ช่วงหนึ่ง + Event ทั้งหมด + Trip Summary ของ Trip n
@@ -65,7 +66,7 @@ pre{white-space:pre-wrap;font-size:12px;margin:8px 0 0}a{color:var(--pc)}h2{font
 <p>ทดสอบ 3 วิ: <button onclick="post('/api/test?what=buzzer')">buzzer</button> <button onclick="post('/api/test?what=green')">LED เขียว</button>
 <button onclick="post('/api/test?what=red')">LED แดง</button> <button onclick="post('/api/test?what=ir')">IR</button> <button onclick="post('/api/test?what=oled')">จอ OLED</button></p>
 <div class="s">IR กะพริบ 1 วิ ดูภาพสว่างขึ้นลงในภาพกล้อง (ต้องมีของสะท้อนใกล้ๆ ในที่มืด) · ปุ่ม BOOT บนโมดูล = ปิดเสียง 5 นาที</div></div>
-<div class="card"><a href="/trips">ประวัติ Trip</a> · <a href="/update">อัปเดต firmware</a>
+<div class="card"><a href="/wifi">ตั้งค่า WiFi</a> · <a href="/trips">ประวัติ Trip</a> · <a href="/update">อัปเดต firmware</a>
 <details><summary class="mut">ข้อมูลดิบ (/api/status)</summary><pre id="s">loading...</pre></details></div>
 </main>
 <script>
@@ -122,6 +123,76 @@ const v=$('v');function next(){v.src='/snapshot.jpg?'+Date.now();}
 v.onload=()=>setTimeout(next,150);v.onerror=()=>setTimeout(next,1000);next();
 const ei=$('e');function nextE(){ei.src='/eyes.jpg?'+Date.now();}
 ei.onload=()=>setTimeout(nextE,300);ei.onerror=()=>setTimeout(nextE,1000);nextE();
+</script></body></html>)HTML";
+
+// หน้าตั้งค่า WiFi (ต้องใส่ admin / OTA_PASSWORD) · ข้อมูลจาก /api/wifi · บันทึกใน NVS ผ่าน net.cpp
+static const char WIFI_HTML[] PROGMEM = R"HTML(<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ตั้งค่า WiFi</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--fg:#1d2330;--mut:#6b7280;--line:#e3e6eb;--ok:#1f9d55;--bad:#d61f1f;--ac:#2f6fed}
+@media(prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1c2029;--fg:#e6e8ec;--mut:#9aa3b2;--line:#2c3240;--ac:#7aa2ff}}
+:root{color-scheme:light dark}
+*{box-sizing:border-box}body{font-family:system-ui,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
+main{max-width:560px;margin:0 auto;padding:12px 16px 32px}
+header{display:flex;justify-content:space-between;align-items:baseline}h1{font-size:20px;margin:4px 0}h2{font-size:16px;margin:0 0 10px}
+a{color:var(--ac)}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:12px}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input{font:inherit;font-size:16px;width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+button{font:inherit;font-size:15px;padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+.primary{background:var(--ac);color:#fff;border:none;width:100%;margin-top:14px;padding:12px}
+.pw{display:flex;gap:8px}.pw input{flex:1}
+.s{font-size:12px;color:var(--mut);margin-top:6px}.msg{font-size:14px;margin-top:10px;min-height:1em}.err{color:var(--bad)}.okc{color:var(--ok)}
+ul{list-style:none;margin:0;padding:0}li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}li:last-child{border-bottom:0}
+li .n{flex:1;word-break:break-all}.bars{font-size:12px;color:var(--mut);letter-spacing:-1px;width:34px}
+.near li{cursor:pointer}.badge{font-size:12px;color:var(--ok);border:1px solid var(--ok);border-radius:999px;padding:1px 8px}
+#st b{font-size:17px}
+</style></head><body><main>
+<header><h1>ตั้งค่า WiFi</h1><a href="/">← กลับ</a></header>
+<div class="card" id="st">กำลังโหลด...</div>
+<div class="card"><h2>เพิ่ม WiFi / hotspot</h2>
+<form id="f" autocomplete="off">
+<label for="ssid">ชื่อ WiFi (SSID)</label><input id="ssid" maxlength="32" required>
+<label for="pass">รหัสผ่าน</label><div class="pw"><input id="pass" type="password" maxlength="63"><button type="button" id="eye">แสดง</button></div>
+<div class="s">เว้นว่างได้ถ้าเป็น WiFi ไม่มีรหัส · ถ้ามีรหัสต้องยาว 8–63 ตัว</div>
+<button class="primary" id="save">บันทึกและเชื่อมต่อ</button><div class="msg" id="msg"></div></form>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px"><h2 style="margin:0">WiFi ใกล้เคียง</h2><button id="scan">ค้นหาใหม่</button></div>
+<ul class="near" id="near"><li class="s">กด "ค้นหาใหม่" เพื่อดู WiFi รอบตัว</li></ul>
+<div class="s">บอร์ดรองรับเฉพาะ 2.4 GHz · hotspot ของ iPhone ต้องเปิด "Maximize Compatibility" · ระหว่างค้นหา WiFi ของบอร์ดอาจสะดุด 2–3 วินาที</div></div>
+<div class="card"><h2>WiFi ที่บันทึกไว้</h2><ul id="saved"></ul>
+<div class="s">บอร์ดจะลองเชื่อมจากบนลงล่าง และลองใหม่ทุก 1 นาทีเมื่อหลุด · ค่าใน secrets.h ใช้เป็นตัวสำรองต่อท้าย</div></div>
+<div class="s" style="margin-top:12px">แนะนำให้ตั้งค่าผ่าน WiFi ของบอร์ด (Drowsy-XXXX, เปิด 192.168.4.1) เพราะตอนเปลี่ยน WiFi บอร์ดจะหลุดจากเครือข่ายเดิมชั่วคราว</div>
+</main><script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const bars=r=>r>-55?'▂▄▆█':r>-67?'▂▄▆':r>-78?'▂▄':'▂';
+let polling=0;
+async function load(scan){
+  try{const r=await fetch('/api/wifi'+(scan?'?scan=1':''));if(!r.ok){$('st').textContent='โหลดไม่ได้ ('+r.status+')';return;}
+  const d=await r.json();render(d);if(d.scanning)setTimeout(()=>load(false),1500);}catch(e){$('st').textContent='ติดต่อบอร์ดไม่ได้';}}
+function render(d){
+  $('st').innerHTML=d.connected?`เชื่อมต่ออยู่กับ <b>${esc(d.ssid)}</b><div class="s">IP ${esc(d.ip)} · WiFi ของบอร์ด ${esc(d.ap)} (192.168.4.1)</div>`
+    :`<b>ยังไม่ได้เชื่อมต่ออินเทอร์เน็ต</b><div class="s">ใช้ได้ผ่าน WiFi ของบอร์ด ${esc(d.ap)} (192.168.4.1) · ข้อมูลจะส่งขึ้น cloud เมื่อเชื่อมได้</div>`;
+  $('saved').innerHTML=d.saved.length?d.saved.map((s,i)=>`<li><span class="n">${i+1}. ${esc(s.ssid)}</span>${d.connected&&s.ssid===d.ssid?'<span class="badge">เชื่อมอยู่</span>':''}<button data-ssid="${esc(s.ssid)}">ลบ</button></li>`).join('')
+    :'<li class="s">ยังไม่มี WiFi ที่บันทึกไว้</li>';
+  $('saved').querySelectorAll('button').forEach(b=>b.onclick=()=>forget(b.dataset.ssid));
+  if(d.scan.length||!d.scanning)$('near').innerHTML=d.scan.length?d.scan.map(n=>`<li data-ssid="${esc(n.ssid)}"><span class="bars">${bars(n.rssi)}</span><span class="n">${esc(n.ssid)}</span><span class="s">${n.secure?'🔒':'เปิด'}</span></li>`).join(''):'<li class="s">ไม่พบ WiFi</li>';
+  if(d.scanning&&!d.scan.length)$('near').innerHTML='<li class="s">กำลังค้นหา...</li>';
+  $('near').querySelectorAll('li[data-ssid]').forEach(li=>li.onclick=()=>{$('ssid').value=li.dataset.ssid;$('pass').value='';$('pass').focus();});
+}
+const form=o=>Object.entries(o).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+async function post(u,o){return fetch(u,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:form(o)});}
+$('eye').onclick=()=>{const p=$('pass');p.type=p.type==='password'?'text':'password';$('eye').textContent=p.type==='password'?'แสดง':'ซ่อน';};
+$('scan').onclick=()=>{$('near').innerHTML='<li class="s">กำลังค้นหา...</li>';load(true);};
+$('f').onsubmit=async e=>{e.preventDefault();const m=$('msg'),ssid=$('ssid').value.trim(),pass=$('pass').value;
+  if(pass&&pass.length<8){m.className='msg err';m.textContent='รหัสผ่านต้องยาวอย่างน้อย 8 ตัว';return;}
+  m.className='msg';m.textContent='กำลังบันทึก...';
+  const r=await post('/api/wifi/save',{ssid,pass});
+  if(!r.ok){m.className='msg err';m.textContent='บันทึกไม่ได้: '+await r.text();return;}
+  $('pass').value='';m.className='msg okc';m.textContent='บันทึกแล้ว กำลังเชื่อมต่อ "'+ssid+'" (ไม่เกิน ~10 วินาที)';
+  clearInterval(polling);let n=0;polling=setInterval(async()=>{await load(false);if(++n>=10)clearInterval(polling);},2000);};
+async function forget(ssid){if(!confirm('ลบ "'+ssid+'" ออกจากรายการ?'))return;await post('/api/wifi/forget',{ssid});load(false);}
+load(false);
 </script></body></html>)HTML";
 
 static const char UPDATE_HTML[] PROGMEM = R"HTML(<!doctype html>
@@ -420,8 +491,63 @@ static void handleUpload(AsyncWebServerRequest* req, const String& filename, siz
   }
 }
 
+// ---- ตั้งค่า WiFi (ต้อง login เหมือน /update) ----
+static void jsonStr(String& out, const char* s) {
+  out += '"';
+  for (; *s; s++) {
+    if (*s == '"' || *s == '\\') { out += '\\'; out += *s; }
+    else if ((uint8_t)*s < 0x20) { char b[8]; snprintf(b, sizeof(b), "\\u%04x", *s); out += b; }
+    else out += *s;
+  }
+  out += '"';
+}
+
+static void handleWifiGet(AsyncWebServerRequest* r) {
+  if (!otaAuthorized(r)) return r->requestAuthentication();
+  if (r->hasParam("scan")) wifiScanRequest();
+  SharedState s = stateSnapshot();
+  WifiNet saved[WIFI_SAVED_MAX], near[WIFI_SCAN_MAX];
+  bool scanning = false;
+  int ns = wifiSavedList(saved, WIFI_SAVED_MAX), nn = wifiScanResults(near, WIFI_SCAN_MAX, &scanning);
+  String j = "{\"connected\":";
+  j += s.staConnected ? "true" : "false";
+  j += ",\"ssid\":"; jsonStr(j, s.staSsid);
+  j += ",\"ip\":"; jsonStr(j, s.staIp);
+  j += ",\"ap\":"; jsonStr(j, s.apSsid);
+  j += ",\"scanning\":"; j += scanning ? "true" : "false";
+  j += ",\"saved\":[";
+  for (int i = 0; i < ns; i++) { if (i) j += ','; j += "{\"ssid\":"; jsonStr(j, saved[i].ssid); j += '}'; }
+  j += "],\"scan\":[";
+  for (int i = 0; i < nn; i++) {
+    if (i) j += ',';
+    j += "{\"ssid\":"; jsonStr(j, near[i].ssid);
+    j += ",\"rssi\":"; j += (int)near[i].rssi;   // int8_t จะถูกต่อเป็นตัวอักษรถ้าไม่แปลง
+    j += ",\"secure\":"; j += near[i].secure ? "true" : "false"; j += '}';
+  }
+  j += "]}";
+  r->send(200, "application/json", j);
+}
+
 void startWebServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "text/html", INDEX_HTML); });
+  server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest* r) {
+    if (!otaAuthorized(r)) return r->requestAuthentication();
+    r->send(200, "text/html", WIFI_HTML);
+  });
+  server.on("/api/wifi/save", HTTP_POST, [](AsyncWebServerRequest* r) {
+    if (!otaAuthorized(r)) return r->requestAuthentication();
+    if (!r->hasParam("ssid", true)) { r->send(400, "text/plain", "missing ssid"); return; }
+    String ssid = r->getParam("ssid", true)->value(), pass = r->hasParam("pass", true) ? r->getParam("pass", true)->value() : "";
+    if (!wifiSave(ssid.c_str(), pass.c_str())) { r->send(400, "text/plain", "ชื่อ 1-32 ตัว · รหัสผ่านเว้นว่าง หรือ 8-63 ตัว"); return; }
+    r->send(200, "application/json", "{\"saved\":true}");
+  });
+  server.on("/api/wifi/forget", HTTP_POST, [](AsyncWebServerRequest* r) {
+    if (!otaAuthorized(r)) return r->requestAuthentication();
+    if (!r->hasParam("ssid", true)) { r->send(400, "text/plain", "missing ssid"); return; }
+    bool ok = wifiForget(r->getParam("ssid", true)->value().c_str());
+    r->send(ok ? 200 : 404, "application/json", ok ? "{\"forgotten\":true}" : "{\"forgotten\":false}");
+  });
+  server.on("/api/wifi", HTTP_GET, handleWifiGet);
   server.on("/api/status", HTTP_GET, handleStatus);
   server.on("/api/ab", HTTP_GET, handleAb);
   server.on("/api/trips", HTTP_GET, handleTrips);

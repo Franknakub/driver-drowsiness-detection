@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.3.5-hw"       // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
+#define FW_VERSION "0.3.6-wifi"     // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47
@@ -60,6 +60,9 @@
 
 // ---- เครือข่าย ----
 #define NET_RETRY_MS           60000  // ลอง WiFi ที่บันทึกไว้ทุก 1 นาที
+#define WIFI_SAVED_MAX         5      // WiFi ที่ตั้งจากหน้า /wifi (เก็บใน NVS) · secrets.h เป็นตัวสำรองต่อท้าย
+#define WIFI_SCAN_MAX          15     // รายการ WiFi ใกล้เคียงที่ส่งให้หน้าเว็บ
+#define WIFI_SCAN_TTL_MS       15000  // ผลสแกนใหม่กว่านี้ใช้ซ้ำ ไม่สแกนใหม่ (สแกนทำให้ AP สะดุดชั่วครู่)
 #define MDNS_NAME              "drowsy"
 #define TZ_THAILAND            "ICT-7"
 #define TIME_VALID_EPOCH       1767225600UL  // 1 ม.ค. 2026: ก่อนหน้านี้ถือว่ายังไม่มีเวลาจริง
