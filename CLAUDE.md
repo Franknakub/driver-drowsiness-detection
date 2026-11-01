@@ -4,10 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **repo นี้เป็น public** (<https://github.com/Franknakub/driver-drowsiness-detection>) และเป็น**สำเนาที่จัดระเบียบแล้ว**ของโฟลเดอร์งานชั้นบน (`../`) ไม่ใช่ต้นฉบับทั้งหมด
 > - ต้นฉบับ PCB อยู่ใน **EasyEDA Pro cloud** — `.epro2` และ Gerber ในนี้เป็นแค่ export
-> - ต้นฉบับสเก็ตช์อยู่ที่ `~/Documents/Arduino/<ชื่อสเก็ตช์>/` — แก้และ build ที่นั่น แล้ว copy เข้า `firmware/` (ยกเว้น `secrets.h` และ `build/`) · เช็คว่าสำเนาตรงกันก่อน commit: `diff -rq firmware/DrowsyFW ~/Documents/Arduino/DrowsyFW | grep -v 'build\|secrets'` (ไม่มีผลลัพธ์ = ตรงกัน)
-> - `../CLAUDE.md` ละเอียดกว่า (การต่อ EasyEDA API, สถานะล่าสุด, ประเด็นค้าง, กับดัก USB) อ่านคู่กันเสมอ · มีเฉพาะในโฟลเดอร์งานของผู้ใช้ ไม่อยู่ใน clone จาก GitHub
+> - ต้นฉบับสเก็ตช์อยู่ที่ `~/Documents/Arduino/<ชื่อสเก็ตช์>/` — แก้และ build ที่นั่น แล้ว copy เข้า `firmware/` (ยกเว้น `secrets.h` และ `build/`)
+> - `../CLAUDE.md` ละเอียดกว่า (การต่อ EasyEDA API, สถานะล่าสุด, ประเด็นค้าง, กับดัก USB) อ่านคู่กันเสมอ
 > - งาน firmware/ML/กล่องอยู่บน branch **`firmware`** · คำศัพท์ใช้ตาม [GLOSSARY.md](GLOSSARY.md) · การตัดสินใจหลักอยู่ใน [docs/adr/](docs/adr/) · แผนและผลทดลองอยู่ใน [docs/firmware-plan.html](docs/firmware-plan.html)
-> - สรุปสถานะ/งานที่เหลืออยู่ใน [docs/STATUS.md](docs/STATUS.md) — ⚠️ เขียนไว้ 23 ต.ค. (บอก 0.3.4) อาจตามไม่ทัน · เวอร์ชันที่แท้จริงดู `FW_VERSION` ใน `firmware/DrowsyFW/config.h`
 
 ## ก่อน commit
 
@@ -28,8 +27,6 @@ cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I.
 cd cloud/test && npm install && node sql_test.mjs   # รัน cloud/sql บน PGlite (Postgres จำลอง ไม่ต้องใช้ Supabase): RLS, ส่งซ้ำ, Trip Summary ตรงกับ Device
 ```
 
-เทสต์ไม่มีตัวเลือกกรองเคส — หน่วยที่เล็กที่สุดคือรันทั้งไฟล์ตามบรรทัดข้างบน
-
 Cloud Dashboard เปิดในเครื่อง: `cd docs && python -m http.server 8765 --bind 127.0.0.1` → `http://127.0.0.1:8765/dashboard/` · บนเว็บจริง GitHub Pages สร้างจาก branch **`main`** โฟลเดอร์ `/docs` (งานใน `docs/` ต้อง merge เข้า main ก่อนจึงขึ้นเว็บ)
 
 ```bash
@@ -40,9 +37,9 @@ S=~/Documents/Arduino/DrowsyFW
 "$CLI" upload -p COM6 --fqbn "$FQBN" --input-dir $S/build/esp32.esp32.esp32s3 $S
 ```
 
-- core `esp32 by Espressif Systems` **3.3.12** · ไลบรารี: `Async TCP` + `ESP Async WebServer` (ของ ESP32Async) + `U8g2` 2.36.19 (จอ OLED · `arduino-cli lib install U8g2`) · `esp-dl`, `esp-tflite-micro`, `esp-nn` มากับ core แล้ว ไม่ต้องลงเพิ่ม
+- core `esp32 by Espressif Systems` **3.3.12** · ไลบรารี: `Async TCP` + `ESP Async WebServer` (ของ ESP32Async) · `esp-dl`, `esp-tflite-micro`, `esp-nn` มากับ core แล้ว ไม่ต้องลงเพิ่ม
 - **`upload` ไม่ compile ให้** ต้อง compile ก่อนทุกครั้ง ไม่งั้นแฟลชไบนารีเก่า (`No changed sectors found`)
-- **`PartitionScheme=custom`** ใช้ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) · arduino-cli จะเช็คขนาดเทียบ 16 MB ไม่ใช่ 6 MB ต้องดูขนาดเอง (ตอนนี้ ~3.65 MB) · สเก็ตช์ทดสอบอื่น (`DrowsinessDiag`, `BenchTest`) ใช้ `PartitionScheme=app3M_fat9M_16MB` · ⚠️ แฟลชด้วยตารางนี้จะทับ partition ของ DrowsyFW (FFat/Trip หายได้) · ถ้าจะแฟลชสเก็ตช์ทดสอบแล้วกลับมา DrowsyFW ให้ build ด้วย `PartitionScheme=custom` และคัดลอก `partitions.csv` ของ DrowsyFW ไปไว้ข้างสเก็ตช์ (ทำแบบนี้เมื่อ 23 ต.ค. เลข trip ต่อเนื่องไม่รีเซ็ต)
+- **`PartitionScheme=custom`** ใช้ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) · arduino-cli จะเช็คขนาดเทียบ 16 MB ไม่ใช่ 6 MB ต้องดูขนาดเอง (ตอนนี้ ~3.4 MB) · สเก็ตช์ทดสอบอื่น (`DrowsinessDiag`, `BenchTest`) ใช้ `PartitionScheme=app3M_fat9M_16MB` · ⚠️ แฟลชด้วยตารางนี้จะทับ partition ของ DrowsyFW (FFat/Trip หายได้) · ถ้าจะแฟลชสเก็ตช์ทดสอบแล้วกลับมา DrowsyFW ให้ build ด้วย `PartitionScheme=custom` และคัดลอก `partitions.csv` ของ DrowsyFW ไปไว้ข้างสเก็ตช์ (ทำแบบนี้เมื่อ 23 ต.ค. เลข trip ต่อเนื่องไม่รีเซ็ต)
 - **`PSRAM=opi` บังคับ** (N16R8 = Octal PSRAM)
 - ต้องมี `secrets.h` (คัดลอกจาก `secrets.example.h`) · **อย่าเปิดอ่าน `secrets.h` ของผู้ใช้** ให้แก้เฉพาะบรรทัดที่สั่ง
 - แฟลชผ่าน **USB ของโมดูล** เท่านั้น (USB-C บน PCB มีแค่ไฟ) · ลำดับเข้า download mode, VID:PID และ error ที่เจอบ่อยอยู่ใน [firmware/README.md](firmware/README.md)
@@ -59,18 +56,17 @@ S=~/Documents/Arduino/DrowsyFW
   → P(ตาปิด) เฉลี่ยสองข้าง → Eye State (ปิด ≥ 0.5 · เปิด < 0.3 · ระหว่างนั้น = ไม่แน่ใจ)
 ```
 
-- **แบ่ง task ตาม core:** Core 1 = `vision` / `alert` / `sensor` (LDR→IR) · Core 0 = `net` (AP ตลอด + ลอง WiFi ที่บันทึกไว้ + NTP + mDNS), `log`, `sync`, `display` (จอ OLED priority 1), เว็บ (AsyncWebServer ทำงานบน task ของ AsyncTCP)
+- **แบ่ง task ตาม core:** Core 1 = `vision` / `alert` / `sensor` (LDR→IR) · Core 0 = `net` (AP ตลอด + ลอง WiFi ที่บันทึกไว้ + NTP + mDNS), `log`, `sync`, เว็บ (AsyncWebServer ทำงานบน task ของ AsyncTCP)
 - task คุยกันผ่าน `SharedState` + mutex (`shared_state.h`) อ่านด้วย `stateSnapshot()` เขียนใน `StateGuard` · **ห้ามส่ง camera `fb` ข้าม core** — ภาพสดใช้การคัดลอกเข้า buffer แยก (`snapshotStore` ใน `vision.cpp`)
 - ค่าคงที่และเกณฑ์ทั้งหมดอยู่ใน `config.h` (เกณฑ์เวลาเป็นมิลลิวินาที ไม่นับเป็นเฟรม)
 - `face_eye.cpp` = หาหน้า + หมุนภาพ (ย้ายมาจากสเก็ตช์ทดลอง FaceSpike) · `human_face_detect*.{hpp,cpp}` + `human_face_detect_model.cpp` = โค้ดและโมเดลจาก esp-dl v3.3.11 (MIT) · `eye_classifier.cpp` + `eye_preprocess.h` + `eye_model_data.h` = โมเดลตา
 - **endpoint ดีบัก:** `/api/status` (JSON ทุกค่าใน state รวมเวลา rotate/detect/classify) · `/snapshot.jpg` (ภาพตั้งตรงพร้อมกรอบหน้า/ตา) · `/eyes.jpg` (ภาพ 32×32 ที่เข้าโมเดลจริง ซ้าย = ตาซ้ายของภาพ)
-- **คำสั่งทดสอบกล้อง/IR ทาง Serial** (0.3.5 · `loop()` ใน `DrowsyFW.ino` · ใช้ได้โดยไม่ต้องต่อ WiFi): `ir on|off|auto` (บังคับ IR · `auto` = ตาม LDR) · `gain 16-1023` · `ae -2..2` · `aec2 0|1` · `bright -2..2` · `exp auto|<ค่า>` · `agc auto|<ค่า>` · `cam` (พิมพ์ค่าตั้ง) · `log on|off` (พิมพ์ `[cam]` ทุก 2 วิ: จำนวนเฟรมที่เจอหน้า, `frameMean`/`centerMean` ความสว่างทั้งภาพ/กลางภาพ, `eyeMean` ของภาพตา 32×32, gain/exposure จริงจาก register, LDR) · ค่าที่ตั้งหายเมื่อรีบูต · ส่งคำสั่งโดยเปิดพอร์ตด้วย DTR = false (ดูหัวข้อฮาร์ดแวร์)
-- RAM ภายในเหลือก้อนใหญ่สุดแค่ ~30 KB หลัง WiFi + esp-dl · arena ของ TFLM จึงตั้ง `29*1024+256` (deep2_half ใช้จริง 29,324 B อยู่ใน RAM ภายใน) ถ้าไม่พอจะ fallback ไป PSRAM
+- RAM ภายในเหลือก้อนใหญ่สุดแค่ ~30 KB หลัง WiFi + esp-dl · arena ของ TFLM จึงตั้ง 28 KB และ fallback ไป PSRAM
 - **logic ความง่วง** อยู่ใน `drowsiness.{h,cpp}` (class `DrowsinessJudge`, เกณฑ์ใน `drowsy_config.h`) · vision เรียกทุกเฟรมหลังได้ Eye State · นับเป็นเวลา (dt) ไม่นับเฟรม · Event ส่งผ่านคิวให้ log task พิมพ์ — **ห้ามพิมพ์ Serial จาก vision task** (USB CDC ที่ไม่มีใครเปิดพอร์ตทำให้ค้าง ~3 วิ เจอใน 0.2.6)
 - **ประวัติ Trip** (`trip_record.*` = รูปแบบไฟล์ + Trip Summary ไม่พึ่ง Arduino · `trip_log.*` = FFat + log task): 1 Trip = `/trips/<n>.s` (Sample 16 ไบต์/วิ) + `<n>.e` (Event) + `<n>.m` (ตำแหน่ง Sync + Summary + crc) · เวลาใน record = `millis()` แล้วเทียบเวลาจริงจาก Event `TimeKnown` · FFat ถึง 80% ลบ Trip ที่ Sync แล้ว · endpoint `/trips`, `/api/trips`, `/api/trips/<n>?from=&count=&step=`
 - **Sync** (`sync.cpp`): POST `/rest/v1/rpc/ingest` ของ Supabase ทีละ ≤ 300 Sample จาก Trip เก่าสุดที่ค้าง · Trip ปัจจุบันส่งทุก 30 วิ · สถานะอยู่ใน `/api/status` ช่อง `sync` · ตั้ง `DEVICE_SECRET` ใน `secrets.h` · SQL/ขั้นติดตั้ง/Cloud Dashboard อยู่ใน [cloud/README.md](cloud/README.md) (ADR 0003)
 - **TLS ต้องใช้ PSRAM:** RAM ภายในเหลือก้อนใหญ่สุด ~13 KB ไม่พอ buffer 16 KB ของ mbedTLS (0.3.0 ได้ `connection refused`) → `sync.cpp` เรียก `mbedtls_platform_set_calloc_free` ให้ก้อน ≥ 1 KB ไปอยู่ PSRAM
-- **จอ OLED** (`display.cpp`, 0.3.6): SSD1306 128x64 ผ่าน U8g2 อัปเดตทุก 200 ms · ข้อความอังกฤษ ลำดับ Microsleep `WAKE UP!` > ระดับ 2 `DROWSY` > Distraction `EYES ON` > Unmonitored `NO READ` > ระดับ 1 `TIRED` > ยังไม่เห็นตา/Driver ลงจากรถ `WAITING` (`driverPresent`) > ปกติ `OK` + PERCLOS + แถบ WIFI/SYNC/IR/MUTE · Alert เต็มจอ พื้นดำ ไม่กะพริบ (ผู้ใช้ตัดสิน 1 พ.ย.) · หรี่จอด้วยเกณฑ์ LDR เดียวกับ IR · หาจอไม่เจอ task จบเอง · **compile ผ่าน ยังไม่ได้ทดสอบบนบอร์ด**
+- **ยังไม่ได้ทำ:** OLED
 
 ## ML (`ml/`)
 
@@ -108,8 +104,6 @@ GPIO map อยู่ใน [README.md](README.md) · เพิ่มเติ�
 - **OLED:** จอจริงเรียงขา `VCC GND SCL SDA` ต่อกับ H1 (`3V3 GND IO1 IO42`) เส้นต่อเส้นด้วยสาย dupont · ใช้ `Wire.begin(42, 1)` (SDA=42, SCL=1)
 - **ภาพจากกล้องตะแคง 90°** ตามการวางโมดูลบน PCB → `CAM_ROTATE_CW` ใน `config.h` · ถ้ากล่องวางให้ภาพตั้งตรงได้ ตั้งเป็น 0 จะประหยัด 17–38 ms ต่อเฟรม
 - กล้อง: ไม่ต้องโหลด AF (fixed-focus ตั้งใจไว้) · เวลาวัดความสว่างให้ล็อก AEC/AGC และนับจำนวนพิกเซลที่เกินเกณฑ์ ไม่ใช้ peak
-- **`set_gainceiling` ของ OV5640 ใช้หน่วย 1/16 เท่า** (ค่าเริ่ม 248 = 15.5x) ไม่ใช่ enum 0–6 แบบ OV2640 · ส่ง 6 = เพดาน 0.4x ภาพมืดลง · `status.gainceiling` เป็น uint8 ค่าเกิน 255 ถูกตัด และตอนลอง 512/1023 ภาพมืดลงแทนที่จะสว่างขึ้น · gain/exposure จริงอ่านจาก register `0x350A–0x350B` (หน่วย 1/16) และ `0x3500–0x3502`
-- **เปิดพอร์ต Serial (COM6) ด้วย DTR = true จะรีเซ็ตบอร์ด** (เห็น `rst:0x15 USB_UART_CHIP_RESET`) · ถ้าจะอ่าน log โดยไม่ให้รีบูต ให้ตั้ง `DtrEnable = $false` และ `RtsEnable = $false`
 - **PCB v2 = บอร์ดสุดท้าย** (ได้รับและทดสอบผ่านแล้ว 23 ต.ค. · ไม่ทำ v3) ดูผลทดสอบด้านล่าง · บอร์ด v1 ห้ามเสียบโมดูล (header เป็นภาพกระจก) · ทดสอบอุปกรณ์รอบตัวด้วยการต่อสายตาม [docs/bench-wiring-v1.md](docs/bench-wiring-v1.md) + สเก็ตช์ `BenchTest`
 
 ## ผลทดสอบบอร์ด v2 (23 ต.ค.)
@@ -117,8 +111,7 @@ GPIO map อยู่ใน [README.md](README.md) · เพิ่มเติ�
 ผ่าน: บูต · กล้อง · IR ×4 · buzzer · LED เขียว/แดง · LDR · OLED (เจอที่ 0x3C) · ไฟเข้าทาง USB-C บน PCB + SW1 · WiFi + Sync Supabase · ความร้อนที่อุณหภูมิห้อง (มีแค่ฝาโมดูลอุ่น)
 
 - **SW1: ขวา = ON, ซ้าย = OFF** (มองจากด้านบน โมดูลกล้องหงาย ปลาย USB โมดูลหันขอบบน)
-- **กล้อง OV5640 เห็น IR 940 nm** · วัดด้วยโหมดความสว่างเฉลี่ยของ `BenchTest`: IR เปิดสว่างขึ้น +12 / +31 ระดับที่ exposure กลาง/สูง · **ต้องมีกระดาษขาวสะท้อนห่าง ~5 ซม. ในห้องมืด** ไม่มีของสะท้อนจะวัดไม่ขึ้นและสรุปผิดได้
-- **⚠️ IR บนบอร์ดอ่อนเกินกว่าจะใช้ตอนกลางคืน (วัดในห้องมืด 27 ต.ค.):** บังคับเปิด/ปิด IR แล้วภาพต่างกันแค่ ~1–4 ระดับ แม้ยกฝ่ามือห่างกล้อง ~10 ซม. · กล้องไม่เจอหน้าที่ ~50 ซม. · gain ค้างที่เพดาน 15.5x และ exposure ค้างที่ค่าสูงสุด · IR LED ติดครบ 4 ดวง (ส่องด้วยกล้องหน้ามือถือ) · รีโมททีวีส่องเข้าเลนส์ทำให้ภาพเฉลี่ยขึ้นจาก ~15–40 เป็น ~100–180 และ gain ลดเหลือ 2–5x ขณะ LDR ยังอ่านว่ามืด → กล้องรับ IR ได้ แต่ LED บนบอร์ด (~29 mA ต่อดวงผ่าน 120Ω, ±17°) ให้แสงน้อยเกินไป · เปลี่ยน R เป็น 68Ω ได้แค่ ~1.7 เท่า ไม่พอ (และผู้ใช้บัดกรี SMD ไม่ได้) · แผน: โคม IR 850 nm ภายนอกแบบ 5V USB มีเซนเซอร์แสงในตัว ต่อไฟจาก power bank แยก (ยังไม่ได้ซื้อและทดสอบ)
+- **กล้อง OV5640 เห็น IR 940 nm** (ไม่มี IR-cut) · วัดด้วยโหมดความสว่างเฉลี่ยของ `BenchTest`: IR เปิดสว่างขึ้น +12 / +31 ระดับที่ exposure กลาง/สูง · **ต้องมีกระดาษขาวสะท้อนห่าง ~5 ซม. ในห้องมืด** ไม่มีของสะท้อนจะวัดไม่ขึ้นและสรุปผิดได้
 - **`cam_hal: FB-SIZE` เฟรมเสีย ~17%** (~140–150 ครั้ง/2 นาที ที่ ~7 fps) · **ไม่เกี่ยวกับ PCB** (เท่ากันตอนถอดโมดูลออกจากบอร์ด) · เฟรมขาดทีละ 16 แถวพอดี · ลด XCLK เป็น 10 MHz แย่กว่า (fps ตกเหลือ ~3) จึงคง 20 MHz · เฟรมเสียถูกทิ้ง fps ยังได้ ~7 ยังไม่ได้ไล่สาเหตุ (สงสัย PSRAM/WiFi แย่งบัส)
 - **ค่า LDR:** ห้องมืดอ่าน ~2900–3000 (เกินเกณฑ์ `LDR_DARK_ON_RAW` 2800 → IR ติด) · ปิดมือ ~3900–4095 · สว่าง ~500–700 · เกณฑ์ยังไม่ได้คาลิเบรตในรถ
 - hotspot iPhone ต้องเปิด Maximize Compatibility ถึงต่อได้ (ก่อนเปิด บอร์ดวนลองแต่ไม่ติด)
