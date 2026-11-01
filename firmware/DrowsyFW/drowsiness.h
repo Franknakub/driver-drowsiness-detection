@@ -11,6 +11,7 @@ struct DrowsyResult {
   DrowsinessLevel level;        // max(ระดับจากตาปิดต่อเนื่อง, ระดับจาก PERCLOS)
   bool            distraction;  // มองไม่เห็นตา ≥ DISTRACTION_MS (หลังเคยเห็นตา และไม่เกิน DRIVER_ABSENT_MS)
   bool            unmonitored;  // เห็นหน้าแต่ "ไม่แน่ใจ" ต่อเนื่อง ≥ UNMONITORED_MS
+  bool            driverPresent; // เคยเห็นตาแล้ว และยังไม่หายไปนานเกิน DRIVER_ABSENT_MS · false = รอ Driver
   EyeState        effective;    // Eye State หลังถือค่าเดิมช่วงหาหน้าไม่เจอสั้นๆ (EYE_HOLD_MS)
 };
 

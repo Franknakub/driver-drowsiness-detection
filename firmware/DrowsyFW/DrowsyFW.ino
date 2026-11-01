@@ -83,6 +83,7 @@ void setup() {
   startLogTask();               // เลข Trip + FFat ก่อน task อื่น
   startSensorTask();
   startAlertTask();
+  startDisplayTask();
   startVisionTask();
   startNetTask();               // เปิด AP + เว็บ + OTA
   startSyncTask();

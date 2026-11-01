@@ -45,6 +45,7 @@ struct SharedState {
   DrowsinessLevel level;
   bool            distraction;
   bool            unmonitored;
+  bool            driverPresent; // false = ยังไม่เคยเห็นตา หรือ Driver ลงจากรถ (จอแสดง WAITING)
 
   // alert
   uint32_t mutedUntilMs;       // millis() ที่การปิดเสียงหมดอายุ · 0 = ไม่ได้ปิด
