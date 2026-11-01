@@ -170,6 +170,7 @@ const DrowsyResult& DrowsinessJudge::update(uint32_t nowMs, EyeState raw) {
     push(ev);
   }
   r_.distraction = dis;
+  r_.driverPresent = driverArmed_;
 
   // 5. Unmonitored
   uncertainRun_ = e == EyeState::Uncertain ? uncertainRun_ + dt : 0;

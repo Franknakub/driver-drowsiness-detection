@@ -6,6 +6,7 @@
 #include "tasks.h"
 #include "face_eye.h"
 #include "eye_classifier.h"
+#include "eye_preprocess.h"
 #include "drowsiness.h"
 #include "img_converters.h"
 #include "esp_heap_caps.h"
@@ -275,6 +276,14 @@ static void visionTask(void*) {
       classifyMs = (micros() - t) / 1000.0f;
     }
     snapshotStore(fb, f, side, pL, pR);
+    uint32_t sumAll = 0, nAll = 0, sumMid = 0, nMid = 0;   // สุ่มทุก 8 พิกเซล: ความสว่างสำหรับคำสั่งทดสอบกล้อง
+    for (int y = 0; y < (int)fb->height; y += 8)
+      for (int x = 0; x < (int)fb->width; x += 8) {
+        const uint8_t* q = fb->buf + 2 * (y * fb->width + x);
+        uint8_t g = eye_rgb565_to_gray((uint16_t)((q[0] << 8) | q[1]));
+        sumAll += g; nAll++;
+        if (x >= (int)fb->width / 3 && x < 2 * (int)fb->width / 3 && y >= (int)fb->height / 3 && y < 2 * (int)fb->height / 3) { sumMid += g; nMid++; }
+      }
     bool ab, abReset;
     { StateGuard g; ab = g_state.abOn; abReset = g_state.abReset; g_state.abReset = false; }
     if (abReset) s_ab = AbAcc();
@@ -289,6 +298,10 @@ static void visionTask(void*) {
     {
       StateGuard g;
       g_state.faceFound = f.found;
+      g_state.camFrames++;
+      g_state.camFrameMean = nAll ? sumAll / nAll : 0;
+      g_state.camCenterMean = nMid ? sumMid / nMid : 0;
+      if (f.found) g_state.camFaceFrames++;
       g_state.faceScore = f.found ? f.score : 0;
       g_state.pLeft = pL;
       g_state.pRight = pR;
@@ -301,6 +314,7 @@ static void visionTask(void*) {
       g_state.level = dr.level;
       g_state.distraction = dr.distraction;
       g_state.unmonitored = dr.unmonitored;
+      g_state.driverPresent = dr.driverPresent;
       g_state.lastFrameMs = now;
       g_state.eyeDistPx = eyeDist;
       g_state.tiltCompDeg = f.compDeg;

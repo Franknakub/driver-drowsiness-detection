@@ -9,7 +9,7 @@
 """
 import math
 from pathlib import Path
-from build123d import (Align, Axis, Box, Cone, Cylinder, Plane, Pos, RegularPolygon, Rot, Text, export_step,
+from build123d import (Align, Axis, Box, Cone, Cylinder, Plane, Pos, RegularPolygon, Rot, Solid, Text, export_step,
                        export_stl, extrude)
 
 OUT = Path(__file__).parent / "out"
@@ -39,8 +39,30 @@ SW_H = 8.3                       # MEAS sw_h ปลายก้าน
 SW_TRAVEL = 3.76                 # MEAS sw_travel
 SW_BODY = (8.55, 3.85, 4.3)      # MEAS sw_bw (แนวเลื่อน x) · sw_bl · sw_bh
 SW_LEVER = (1.5, 1.5)            # MEAS sw_lw (แนวเลื่อน x) × sw_lt
-SW_SOCKET_FIT = 0.3              # เผื่อรูสวมก้าน (แน่นกว่า FIT ทั่วไป)
-SW_FLANGE_W, SW_FLANGE_T, SW_FLANGE_GAP = 5.4, 1.2, 0.4   # ปีกขังด้ามต่อใต้ฝา: กว้าง (แนว y) · หนา · ห่างผิวในฝา
+SW_SOCKET_FIT = 0.3              # เผื่อช่องที่สวมก้าน (ด้ามต่อ 18 ต.ค. ใช้ค่านี้ สวมลงได้ดี)
+# ด้ามโยก (26 ต.ค.): ด้ามต่อแบบเลื่อน 18 ต.ค. ดันที่ปลายแล้วเอียงงัดก้าน สวิตช์ไม่เลื่อน (ดันที่โคนเลื่อนได้ — ผู้ใช้ทดสอบ)
+# แบบแผ่นยาวใต้ฝาก็ไม่พอ: หัวด้ามสูงกว่าก้าน ~18 มม. แผ่นยาว 12 มม. → แรงเสียดทานกินแรงดันเกือบหมด (μ ~0.3 ต้องออกแรง ~10 เท่า)
+# → คันโยกหมุนรอบหมุดในขาแขวนที่ติดกาวใต้ฝา: ไม่มีผิวถูภายใต้แรงกดสูง · หัวด้ามโยก ปลายล่างเป็นง่ามคร่อมก้านดันกลับทาง
+SW_PIVOT_Z = 25.0                # ความสูงหมุด (z) อยู่ตรง x ของ SW1 · ต่ำกว่าผิวในฝา 3.76
+# หมุดปริ้น ASA แทนลวด (ผู้ใช้เลือก 26 ต.ค.): หัวกันหลุดอยู่ฝั่ง y น้อย (ฝั่งโล่ง) · ปลายอีกข้างโผล่ 0.3 แต้มอีพ็อกซีติดแก้ม
+SW_PIN_D = 1.8
+SW_PIN_HOLE_BR = 1.9             # รูแก้มขาแขวน (หมุดไม่หมุน)
+SW_PIN_HOLE = 2.1                # รูด้ามโยก (ด้ามหมุนรอบหมุด)
+SW_PIN_HEAD = (3.2, 0.8)         # หัวหมุด Ø · หนา
+SW_PIN_TAIL = 0.3                # ปลายหมุดโผล่พ้นแก้มอีกข้าง
+SW_BOSS_R = 2.15                 # ปุ่มกลมรอบรูหมุดของด้าม (ด้ามกว้าง 3 เจาะ 2.1 เหลือผนัง 0.45 → บางไป) · ยอดปุ่มต่ำกว่าแผ่นติดกาว 0.4
+SW_ARM = 3.0                     # ด้าม x × y (ร่องฝากว้าง 3.9 ในแนว y)
+# ก้าน SW1 งอ/เอียงได้มาก: ดันปลายก้าน ก้านแค่เอียง (เกือบหัก) สวิตช์ไม่เลื่อน · ดันโคนก้านชิดตัวสวิตช์เลื่อนได้ (ผู้ใช้ทดสอบ 26 ต.ค.)
+# → ง่ามแตะก้านเฉพาะแถบล่างสุดเหนือตัวสวิตช์ ช่วงบนเว้นช่องกว้างไม่ให้แตะปลายก้าน
+SW_FORK_FIT = 0.45               # แถบสัมผัส: ช่อง = ก้าน + ค่านี้
+SW_FORK_GAP = 0.4                # ก้นง่ามสูงกว่าหลังตัวสวิตช์
+SW_FORK_BAND = 1.0               # สูงแถบสัมผัส
+SW_FORK_WALL = 0.8               # ผนังแถบสัมผัส — แคบไว้ ให้มุมล่างไม่จมลงหาตัวสวิตช์ตอนโยกสุด
+SW_FORK_RELIEF = 3.5             # ช่องเหนือแถบสัมผัส (ก้าน 1.5 + ง่ามเอียง ~0.5 ต่อข้าง + เผื่อ)
+SW_FORK_TOP = (16.2, 17.5)       # เพดานช่องง่าม (ปลายก้าน 15.99 + 0.2) · ต่อเข้าด้าม
+SW_CHEEK = (5.0, 1.0, 0.15)      # แก้มขาแขวน: ยาว x · หนา · ช่องว่างถึงด้าม — แก้มนอกห่างเสาฝา MH3 ≥ 0.4
+SW_FLANGE_T = 1.2                # แผ่นติดกาวใต้ฝา
+SW_TAB_H = 1.5                   # เดือยที่ปลายแผ่นติดกาวเข้าร่องฝา (ร่องลึก 2) ใช้จัดตำแหน่งก่อนทากาว
 
 # ---------------------------------------------------------------- โมดูล + กล้อง
 HDR_H = 8.51                     # MEAS hdr_h (กรอกใหม่ จากเดิม 11.7)
@@ -326,18 +348,74 @@ def make_base():
 
 
 # ---------------------------------------------------------------- ด้ามต่อ SW1
-def make_sw_ext():
-    z0 = Z_PCB + SW_H - 3.0          # สวมก้านลึก 3
-    z1 = Z_TOP + 2.5                 # โผล่พ้นฝา 2.5
+def sw_slot_half():
+    """ครึ่งความยาว / ครึ่งความกว้างของร่อง SW1 บนฝา (ตรงกับ make_lid)"""
+    return (SW_TRAVEL + 3.0 + FIT * 2) / 2, 1.5 + FIT
+
+
+def sw_fork_z():
+    """ก้นง่าม และความสูงจุดสัมผัส (กลางแถบสัมผัส)"""
+    z0 = Z_PCB + SW_BODY[2] + SW_FORK_GAP
+    return z0, z0 + SW_FORK_BAND / 2
+
+
+def sw_rocker_angle(dx):
+    """มุมโยก (องศา) ที่ทำให้แถบสัมผัสของง่ามตามโคนก้านซึ่งเลื่อนไป dx"""
+    # Rot รอบแกน Y บวก: จุดใต้หมุด (z < 0) ไปทาง −x → ต้องกลับเครื่องหมาย
+    return -math.degrees(math.asin(dx / (SW_PIVOT_Z - sw_fork_z()[1])))
+
+
+def make_sw_rocker():
+    """ด้ามโยก ในพิกัดที่หมุดอยู่ที่จุดกำเนิด (แกนหมุนตามแนว y) · ปริ้นแนวตั้ง ง่ามลงพื้น"""
+    z = lambda a: a - SW_PIVOT_Z
     c = (Align.CENTER, Align.CENTER, Align.MIN)
-    ext = Box(3.0, 3.0, z1 - z0, align=c)
-    # รูสวมก้านเผื่อแค่ 0.3 ให้จับก้านแน่น (ผู้ใช้เลือก 18 ต.ค.)
-    ext -= Box(SW_LEVER[0] + SW_SOCKET_FIT, SW_LEVER[1] + SW_SOCKET_FIT, 3.0, align=c)
-    ext += Pos(0, 0, z1 - z0 - 1.5) * Box(5.0, 3.0, 1.5, align=c)
-    # ปีกใต้ฝา กว้างกว่าร่องในแนว y → ด้ามต่อถูกขังระหว่างฝากับก้าน หลุดออกหน้ากล่องไม่ได้
-    zf = Z_LID_IN - SW_FLANGE_GAP - SW_FLANGE_T - z0
-    ext += Pos(0, 0, zf) * Box(3.0, SW_FLANGE_W, SW_FLANGE_T, align=c)
-    return ext
+    z_top = Z_TOP + 2.5
+    z0, _ = sw_fork_z()
+    z_band, (z_ceil, z_join) = z0 + SW_FORK_BAND, SW_FORK_TOP
+    gap = SW_LEVER[0] + SW_FORK_FIT
+    r = Pos(0, 0, z(z_join)) * Box(SW_ARM, SW_ARM, z_top - z_join, align=c)
+    r += Pos(0, 0, z(z_top - 1.5)) * Box(5.0, SW_ARM, 1.5, align=c)                      # หัวด้ามเหนือฝา
+    r += Pos(0, 0, z(z0)) * Box(gap + 2 * SW_FORK_WALL, SW_ARM, z_band - z0, align=c)    # แถบสัมผัส (แคบ)
+    r += Pos(0, 0, z(z_band)) * Box(SW_FORK_RELIEF + 2 * SW_FORK_WALL, SW_ARM, z_join - z_band, align=c)
+    r -= Pos(0, 0, z(z0) - 0.1) * Box(gap, SW_ARM + 1, z_band - z0 + 0.2, align=c)
+    r -= Pos(0, 0, z(z_band)) * Box(SW_FORK_RELIEF, SW_ARM + 1, z_ceil - z_band, align=c)  # เว้นไม่ให้แตะปลายก้าน
+    r += Rot(90, 0, 0) * Cylinder(SW_BOSS_R, SW_ARM)
+    r -= Rot(90, 0, 0) * Cylinder(SW_PIN_HOLE / 2, SW_ARM + 2)
+    return r
+
+
+def make_sw_pin():
+    """หมุดด้ามโยก (พิกัดกล่อง) · ปริ้นตั้ง หัวลงพื้น"""
+    x0, y0 = SW1
+    y_out = SW_ARM / 2 + SW_CHEEK[2] + SW_CHEEK[1]                  # ผิวนอกแก้ม นับจากแนวกลาง y
+    yh = y0 - y_out                                                 # ผิวนอกแก้มฝั่งหัวหมุด (y บอร์ด)
+    along = lambda y_from, r, length: Solid.make_cylinder(r, length, Plane(origin=(x0, -y_from, SW_PIVOT_Z), z_dir=(0, -1, 0)))
+    pin = along(yh - SW_PIN_HEAD[1], SW_PIN_HEAD[0] / 2, SW_PIN_HEAD[1])
+    pin += along(yh, SW_PIN_D / 2, 2 * y_out + SW_PIN_TAIL)
+    return pin
+
+
+def place_sw_rocker(part, dx=0.0):
+    """วางด้ามโยกในพิกัดกล่อง ให้ง่ามอยู่ที่ก้านซึ่งเลื่อนไป dx จากกลาง"""
+    return Pos(SW1[0], -SW1[1], SW_PIVOT_Z) * Rot(0, sw_rocker_angle(dx), 0) * part
+
+
+def make_sw_bracket():
+    """ขาแขวนหมุด ติดกาวใต้ฝารอบร่อง SW1 (พิกัดกล่อง) · เดือยสองปลายเข้าร่องฝาเพื่อจัดตำแหน่ง"""
+    hx, hy = sw_slot_half()
+    x0, y0 = SW1
+    cl, ct, cg = SW_CHEEK
+    y_in, y_out = SW_ARM / 2 + cg, SW_ARM / 2 + cg + ct            # แก้มนับจากแนวกลาง y
+    z_f = Z_LID_IN - SW_FLANGE_T
+    tab_in = 2.95                                                  # ขอบในเดือย / ช่องเปิดแผ่น (แนว x) — ด้ามโยกสุดแค่ ±2.6 ที่ระดับฝา
+    br = box(x0 - 4.5, x0 + 4.5, 56.5, y0 + y_out, z_f, Z_LID_IN)
+    br -= box(x0 - tab_in, x0 + tab_in, y0 - hy, y0 + hy, z_f - 1, Z_LID_IN + 1)
+    for s in (-1, 1):
+        a, b = sorted((x0 + s * tab_in, x0 + s * (hx - 0.15)))
+        br += box(a, b, y0 - hy + 0.15, y0 + hy - 0.15, Z_LID_IN - 0.01, Z_LID_IN + SW_TAB_H)
+        br += box(x0 - cl / 2, x0 + cl / 2, *sorted((y0 + s * y_in, y0 + s * y_out)), SW_PIVOT_Z - 2.2, z_f + 0.01)
+    br -= Pos(x0, -y0, SW_PIVOT_Z) * Rot(90, 0, 0) * Cylinder(SW_PIN_HOLE_BR / 2, 2 * y_out + 2)
+    return br
 
 
 def report():
@@ -354,7 +432,8 @@ def report():
 if __name__ == "__main__":
     OUT.mkdir(exist_ok=True)
     report()
-    parts = {"lid": make_lid(), "base": make_base(), "sw1_extender": make_sw_ext()}
+    parts = {"lid": make_lid(), "base": make_base(), "sw1_rocker": make_sw_rocker(), "sw1_bracket": make_sw_bracket(),
+             "sw1_pin": make_sw_pin()}
     for name, p in parts.items():
         export_step(p, str(OUT / f"{name}.step"))
         export_stl(p, str(OUT / f"{name}.stl"))

@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.3.4-absent"   // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
+#define FW_VERSION "0.3.6-oled"   // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47
@@ -50,6 +50,11 @@
 #define LDR_DARK_ON_RAW        2800   // ค่าสูงกว่านี้ = มืด เปิด IR
 #define LDR_DARK_OFF_RAW       2400   // ค่าต่ำกว่านี้ = สว่าง ปิด IR
 #define LDR_PERIOD_MS          500
+
+// ---- จอ OLED (display.cpp) · หรี่เมื่อมืดด้วยเกณฑ์ LDR เดียวกับ IR ----
+#define DISPLAY_PERIOD_MS      200    // 5 ครั้ง/วินาที · ส่งทั้งจอผ่าน I2C 400 kHz ~25 ms
+#define OLED_CONTRAST_DAY      255
+#define OLED_CONTRAST_DARK     1
 
 // ---- เครือข่าย ----
 #define NET_RETRY_MS           60000  // ลอง WiFi ที่บันทึกไว้ทุก 1 นาที

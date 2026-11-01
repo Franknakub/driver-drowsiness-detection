@@ -8,6 +8,7 @@ void stateInit() {
   g_state.eyeState = EyeState::Unknown;
   g_state.level = DrowsinessLevel::Normal;
   g_state.perclos = -1;
+  g_state.irForce = -1;
   g_state.tripStartMs = millis();
   s_mutex = xSemaphoreCreateMutex();
 }
