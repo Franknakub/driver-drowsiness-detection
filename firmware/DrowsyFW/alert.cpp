@@ -1,4 +1,4 @@
-// Alert: buzzer / LED (จอ OLED อยู่ใน display.cpp)
+// Alert: buzzer / LED (OLED จะเพิ่มทีหลัง)
 // ปิดเสียงได้เฉพาะระดับ 1–2 และ Distraction · ระดับ 3 (Microsleep) ปิดเสียงไม่ได้
 #include "config.h"
 #include "shared_state.h"

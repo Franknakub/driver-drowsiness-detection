@@ -4,7 +4,6 @@
 void alertBegin();      // ตั้งขา buzzer/LED ให้เงียบก่อนทุกอย่าง
 void startAlertTask();
 void startSensorTask();
-void startDisplayTask();   // จอ OLED (Core 0)
 void startVisionTask();
 void startLogTask();
 void startNetTask();

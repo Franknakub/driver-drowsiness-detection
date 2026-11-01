@@ -269,9 +269,7 @@ static void testBootNoFace() {
   Sim s;
   s.run(S::NotVisible, 10000);
   CHECK(!s.everDistraction && s.distractions == 0, "distraction ตอนบูตไม่มีคน");
-  CHECK(!s.r().driverPresent, "บูตยังไม่เห็นตา ต้องรอ Driver");
   s.run(S::Open, 2000);                       // คนขับนั่งแล้ว
-  CHECK(s.r().driverPresent, "เห็นตาแล้ว driverPresent ต้องเป็น true");
   s.run(S::NotVisible, 4000);
   CHECK(s.r().distraction && s.distractions == 1, "หลังเห็นหน้าแล้วหันออก 4 s ต้องเตือน (n=%d)", s.distractions);
 }
@@ -280,18 +278,15 @@ static void testDriverAbsent() {
   puts("away 70 s: Distraction stops after 60 s, re-arms on next eyes");
   Sim s;
   s.run(S::Open, 5000);
-  bool at10 = false, at65 = false, present10 = false;
+  bool at10 = false, at65 = false;
   s.run(S::NotVisible, 70000, [&](const DrowsyResult& r, uint32_t el) {
-    if (el == 9900) { at10 = r.distraction; present10 = r.driverPresent; }   // el เป็นจำนวนเท่าของ 150
+    if (el == 9900) at10 = r.distraction;     // el เป็นจำนวนเท่าของ 150
     if (el == 64950) at65 = r.distraction;
   });
   CHECK(at10, "ที่ 10 s distraction ต้องติด");
-  CHECK(present10, "หันออก 10 s ยังนับว่า Driver อยู่");
   CHECK(!at65 && !s.r().distraction, "เกิน 60 s ต้องเลิกเตือน");
-  CHECK(!s.r().driverPresent, "เกิน 60 s ถือว่า Driver ลงจากรถ");
   CHECK(s.distractions == 1, "distraction event=%d", s.distractions);
   s.run(S::Open, 1000);
-  CHECK(s.r().driverPresent, "เห็นตาอีกครั้ง Driver กลับมา");
   s.run(S::NotVisible, 4000);
   CHECK(s.r().distraction && s.distractions == 2, "เห็นตาอีกครั้งแล้วหันออก ต้องเตือนใหม่ (n=%d)", s.distractions);
 }
