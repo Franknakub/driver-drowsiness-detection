@@ -50,10 +50,11 @@ create table if not exists public.samples (             -- 1 แถว = 1 ว�
   p_closed    real not null,
   perclos     real,                                   -- null = ยังไม่พร้อม
   fps         real not null,
-  ldr         smallint not null,
+  ldr         integer not null,                       -- uint16 บน Device · record ที่เขียนไม่ครบอ่านได้ 65535 เกิน smallint
   closed_ms   integer not null,                       -- ตาปิดต่อเนื่องที่ยาวที่สุดในวินาทีนั้น
   primary key (trip_id, i)
 );
+alter table public.samples alter column ldr type integer;   -- โปรเจกต์ที่สร้างตอน ldr ยังเป็น smallint
 
 create table if not exists public.events (
   trip_id     bigint not null references public.trips(id) on delete cascade,
@@ -158,7 +159,7 @@ begin
                               p_closed, perclos, fps, ldr, closed_ms)
   select tid, (x->>0)::int, (x->>1)::bigint, (x->>2)::smallint, (x->>3)::smallint,
          ((x->>4)::int & 1) <> 0, ((x->>4)::int & 2) <> 0, ((x->>4)::int & 4) <> 0, ((x->>4)::int & 8) <> 0,
-         (x->>5)::real / 1000, (x->>6)::real / 1000, (x->>7)::real / 10, (x->>8)::smallint, (x->>9)::int
+         (x->>5)::real / 1000, (x->>6)::real / 1000, (x->>7)::real / 10, (x->>8)::int, (x->>9)::int
   from jsonb_array_elements(coalesce(payload->'samples', '[]'::jsonb)) x
   on conflict do nothing;
   get diagnostics ns = row_count;
@@ -221,6 +222,13 @@ create policy "driver reads own trips" on public.trips
   for select to authenticated using (
     exists (select 1 from public.devices d where d.device_id = trips.device_id and d.owner = (select auth.uid())));
 
+-- Driver ลบ Trip ของตัวเองได้จาก Cloud Dashboard · samples/events หายตาม on delete cascade
+-- (Device ไม่ส่ง Trip ที่ Sync ครบแล้วซ้ำ · Trip ที่กำลังบันทึกอยู่ dashboard ไม่ให้ลบ)
+drop policy if exists "driver deletes own trips" on public.trips;
+create policy "driver deletes own trips" on public.trips
+  for delete to authenticated using (
+    exists (select 1 from public.devices d where d.device_id = trips.device_id and d.owner = (select auth.uid())));
+
 drop policy if exists "driver reads own samples" on public.samples;
 create policy "driver reads own samples" on public.samples
   for select to authenticated using (
@@ -236,6 +244,7 @@ create policy "driver reads own events" on public.events
 revoke all on public.devices, public.trips, public.samples, public.events, public.trip_summary from anon, authenticated;
 grant select (device_id, owner, name, created_at, last_seen) on public.devices to authenticated;   -- ไม่ให้เห็น secret_hash
 grant select on public.trips, public.samples, public.events, public.trip_summary to authenticated;
+grant delete on public.trips to authenticated;
 
 revoke all on function public.ingest(jsonb) from public, anon, authenticated;
 revoke all on function public.claim_device(text, text, text) from public, anon, authenticated;

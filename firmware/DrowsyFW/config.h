@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.3.4-absent"   // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
+#define FW_VERSION "0.3.6-wifi"     // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47
@@ -13,6 +13,7 @@
 #define PIN_IR        21    // base S8050 ผ่าน 1k: HIGH = IR ติด
 #define PIN_OLED_SDA  42    // จอจริงต่อแบบนี้: Wire.begin(42, 1)
 #define PIN_OLED_SCL   1
+#define PIN_BOOT_BTN   0    // ปุ่ม BOOT บนโมดูล (กด = LOW) · ใช้เป็นปุ่มปิดเสียงหลังบูตแล้ว
 
 // ---- กล้อง GOOUUU ESP32-S3-CAM ----
 #define CAM_PIN_XCLK  15
@@ -51,16 +52,25 @@
 #define LDR_DARK_OFF_RAW       2400   // ค่าต่ำกว่านี้ = สว่าง ปิด IR
 #define LDR_PERIOD_MS          500
 
+// ---- OLED SSD1306 128x64 (I2C ขา 42/1) · ปุ่ม · ทดสอบฮาร์ดแวร์ ----
+#define OLED_PERIOD_MS         500    // วาดจอใหม่ทุกเท่านี้ (ส่งทั้งจอ ~25 ms ที่ 400 kHz)
+#define OLED_RETRY_MS          5000   // หาจอไม่เจอ: ลองใหม่ทุกเท่านี้ (สาย dupont หลุด/เสียบใหม่)
+#define BTN_DEBOUNCE_MS        60     // กด BOOT ค้างเท่านี้จึงนับ = ปิดเสียง MUTE_DEFAULT_MS
+#define HW_TEST_MS             3000   // ปุ่มทดสอบในหน้าเว็บ: ทำงานนานเท่านี้
+
 // ---- เครือข่าย ----
 #define NET_RETRY_MS           60000  // ลอง WiFi ที่บันทึกไว้ทุก 1 นาที
+#define WIFI_SAVED_MAX         5      // WiFi ที่ตั้งจากหน้า /wifi (เก็บใน NVS) · secrets.h เป็นตัวสำรองต่อท้าย
+#define WIFI_SCAN_MAX          15     // รายการ WiFi ใกล้เคียงที่ส่งให้หน้าเว็บ
+#define WIFI_SCAN_TTL_MS       15000  // ผลสแกนใหม่กว่านี้ใช้ซ้ำ ไม่สแกนใหม่ (สแกนทำให้ AP สะดุดชั่วครู่)
 #define MDNS_NAME              "drowsy"
 #define TZ_THAILAND            "ICT-7"
 #define TIME_VALID_EPOCH       1767225600UL  // 1 ม.ค. 2026: ก่อนหน้านี้ถือว่ายังไม่มีเวลาจริง
 
 // ---- Sync ขึ้น Supabase (ADR 0002) · publishable key เป็นค่าสาธารณะโดยออกแบบ ใส่ใน repo ได้ ----
 // สิทธิ์เขียนมาจาก DEVICE_SECRET ใน secrets.h ซึ่งฟังก์ชัน ingest เทียบกับ hash ในตาราง devices
-#define SUPABASE_URL             "https://wcuagguhwtprdnguiozn.supabase.co"
-#define SUPABASE_PUBLISHABLE_KEY "sb_publishable_eR_UKx297yjqdHjC_W_SAA_l-lsoWsH"
+#define SUPABASE_URL             "https://iatzjmxjbxcakotczoko.supabase.co"
+#define SUPABASE_PUBLISHABLE_KEY "sb_publishable_ri55GXYeKSjVqd664DQpYg_l-1KVoK6"
 #define SYNC_BATCH_SAMPLES     300    // ต่อ 1 ครั้ง (~12 KB JSON)
 #define SYNC_BATCH_EVENTS      100
 #define SYNC_IDLE_MS           30000  // ส่งของใหม่ทุก 30 วิ เมื่อไม่มีค้าง
