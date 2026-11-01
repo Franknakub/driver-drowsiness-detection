@@ -39,7 +39,7 @@ S=~/Documents/Arduino/DrowsyFW
 
 - core `esp32 by Espressif Systems` **3.3.12** · ไลบรารี: `Async TCP` + `ESP Async WebServer` (ของ ESP32Async) · `esp-dl`, `esp-tflite-micro`, `esp-nn` มากับ core แล้ว ไม่ต้องลงเพิ่ม
 - **`upload` ไม่ compile ให้** ต้อง compile ก่อนทุกครั้ง ไม่งั้นแฟลชไบนารีเก่า (`No changed sectors found`)
-- **`PartitionScheme=custom`** ใช้ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) · arduino-cli จะเช็คขนาดเทียบ 16 MB ไม่ใช่ 6 MB ต้องดูขนาดเอง (ตอนนี้ ~3.4 MB) · สเก็ตช์ทดสอบอื่น (`DrowsinessDiag`, `BenchTest`) ใช้ `PartitionScheme=app3M_fat9M_16MB` · ⚠️ แฟลชด้วยตารางนี้จะทับ partition ของ DrowsyFW (FFat/Trip หายได้) · ถ้าจะแฟลชสเก็ตช์ทดสอบแล้วกลับมา DrowsyFW ให้ build ด้วย `PartitionScheme=custom` และคัดลอก `partitions.csv` ของ DrowsyFW ไปไว้ข้างสเก็ตช์ (ทำแบบนี้เมื่อ 23 ต.ค. เลข trip ต่อเนื่องไม่รีเซ็ต)
+- **`PartitionScheme=custom`** ใช้ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) · arduino-cli จะเช็คขนาดเทียบ 16 MB ไม่ใช่ 6 MB ต้องดูขนาดเอง (ตอนนี้ ~3.66 MB) · สเก็ตช์ทดสอบอื่น (`DrowsinessDiag`, `BenchTest`) ใช้ `PartitionScheme=app3M_fat9M_16MB` · ⚠️ แฟลชด้วยตารางนี้จะทับ partition ของ DrowsyFW (FFat/Trip หายได้) · ถ้าจะแฟลชสเก็ตช์ทดสอบแล้วกลับมา DrowsyFW ให้ build ด้วย `PartitionScheme=custom` และคัดลอก `partitions.csv` ของ DrowsyFW ไปไว้ข้างสเก็ตช์ (ทำแบบนี้เมื่อ 23 ต.ค. เลข trip ต่อเนื่องไม่รีเซ็ต)
 - **`PSRAM=opi` บังคับ** (N16R8 = Octal PSRAM)
 - ต้องมี `secrets.h` (คัดลอกจาก `secrets.example.h`) · **อย่าเปิดอ่าน `secrets.h` ของผู้ใช้** ให้แก้เฉพาะบรรทัดที่สั่ง
 - แฟลชผ่าน **USB ของโมดูล** เท่านั้น (USB-C บน PCB มีแค่ไฟ) · ลำดับเข้า download mode, VID:PID และ error ที่เจอบ่อยอยู่ใน [firmware/README.md](firmware/README.md)
@@ -56,7 +56,7 @@ S=~/Documents/Arduino/DrowsyFW
   → P(ตาปิด) เฉลี่ยสองข้าง → Eye State (ปิด ≥ 0.5 · เปิด < 0.3 · ระหว่างนั้น = ไม่แน่ใจ)
 ```
 
-- **แบ่ง task ตาม core:** Core 1 = `vision` / `alert` / `sensor` (LDR→IR) · Core 0 = `net` (AP ตลอด + ลอง WiFi ที่บันทึกไว้ + NTP + mDNS), `log`, `sync`, เว็บ (AsyncWebServer ทำงานบน task ของ AsyncTCP)
+- **แบ่ง task ตาม core:** Core 1 = `vision` / `alert` / `sensor` (LDR→IR) · Core 0 = `net` (AP ตลอด + ลอง WiFi ที่บันทึกไว้ + NTP + mDNS), `log`, `sync`, `oled` (priority 1), เว็บ (AsyncWebServer ทำงานบน task ของ AsyncTCP)
 - task คุยกันผ่าน `SharedState` + mutex (`shared_state.h`) อ่านด้วย `stateSnapshot()` เขียนใน `StateGuard` · **ห้ามส่ง camera `fb` ข้าม core** — ภาพสดใช้การคัดลอกเข้า buffer แยก (`snapshotStore` ใน `vision.cpp`)
 - ค่าคงที่และเกณฑ์ทั้งหมดอยู่ใน `config.h` (เกณฑ์เวลาเป็นมิลลิวินาที ไม่นับเป็นเฟรม)
 - `face_eye.cpp` = หาหน้า + หมุนภาพ (ย้ายมาจากสเก็ตช์ทดลอง FaceSpike) · `human_face_detect*.{hpp,cpp}` + `human_face_detect_model.cpp` = โค้ดและโมเดลจาก esp-dl v3.3.11 (MIT) · `eye_classifier.cpp` + `eye_preprocess.h` + `eye_model_data.h` = โมเดลตา
@@ -66,7 +66,10 @@ S=~/Documents/Arduino/DrowsyFW
 - **ประวัติ Trip** (`trip_record.*` = รูปแบบไฟล์ + Trip Summary ไม่พึ่ง Arduino · `trip_log.*` = FFat + log task): 1 Trip = `/trips/<n>.s` (Sample 16 ไบต์/วิ) + `<n>.e` (Event) + `<n>.m` (ตำแหน่ง Sync + Summary + crc) · เวลาใน record = `millis()` แล้วเทียบเวลาจริงจาก Event `TimeKnown` · FFat ถึง 80% ลบ Trip ที่ Sync แล้ว · endpoint `/trips`, `/api/trips`, `/api/trips/<n>?from=&count=&step=`
 - **Sync** (`sync.cpp`): POST `/rest/v1/rpc/ingest` ของ Supabase ทีละ ≤ 300 Sample จาก Trip เก่าสุดที่ค้าง · Trip ปัจจุบันส่งทุก 30 วิ · สถานะอยู่ใน `/api/status` ช่อง `sync` · ตั้ง `DEVICE_SECRET` ใน `secrets.h` · SQL/ขั้นติดตั้ง/Cloud Dashboard อยู่ใน [cloud/README.md](cloud/README.md) (ADR 0003)
 - **TLS ต้องใช้ PSRAM:** RAM ภายในเหลือก้อนใหญ่สุด ~13 KB ไม่พอ buffer 16 KB ของ mbedTLS (0.3.0 ได้ `connection refused`) → `sync.cpp` เรียก `mbedtls_platform_set_calloc_free` ให้ก้อน ≥ 1 KB ไปอยู่ PSRAM
-- **ยังไม่ได้ทำ:** OLED
+- **จอ OLED** (`oled.cpp`, 0.3.7): SSD1306 driver เขียนเอง (ฟอนต์ 5x7 ขยาย x1–x4) ไม่ใช้ไลบรารี · หาจอไม่เจอ/จอหลุด ลองใหม่ทุก `OLED_RETRY_MS` · แสดงทีละหน้า ตัวใหญ่ 1 คำ + บรรทัดเล็ก ไม่กะพริบ หรี่จอด้วยเกณฑ์ LDR เดียวกับ IR (ผู้ใช้ตัดสิน 2 พ.ย.)
+  - เฟสบูต: `CONNECTING` + ชื่อ WiFi ที่กำลังลอง (`staTrying`) → `WIFI OK` + ชื่อ WiFi / `NO WIFI` + ชื่อ AP ค้าง `OLED_WIFI_SHOW_MS` (รอ `staTried` = net ลองรอบแรกจบ)
+  - ใช้งาน: `WAKE UP!` (ระดับ 3) > `DROWSY` (2) > `EYES ON THE ROAD` (Distraction) > ข้อความแทรก 2 วิ (`MUTED x MIN`, `WIFI LOST`/`WIFI OK`) > `NO READ` (Unmonitored) > `TIRED` (1) > `WAITING` (`driverPresent` = false: ยังไม่เห็นตา หรือหายเกิน `DRIVER_ABSENT_MS`) > `AWAKE`
+  - ค่าดีบักไม่แสดงบนจอ ดูหน้าเว็บของ Device · ปุ่มทดสอบ OLED บนเว็บแสดงภาพทดสอบทั้งจอ · **compile ผ่าน ยังไม่ได้ทดสอบบนบอร์ด**
 
 ## ML (`ml/`)
 

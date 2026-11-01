@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.3.6-wifi"     // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
+#define FW_VERSION "0.3.7-oled"     // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47
@@ -53,7 +53,11 @@
 #define LDR_PERIOD_MS          500
 
 // ---- OLED SSD1306 128x64 (I2C ขา 42/1) · ปุ่ม · ทดสอบฮาร์ดแวร์ ----
-#define OLED_PERIOD_MS         500    // วาดจอใหม่ทุกเท่านี้ (ส่งทั้งจอ ~25 ms ที่ 400 kHz)
+#define OLED_PERIOD_MS         200    // วาดจอใหม่ทุกเท่านี้ (ส่งทั้งจอ ~25 ms ที่ 400 kHz)
+#define OLED_WIFI_SHOW_MS      3000   // ตอนบูต: ค้างหน้า WIFI OK / NO WIFI เท่านี้ แล้วเข้าหน้าสถานะตา
+#define OLED_NOTICE_MS         2000   // ข้อความแทรกสั้น (MUTED, WIFI LOST/OK ระหว่างใช้งาน)
+#define OLED_CONTRAST_DAY      0xCF
+#define OLED_CONTRAST_DARK     1      // มืด (เกณฑ์ LDR เดียวกับ IR): หรี่จอไม่ให้แยงตาคนขับ
 #define OLED_RETRY_MS          5000   // หาจอไม่เจอ: ลองใหม่ทุกเท่านี้ (สาย dupont หลุด/เสียบใหม่)
 #define BTN_DEBOUNCE_MS        60     // กด BOOT ค้างเท่านี้จึงนับ = ปิดเสียง MUTE_DEFAULT_MS
 #define HW_TEST_MS             3000   // ปุ่มทดสอบในหน้าเว็บ: ทำงานนานเท่านี้

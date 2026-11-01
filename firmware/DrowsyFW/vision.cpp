@@ -301,6 +301,7 @@ static void visionTask(void*) {
       g_state.level = dr.level;
       g_state.distraction = dr.distraction;
       g_state.unmonitored = dr.unmonitored;
+      g_state.driverPresent = dr.driverPresent;
       g_state.lastFrameMs = now;
       g_state.eyeDistPx = eyeDist;
       g_state.tiltCompDeg = f.compDeg;
