@@ -33,6 +33,8 @@ struct SharedState {
   bool     abOn, abReset;      // web ตั้ง · vision อ่าน
   AbStats  ab;
   uint32_t visionFrames;
+  uint8_t  camFrameMean, camCenterMean;  // ความสว่างเฉลี่ย (gray) ทั้งภาพ / กลางภาพ 1/3 ของเฟรมล่าสุด
+  uint32_t camFrames, camFaceFrames;  // นับทุกเฟรม / เฟรมที่เจอหน้า · ใช้กับคำสั่งทดสอบกล้องทาง Serial
   uint32_t lastFrameMs;        // millis() ของเฟรมล่าสุดที่ vision ประมวลผลเสร็จ
 
   // drowsiness
@@ -50,6 +52,7 @@ struct SharedState {
   // sensor
   uint16_t ldrRaw;
   bool     irOn;
+  int8_t   irForce;            // -1 = ตาม LDR · 0 = บังคับปิด · 1 = บังคับเปิด (คำสั่งทดสอบทาง Serial)
 
   // trip / time
   uint32_t bootCount;          // = หมายเลข Trip บน Device นี้

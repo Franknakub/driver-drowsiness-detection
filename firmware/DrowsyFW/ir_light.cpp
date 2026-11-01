@@ -14,6 +14,9 @@ static void sensorTask(void*) {
     uint16_t raw = analogRead(PIN_LDR);           // มืด = ค่าสูง
     if (!irOn && raw >= LDR_DARK_ON_RAW)  irOn = true;
     if (irOn  && raw <= LDR_DARK_OFF_RAW) irOn = false;
+    int8_t force;
+    { StateGuard g; force = g_state.irForce; }
+    if (force >= 0) irOn = force;
     digitalWrite(PIN_IR, irOn ? HIGH : LOW);
     {
       StateGuard g;
