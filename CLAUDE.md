@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > - ต้นฉบับ PCB อยู่ใน **EasyEDA Pro cloud** — `.epro2` และ Gerber ในนี้เป็นแค่ export
 > - ต้นฉบับสเก็ตช์อยู่ที่ `~/Documents/Arduino/<ชื่อสเก็ตช์>/` — แก้และ build ที่นั่น แล้ว copy เข้า `firmware/` (ยกเว้น `secrets.h` และ `build/`)
 > - `../CLAUDE.md` ละเอียดกว่า (การต่อ EasyEDA API, สถานะล่าสุด, ประเด็นค้าง, กับดัก USB) อ่านคู่กันเสมอ
-> - งาน firmware/ML/กล่องอยู่บน branch **`firmware`** · คำศัพท์ใช้ตาม [GLOSSARY.md](GLOSSARY.md) · การตัดสินใจหลักอยู่ใน [docs/adr/](docs/adr/) · แผนและผลทดลองอยู่ใน [docs/firmware-plan.html](docs/firmware-plan.html)
+> - **`main` = งานของเพื่อน (PR #6, 0.3.6-wifi) เป็นฐาน** ตั้งแต่ 2 พ.ย. · งานใหม่แตก branch จาก `main` แล้วเปิด PR (ตอนนี้ `oled-phases` = 0.3.7-oled) · branch `firmware` = งานเก่าของเรา (OLED แบบ U8g2 + camtest 0.3.5) ที่ revert ออกจาก `main` ใน PR #5 เก็บไว้อ้างอิง ห้าม merge ตรง · คำศัพท์ใช้ตาม [GLOSSARY.md](GLOSSARY.md) · การตัดสินใจหลักอยู่ใน [docs/adr/](docs/adr/) · แผนและผลทดลองอยู่ใน [docs/firmware-plan.html](docs/firmware-plan.html)
 
 ## ก่อน commit
 
@@ -60,11 +60,13 @@ S=~/Documents/Arduino/DrowsyFW
 - task คุยกันผ่าน `SharedState` + mutex (`shared_state.h`) อ่านด้วย `stateSnapshot()` เขียนใน `StateGuard` · **ห้ามส่ง camera `fb` ข้าม core** — ภาพสดใช้การคัดลอกเข้า buffer แยก (`snapshotStore` ใน `vision.cpp`)
 - ค่าคงที่และเกณฑ์ทั้งหมดอยู่ใน `config.h` (เกณฑ์เวลาเป็นมิลลิวินาที ไม่นับเป็นเฟรม)
 - `face_eye.cpp` = หาหน้า + หมุนภาพ (ย้ายมาจากสเก็ตช์ทดลอง FaceSpike) · `human_face_detect*.{hpp,cpp}` + `human_face_detect_model.cpp` = โค้ดและโมเดลจาก esp-dl v3.3.11 (MIT) · `eye_classifier.cpp` + `eye_preprocess.h` + `eye_model_data.h` = โมเดลตา
+- **Device Dashboard** (`web_server.cpp`, หน้า `/`): การ์ดสถานะ + กราฟสด 2 นาที · `POST /api/ir mode=auto|on|off` (จำใน NVS) · `POST /api/test what=buzzer|green|red|ir|oled` ทดสอบฮาร์ดแวร์ `HW_TEST_MS` · `POST /api/mute` · `/wifi` (admin / `OTA_PASSWORD`) สแกน/เพิ่ม/ลบ WiFi เก็บใน NVS สูงสุด `WIFI_SAVED_MAX` ลองตามลำดับแล้วค่อย `WIFI_NETWORKS` ใน `secrets.h` · `/update` OTA
+- **ปุ่ม BOOT (GPIO0) = ปิดเสียง** ระดับ 1–2 และ Distraction `MUTE_DEFAULT_MS` (5 นาที) หลังบูตแล้ว (`alert.cpp`) · ระดับ 3 ปิดเสียงไม่ได้
 - **endpoint ดีบัก:** `/api/status` (JSON ทุกค่าใน state รวมเวลา rotate/detect/classify) · `/snapshot.jpg` (ภาพตั้งตรงพร้อมกรอบหน้า/ตา) · `/eyes.jpg` (ภาพ 32×32 ที่เข้าโมเดลจริง ซ้าย = ตาซ้ายของภาพ)
 - RAM ภายในเหลือก้อนใหญ่สุดแค่ ~30 KB หลัง WiFi + esp-dl · arena ของ TFLM จึงตั้ง 28 KB และ fallback ไป PSRAM
 - **logic ความง่วง** อยู่ใน `drowsiness.{h,cpp}` (class `DrowsinessJudge`, เกณฑ์ใน `drowsy_config.h`) · vision เรียกทุกเฟรมหลังได้ Eye State · นับเป็นเวลา (dt) ไม่นับเฟรม · Event ส่งผ่านคิวให้ log task พิมพ์ — **ห้ามพิมพ์ Serial จาก vision task** (USB CDC ที่ไม่มีใครเปิดพอร์ตทำให้ค้าง ~3 วิ เจอใน 0.2.6)
 - **ประวัติ Trip** (`trip_record.*` = รูปแบบไฟล์ + Trip Summary ไม่พึ่ง Arduino · `trip_log.*` = FFat + log task): 1 Trip = `/trips/<n>.s` (Sample 16 ไบต์/วิ) + `<n>.e` (Event) + `<n>.m` (ตำแหน่ง Sync + Summary + crc) · เวลาใน record = `millis()` แล้วเทียบเวลาจริงจาก Event `TimeKnown` · FFat ถึง 80% ลบ Trip ที่ Sync แล้ว · endpoint `/trips`, `/api/trips`, `/api/trips/<n>?from=&count=&step=`
-- **Sync** (`sync.cpp`): POST `/rest/v1/rpc/ingest` ของ Supabase ทีละ ≤ 300 Sample จาก Trip เก่าสุดที่ค้าง · Trip ปัจจุบันส่งทุก 30 วิ · สถานะอยู่ใน `/api/status` ช่อง `sync` · ตั้ง `DEVICE_SECRET` ใน `secrets.h` · SQL/ขั้นติดตั้ง/Cloud Dashboard อยู่ใน [cloud/README.md](cloud/README.md) (ADR 0003)
+- **Sync** (`sync.cpp`): POST `/rest/v1/rpc/ingest` ของ Supabase ทีละ ≤ 300 Sample จาก Trip เก่าสุดที่ค้าง · Trip ปัจจุบันส่งทุก 30 วิ · สถานะอยู่ใน `/api/status` ช่อง `sync` · ตั้ง `DEVICE_SECRET` ใน `secrets.h` ให้ตรงกับที่ลงทะเบียนใน Cloud Dashboard ("เพิ่ม Device") · **Supabase โปรเจกต์ `iatzjmxjbxcakotczoko` (ของเพื่อน ใช้ตั้งแต่ 27 ต.ค., ผู้ใช้ยืนยัน 2 พ.ย.)** · Trip ก่อนหน้านั้นอยู่ในโปรเจกต์เก่า `wcuagguhwtprdnguiozn` ซึ่งเลิกใช้แล้ว · SQL/ขั้นติดตั้ง/Cloud Dashboard อยู่ใน [cloud/README.md](cloud/README.md) (ADR 0003)
 - **TLS ต้องใช้ PSRAM:** RAM ภายในเหลือก้อนใหญ่สุด ~13 KB ไม่พอ buffer 16 KB ของ mbedTLS (0.3.0 ได้ `connection refused`) → `sync.cpp` เรียก `mbedtls_platform_set_calloc_free` ให้ก้อน ≥ 1 KB ไปอยู่ PSRAM
 - **จอ OLED** (`oled.cpp`, 0.3.7): SSD1306 driver เขียนเอง (ฟอนต์ 5x7 ขยาย x1–x4) ไม่ใช้ไลบรารี · หาจอไม่เจอ/จอหลุด ลองใหม่ทุก `OLED_RETRY_MS` · แสดงทีละหน้า ตัวใหญ่ 1 คำ + บรรทัดเล็ก ไม่กะพริบ หรี่จอด้วยเกณฑ์ LDR เดียวกับ IR (ผู้ใช้ตัดสิน 2 พ.ย.)
   - เฟสบูต: `CONNECTING` + ชื่อ WiFi ที่กำลังลอง (`staTrying`) → `WIFI OK` + ชื่อ WiFi / `NO WIFI` + ชื่อ AP ค้าง `OLED_WIFI_SHOW_MS` (รอ `staTried` = net ลองรอบแรกจบ)
