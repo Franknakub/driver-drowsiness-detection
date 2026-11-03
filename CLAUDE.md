@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > - ต้นฉบับ PCB อยู่ใน **EasyEDA Pro cloud** — `.epro2` และ Gerber ในนี้เป็นแค่ export
 > - ต้นฉบับสเก็ตช์อยู่ที่ `~/Documents/Arduino/<ชื่อสเก็ตช์>/` — แก้และ build ที่นั่น แล้ว copy เข้า `firmware/` (ยกเว้น `secrets.h` และ `build/`)
 > - `../CLAUDE.md` ละเอียดกว่า (การต่อ EasyEDA API, สถานะล่าสุด, ประเด็นค้าง, กับดัก USB) อ่านคู่กันเสมอ
-> - **`main` = งานของเพื่อน (PR #6, 0.3.6-wifi) เป็นฐาน** ตั้งแต่ 2 พ.ย. · งานใหม่แตก branch จาก `main` แล้วเปิด PR (0.3.7-oled merge แล้วใน PR #7 · ตอนนี้ `oled-info` = 0.3.8 ยังไม่ push) · branch `firmware` = งานเก่าของเรา (OLED แบบ U8g2 + camtest 0.3.5) ที่ revert ออกจาก `main` ใน PR #5 เก็บไว้อ้างอิง ห้าม merge ตรง · คำศัพท์ใช้ตาม [GLOSSARY.md](GLOSSARY.md) · การตัดสินใจหลักอยู่ใน [docs/adr/](docs/adr/) · แผนและผลทดลองอยู่ใน [docs/firmware-plan.html](docs/firmware-plan.html)
+> - **`main` = งานของเพื่อน (PR #6, 0.3.6-wifi) เป็นฐาน** ตั้งแต่ 2 พ.ย. · งานใหม่แตก branch จาก `main` แล้วเปิด PR (0.3.7-oled merge แล้วใน PR #7 · `oled-info` = 0.3.8 ยังไม่ push · `face-roi` แตกจาก `oled-info` = 0.3.9-face-roi ยังไม่ push ณ 3 พ.ย.) · branch `firmware` = งานเก่าของเรา (OLED แบบ U8g2 + camtest 0.3.5) ที่ revert ออกจาก `main` ใน PR #5 เก็บไว้อ้างอิง ห้าม merge ตรง · คำศัพท์ใช้ตาม [GLOSSARY.md](GLOSSARY.md) · การตัดสินใจหลักอยู่ใน [docs/adr/](docs/adr/) · แผนและผลทดลองอยู่ใน [docs/firmware-plan.html](docs/firmware-plan.html)
 
 ## ก่อน commit
 
@@ -42,17 +42,18 @@ S=~/Documents/Arduino/DrowsyFW
 - **ลบ/เปลี่ยนชื่อไฟล์ในสเก็ตช์แล้วต้อง `compile --clean`** แคชของ arduino-cli เก็บไฟล์เก่าไว้ (3 พ.ย. `display.cpp` ของ 0.3.6 ที่ลบไปแล้วยัง build อยู่ ทำให้ 0.3.7 compile ไม่ผ่าน)
 - **`PartitionScheme=custom`** ใช้ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) · arduino-cli จะเช็คขนาดเทียบ 16 MB ไม่ใช่ 6 MB ต้องดูขนาดเอง (ตอนนี้ ~3.66 MB) · สเก็ตช์ทดสอบอื่น (`DrowsinessDiag`, `BenchTest`) ใช้ `PartitionScheme=app3M_fat9M_16MB` · ⚠️ แฟลชด้วยตารางนี้จะทับ partition ของ DrowsyFW (FFat/Trip หายได้) · ถ้าจะแฟลชสเก็ตช์ทดสอบแล้วกลับมา DrowsyFW ให้ build ด้วย `PartitionScheme=custom` และคัดลอก `partitions.csv` ของ DrowsyFW ไปไว้ข้างสเก็ตช์ (ทำแบบนี้เมื่อ 23 ต.ค. เลข trip ต่อเนื่องไม่รีเซ็ต)
 - **`PSRAM=opi` บังคับ** (N16R8 = Octal PSRAM)
-- ต้องมี `secrets.h` (คัดลอกจาก `secrets.example.h`) · **อย่าเปิดอ่าน `secrets.h` ของผู้ใช้** ให้แก้เฉพาะบรรทัดที่สั่ง
+- ต้องมี `secrets.h` (คัดลอกจาก `secrets.example.h`) · **อย่าเปิดอ่าน `secrets.h` ของผู้ใช้** ให้แก้เฉพาะบรรทัดที่สั่ง · **build ใช้ตัวในโฟลเดอร์สเก็ตช์** ไม่ใช่ `firmware/DrowsyFW/secrets.h` ใน repo (3 พ.ย. ผู้ใช้แก้ตัวใน repo แล้วแฟลชไม่เปลี่ยน) · เทียบสองตัวได้โดยไม่เห็นค่า: hash ทีละบรรทัดแล้ว diff เฉพาะชื่อ `#define`
 - แฟลชผ่าน **USB ของโมดูล** เท่านั้น (USB-C บน PCB มีแค่ไฟ) · ลำดับเข้า download mode, VID:PID และ error ที่เจอบ่อยอยู่ใน [firmware/README.md](firmware/README.md)
 - **OTA:** อัปโหลด `build/.../DrowsyFW.ino.bin` ที่ `http://<ip>/update` (user `admin`, รหัส `OTA_PASSWORD`) · ผู้ใช้ต้องใส่รหัสเอง · ห้ามเลือก `DrowsyFW.ino.merged.bin` (16 MB) · ขณะ DrowsyFW รันอยู่และเสียบ USB (`303A:1001`) `upload -p COM6` รีเซ็ตเข้า download mode ได้เอง ไม่ต้องกดปุ่ม (ยืนยัน 18 ต.ค.) · 0.2.9 OTA ค้างถ้าอัปโหลดหลุดกลางทาง (แก้ใน 0.3.0: abort ของเก่าก่อน begin)
-- บอร์ดต่อ hotspot iPhone ได้ต่อเมื่อเปิด **Maximize Compatibility** (2.4 GHz) · AP ของบอร์ด `Drowsy-XXXX` → `192.168.4.1`
+- บอร์ดต่อ hotspot iPhone ได้ต่อเมื่อเปิด **Maximize Compatibility** (2.4 GHz) · hotspot Android ต่อได้ (3 พ.ย. แต่ปิดตัวเองบ่อย) · AP ของบอร์ด `Drowsy-XXXX` → `192.168.4.1` · คอมต้องอยู่วงเดียวกับบอร์ดถึงดึง `/api/status` ได้ (KUWIN ของมหาลัยใช้ไม่ได้)
+- serial บอกเหตุที่ต่อ WiFi ไม่ได้ (`net.cpp`, 0.3.9): `201 NO_AP_FOUND` = มองไม่เห็นเครือข่าย (hotspot ปิด/5 GHz/ไกล) · `15` / `202` = รหัสผิด · `210–212` = security ไม่ตรง · `36 STA_LEAVING` = ฝั่งบอร์ดตัดเองระหว่างลองใหม่ ไม่ใช่สาเหตุ
 - เปลี่ยน `FW_VERSION` ใน `config.h` ทุกครั้งที่แฟลช เพื่อยืนยันจาก `/api/status` ว่าบอร์ดรันตัวใหม่
 
 ## สถาปัตยกรรม DrowsyFW
 
 ```
 กล้อง OV5640 (RGB565 HVGA) → หมุนภาพ 270° (+ ชดเชยหน้าเอียงตามมุมเส้นตา)
-  → ESP-DL HumanFaceDetect (MSR+MNP, score thr 0.30) → จุดตา 2 ข้าง
+  → ROI 4:3 (0.3.9) → ESP-DL HumanFaceDetect (MSR 160×120 + MNP 48×48, score thr 0.30) → จุดตา 2 ข้าง
   → Eye Region ด้าน 0.8 × ระยะระหว่างตา → gray → 32×32 → int8 → CNN (TFLite Micro)
   → P(ตาปิด) เฉลี่ยสองข้าง → Eye State (ปิด ≥ 0.5 · เปิด < 0.3 · ระหว่างนั้น = ไม่แน่ใจ)
 ```
@@ -60,11 +61,16 @@ S=~/Documents/Arduino/DrowsyFW
 - **แบ่ง task ตาม core:** Core 1 = `vision` / `alert` / `sensor` (LDR→IR) · Core 0 = `net` (AP ตลอด + ลอง WiFi ที่บันทึกไว้ + NTP + mDNS), `log`, `sync`, `oled` (priority 1), เว็บ (AsyncWebServer ทำงานบน task ของ AsyncTCP)
 - task คุยกันผ่าน `SharedState` + mutex (`shared_state.h`) อ่านด้วย `stateSnapshot()` เขียนใน `StateGuard` · **ห้ามส่ง camera `fb` ข้าม core** — ภาพสดใช้การคัดลอกเข้า buffer แยก (`snapshotStore` ใน `vision.cpp`)
 - ค่าคงที่และเกณฑ์ทั้งหมดอยู่ใน `config.h` (เกณฑ์เวลาเป็นมิลลิวินาที ไม่นับเป็นเฟรม)
+- **ROI ของขั้น MSR** (`pickRoi` / `compUpdate` ใน `face_eye.cpp`, 0.3.9): ภาพตั้งตรง 320×480 ส่งทั้งเฟรมเข้า input 160×120 = กว้าง ½ สูง ¼ หน้าถูกบีบเตี้ย → **A/B 3 พ.ย. ทั้งเฟรมเจอหน้า 0% ทุกระยะ** (50 ซม.–1.5 ม.) ส่วน ROI ได้ 75–100% · จึงส่งแค่ส่วน 4:3 (ย่อเท่ากันสองแกน):
+  - เจอหน้า: ROI สูง `FACE_ROI_SCALE` (2.5) × ด้านยาวกรอบหน้า ต่ำสุด 160×120 (ไม่ขยายภาพ) · หน้าใหญ่เกินใช้แถบ 320×240 รอบหน้า — **ห้ามถอยไปใช้ทั้งเฟรม** (เคยทำแล้วหน้าใกล้หลุด 11/13 เฟรม)
+  - หลุดเกิน 2 เฟรม: ลองรอบตำแหน่งเดิมด้วย ROI กว้าง 2 เท่า 1 เฟรม แล้วไล่ `SEARCH` ทีละเฟรม (ทั้งเฟรม → แถบ 4:3 → ช่อง 160×120 ครึ่งกลางภาพ 6 ช่อง → มุมเอียง ±20/±40) รอบละ ~16 เฟรม
+  - พิกัดกรอบ/จุดตาแปลงกลับเป็นพิกัดเต็มภาพใน `ViewMSRPostprocessor` (offset `set_map`) · `FACE_ROI 0` = ทั้งเฟรมแบบเดิม
 - `face_eye.cpp` = หาหน้า + หมุนภาพ (ย้ายมาจากสเก็ตช์ทดลอง FaceSpike) · `human_face_detect*.{hpp,cpp}` + `human_face_detect_model.cpp` = โค้ดและโมเดลจาก esp-dl v3.3.11 (MIT) · `eye_classifier.cpp` + `eye_preprocess.h` + `eye_model_data.h` = โมเดลตา
-- **Device Dashboard** (`web_server.cpp`, หน้า `/`): การ์ดสถานะ + กราฟสด 2 นาที · `POST /api/ir mode=auto|on|off` (จำใน NVS) · `POST /api/test what=buzzer|green|red|ir|oled` ทดสอบฮาร์ดแวร์ `HW_TEST_MS` · `POST /api/mute` · `/wifi` (admin / `OTA_PASSWORD`) สแกน/เพิ่ม/ลบ WiFi เก็บใน NVS สูงสุด `WIFI_SAVED_MAX` ลองตามลำดับแล้วค่อย `WIFI_NETWORKS` ใน `secrets.h` · `/update` OTA
+- **Device Dashboard** (`web_server.cpp`, หน้า `/`): การ์ดสถานะ + กราฟสด 2 นาที · `POST /api/ir mode=auto|on|off` (จำใน NVS) · `POST /api/test what=buzzer|green|red|ir|oled` ทดสอบฮาร์ดแวร์ `HW_TEST_MS` · `POST /api/mute` · `/wifi` สแกน/เพิ่ม/ลบ WiFi (เข้าผ่าน AP ของบอร์ดไม่ต้อง login · ผ่าน WiFi อื่นต้อง admin / `OTA_PASSWORD` · `wifiAuthorized` เทียบ `localIP` ของ connection กับ `softAPIP`) เก็บใน NVS สูงสุด `WIFI_SAVED_MAX` ลองตามลำดับแล้วค่อย `WIFI_NETWORKS` ใน `secrets.h` · `/update` OTA
 - **ปุ่ม BOOT (GPIO0) = ปิดเสียง** ระดับ 1–2 และ Distraction `MUTE_DEFAULT_MS` (5 นาที) หลังบูตแล้ว (`alert.cpp`) · ระดับ 3 ปิดเสียงไม่ได้
-- **endpoint ดีบัก:** `/api/status` (JSON ทุกค่าใน state รวมเวลา rotate/detect/classify) · `/snapshot.jpg` (ภาพตั้งตรงพร้อมกรอบหน้า/ตา) · `/eyes.jpg` (ภาพ 32×32 ที่เข้าโมเดลจริง ซ้าย = ตาซ้ายของภาพ)
-- RAM ภายในเหลือก้อนใหญ่สุดแค่ ~30 KB หลัง WiFi + esp-dl · arena ของ TFLM จึงตั้ง 28 KB และ fallback ไป PSRAM
+- **endpoint ดีบัก:** `/api/status` (JSON ทุกค่าใน state รวมเวลา rotate/detect/classify และ `face_roi`) · `/snapshot.jpg` (ภาพตั้งตรงพร้อมกรอบหน้าเขียว/ตา · กรอบเทา = ROI ที่ส่งเข้า MSR) · `/eyes.jpg` (ภาพ 32×32 ที่เข้าโมเดลจริง ซ้าย = ตาซ้ายของภาพ) · `/api/ab?on=1` เทียบทางหาหน้าปัจจุบันกับทางเดิม (`faceEyesRunLegacy`: หมุนทั้งเฟรม + ส่งทั้งเฟรม) บนเฟรมเดียวกัน นับ `found_new` / `found_old` · รีเซ็ตตัวนับ = `on=0` แล้ว `on=1` · ระหว่างเปิด fps ลดราวครึ่ง
+- **ภาพสด:** `snapshotJpeg` ถือ mutex แค่ตอนคัดลอก แล้ววาดกรอบ + เข้ารหัส JPEG (~150–200 ms) หลังปล่อย · vision เก็บภาพแบบไม่รอ mutex ถ้าถือ mutex ตอนเข้ารหัส เฟรมใหม่ถูกข้ามจนหน้าเว็บได้ภาพเดิมซ้ำ (ภาพค้าง แก้ 3 พ.ย.) · `sendJpeg` ให้ buffer เป็นของแต่ละ response (ปล่อยเมื่อ response ถูกลบ) ดูพร้อมกันหลายเครื่องได้
+- RAM ภายในเหลือก้อนใหญ่สุดแค่ ~30 KB หลัง WiFi + esp-dl · arena ของ TFLM จึงตั้ง 28 KB และ fallback ไป PSRAM · **ตอนต่อเน็ตแล้ว Sync ส่ง Trip ค้าง (3 พ.ย.) เหลือ `free_internal_kb` 10–22 / ก้อนใหญ่สุด 7 KB** → JPEG ภาพสดเสียครึ่งล่าง · `cam_hal: FB-OVF` · fps ~3 · Sync `send payload failed` · ยังไม่ได้ไล่ว่าใครกิน
 - **logic ความง่วง** อยู่ใน `drowsiness.{h,cpp}` (class `DrowsinessJudge`, เกณฑ์ใน `drowsy_config.h`) · vision เรียกทุกเฟรมหลังได้ Eye State · นับเป็นเวลา (dt) ไม่นับเฟรม · Event ส่งผ่านคิวให้ log task พิมพ์ — **ห้ามพิมพ์ Serial จาก vision task** (USB CDC ที่ไม่มีใครเปิดพอร์ตทำให้ค้าง ~3 วิ เจอใน 0.2.6)
 - **ประวัติ Trip** (`trip_record.*` = รูปแบบไฟล์ + Trip Summary ไม่พึ่ง Arduino · `trip_log.*` = FFat + log task): 1 Trip = `/trips/<n>.s` (Sample 16 ไบต์/วิ) + `<n>.e` (Event) + `<n>.m` (ตำแหน่ง Sync + Summary + crc) · เวลาใน record = `millis()` แล้วเทียบเวลาจริงจาก Event `TimeKnown` · FFat ถึง 80% ลบ Trip ที่ Sync แล้ว · endpoint `/trips`, `/api/trips`, `/api/trips/<n>?from=&count=&step=`
 - **Sync** (`sync.cpp`): POST `/rest/v1/rpc/ingest` ของ Supabase ทีละ ≤ 300 Sample จาก Trip เก่าสุดที่ค้าง · Trip ปัจจุบันส่งทุก 30 วิ · สถานะอยู่ใน `/api/status` ช่อง `sync` · ตั้ง `DEVICE_SECRET` ใน `secrets.h` ให้ตรงกับที่ลงทะเบียนใน Cloud Dashboard ("เพิ่ม Device") · **Supabase โปรเจกต์ `iatzjmxjbxcakotczoko` (ของเพื่อน ใช้ตั้งแต่ 27 ต.ค., ผู้ใช้ยืนยัน 2 พ.ย.)** · Trip ก่อนหน้านั้นอยู่ในโปรเจกต์เก่า `wcuagguhwtprdnguiozn` ซึ่งเลิกใช้แล้ว · SQL/ขั้นติดตั้ง/Cloud Dashboard อยู่ใน [cloud/README.md](cloud/README.md) (ADR 0003)
@@ -85,6 +91,7 @@ cd ml
 - `train.ipynb` = pipeline ทั้งหมด (MRL → แบ่ง train/val/test **ตาม subject** → train → INT8 → `model_data.h` + `golden_data.h`) · วิธีตั้ง venv และรันอยู่ใน [ml/README.md](ml/README.md)
 - **preprocess ต้องเหมือนกันทุกบิต** ระหว่าง `preprocess.py` กับ `eye_preprocess.h` · แก้ฝั่งหนึ่งต้องแก้อีกฝั่งและรัน `test_preprocess.py`
 - การทดลองหลายแบบอยู่ใน `ml/output/experiments/` (`exp.py`, `run_queue.py`, `summ.py`, ทางรันต่ออยู่ใน `RESUME.md`) · train บน CPU (TensorFlow บน Windows ไม่ใช้ GPU)
+- **โมเดลบนบอร์ดตอนนี้ train จาก MRL อย่างเดียว → จับตาปิดกับกล้องเราไม่ได้:** 3 พ.ย. ที่ 50–60 ซม. (ระยะตา 36 px) หลับตา 0/13 เฟรม (P(ปิด) เฉลี่ย 0.11) ทั้งที่ภาพ `/eyes.jpg` เห็นเปลือกตาชัด · ที่ 1 ม. (ระยะตา ~22 px → Eye Region ~18 px) ภาพตาเปิด/ปิดเบลอจนคนก็แยกไม่ออก · ทางแก้ = fine-tune ด้วยภาพจากกล้องเรา **ผู้ใช้ให้ใช้เฉพาะภาพที่เก็บในรถ** (ภาพบนโต๊ะห้ามเข้าโมเดลที่ใช้จริง) · ยังไม่ได้เก็บ
 - เปลี่ยนโมเดลบนบอร์ด = คัดลอก `model_data.h` ไปเป็น `eye_model_data.h` ของสเก็ตช์ · ถ้าโมเดลใหม่ใช้ op นอกเหนือ CONV_2D / MAX_POOL_2D / MEAN / FULLY_CONNECTED / LOGISTIC ต้องเพิ่มใน resolver ของ `eye_classifier.cpp`
 
 ## กล่อง 3D (`enclosure/`)
