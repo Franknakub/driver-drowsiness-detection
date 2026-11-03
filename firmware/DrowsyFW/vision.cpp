@@ -9,6 +9,54 @@
 #include "drowsiness.h"
 #include "img_converters.h"
 #include "esp_heap_caps.h"
+#include <new>
+
+// ---- ภาพตาแบบดิบสำหรับเก็บข้อมูล fine-tune (/eyes.raw · ml/incar/capture.py) ----
+// เก็บภาพ 32x32 ที่เข้าโมเดลจริงทั้งสองตา + P ของเฟรมเดียวกัน เฉพาะตอนมีคนขอภายใน 3 วิ (เหมือนภาพสด)
+// รูปแบบ little-endian 2072 ไบต์: "EYR1" | seq u32 | ms u32 | pL f32 | pR f32 | eyeDist u16 | valid u8 (bit0 ซ้าย bit1 ขวา) | N u8 | ซ้าย N*N | ขวา N*N
+static constexpr int kRawN = 32;
+static constexpr size_t kRawLen = 24 + 2 * kRawN * kRawN;
+struct EyeRaw {
+  uint32_t seq = 0, ms = 0;
+  float pL = -1, pR = -1;
+  uint16_t eyeDist = 0;
+  uint8_t valid = 0;
+  uint8_t img[2][kRawN * kRawN];
+};
+static EyeRaw* s_raw = nullptr;                              // PSRAM (RAM ภายในตึง)
+static SemaphoreHandle_t s_rawMutex = nullptr;
+static volatile uint32_t s_rawWantedMs = 0;
+static uint32_t s_rawSeq = 0;
+
+static void eyeRawStore(float pL, float pR, int eyeDist, uint32_t now) {
+  s_rawSeq++;                                                 // นับทุกเฟรม ฝั่ง PC ใช้ดูว่าเฟรมหายไปกี่เฟรม
+  if (!s_raw || !s_rawWantedMs || millis() - s_rawWantedMs > 3000) return;
+  if (xSemaphoreTake(s_rawMutex, 0) != pdTRUE) return;        // web กำลังอ่านอยู่ ข้ามเฟรมนี้
+  EyeRaw& r = *s_raw;
+  r.seq = s_rawSeq; r.ms = now; r.pL = pL; r.pR = pR; r.eyeDist = (uint16_t)eyeDist;
+  // eyeLastInput ค้างค่าจากเฟรมก่อนได้เมื่อเฟรมนี้ไม่ได้จำแนก จึงนับว่าใช้ได้เฉพาะตาที่ได้ P ในเฟรมนี้
+  r.valid = (pL >= 0 && eyeLastInput(0, r.img[0]) ? 1 : 0) | (pR >= 0 && eyeLastInput(1, r.img[1]) ? 2 : 0);
+  xSemaphoreGive(s_rawMutex);
+}
+
+bool eyesRaw(uint8_t** out, size_t* outLen) {
+  s_rawWantedMs = millis();
+  if (!s_raw || !s_rawMutex || xSemaphoreTake(s_rawMutex, pdMS_TO_TICKS(200)) != pdTRUE) return false;
+  const EyeRaw& r = *s_raw;
+  if (!r.seq) { xSemaphoreGive(s_rawMutex); return false; }
+  uint8_t* b = (uint8_t*)malloc(kRawLen);
+  if (b) {
+    memcpy(b, "EYR1", 4);
+    memcpy(b + 4, &r.seq, 4); memcpy(b + 8, &r.ms, 4);
+    memcpy(b + 12, &r.pL, 4); memcpy(b + 16, &r.pR, 4);
+    memcpy(b + 20, &r.eyeDist, 2); b[22] = r.valid; b[23] = kRawN;
+    memcpy(b + 24, r.img, 2 * kRawN * kRawN);
+  }
+  xSemaphoreGive(s_rawMutex);
+  if (!b) return false;
+  *out = b; *outLen = kRawLen;
+  return true;
+}
 
 // ---- ภาพสดสำหรับ Device Dashboard ----
 // vision คัดลอกภาพที่หมุนแล้ว + ผลหาหน้าไว้ เฉพาะตอนมีคนเปิดดูภาพสดภายใน 3 วิที่ผ่านมา
@@ -288,6 +336,7 @@ static void visionTask(void*) {
     float p = combineEyes(pL, pR);
     frames++;
     uint32_t now = millis();
+    eyeRawStore(pL, pR, eyeDist, now);
     EyeState es = eyeStateFrom(f.found, p);
     const DrowsyResult& dr = s_judge.update(now, es);
     {
@@ -328,6 +377,9 @@ static void visionTask(void*) {
 
 void startVisionTask() {
   s_snapMutex = xSemaphoreCreateMutex();
+  s_rawMutex = xSemaphoreCreateMutex();
+  void* rawMem = heap_caps_malloc(sizeof(EyeRaw), MALLOC_CAP_SPIRAM);
+  if (rawMem) s_raw = new (rawMem) EyeRaw();
   s_eventQ = xQueueCreate(32, sizeof(DrowsyEvent));
   xTaskCreatePinnedToCore(visionTask, "vision", 16384, nullptr, 5, nullptr, CORE_VISION);
 }

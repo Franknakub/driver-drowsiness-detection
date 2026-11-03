@@ -33,3 +33,4 @@ struct DrowsyEvent;
 bool drowsyEventPop(DrowsyEvent& out, uint32_t waitMs);  // log task รับ Event จาก vision
 void drowsyEventPrint(const DrowsyEvent& e);
 bool eyesJpeg(uint8_t** out, size_t* outLen);       // ภาพตา 32x32 ที่เข้าโมเดลจริง · ผู้เรียกต้อง free(*out)
+bool eyesRaw(uint8_t** out, size_t* outLen);        // ภาพตา 32x32 ดิบ + P ของเฟรมเดียวกัน (รูปแบบใน vision.cpp) · ผู้เรียกต้อง free(*out)
