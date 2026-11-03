@@ -11,6 +11,7 @@ import sys
 
 import common
 
+sys.stdout.reconfigure(encoding="utf-8")
 ALARM = ("drowsy", "microsleep")
 LATE = 1.5
 
@@ -46,6 +47,11 @@ def mean(xs):
 
 def score(name):
     meta, rows = load_status(name)
+    return score_rows(name, meta, rows)
+
+
+def score_rows(name, meta, rows):
+    """rows: [{t, level, closed_ms, eye_state, pL, pR, face, distraction, fps}] จาก /api/status หรือจาก replay.py"""
     end = rows[-1]["t"] if rows else 0
     res = dict(name=name, fw=meta["fw"], protocol=meta["protocol"], person=meta.get("person"), light=meta.get("light"),
                glasses=meta.get("glasses"), rows=len(rows), duration_s=meta.get("duration_s"),
@@ -110,10 +116,11 @@ def verdict(r):
     return ("ผ่าน" if ok else "ยังไม่ผ่าน" if r["closes"] else "ดูตัวเลขเตือนผิด"), notes
 
 
-def report(name):
-    r = score(name)
+def report(name, r=None, save=True):
+    r = r or score(name)
     v, notes = verdict(r)
-    (common.DATA / name / "report.json").write_text(json.dumps(dict(r, verdict=v, notes=notes), ensure_ascii=False, indent=1), encoding="utf-8")
+    if save:
+        (common.DATA / name / "report.json").write_text(json.dumps(dict(r, verdict=v, notes=notes), ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"== {name} · fw {r['fw']} · {r['light']} · แว่น {r['glasses']} · fps {r['fps']} · เจอหน้า {r['face_found']}")
     if r["closes"]:
         print(f"หลับตา: เตือน {r['closes_alarmed']} · microsleep {r['closes_microsleep']} · ระหว่างหลับ Eye State = ปิด {r['closed_eye_state']} · P ซ้าย {r['closed_pL']} ขวา {r['closed_pR']}")
