@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.3.11-toon" // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
+#define FW_VERSION "0.3.12-p30" // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47
@@ -40,7 +40,7 @@
 #define FACE_ROI_SCALE       2.5f   // ความสูง ROI = 2.5 × ด้านยาวกรอบหน้าเฟรมก่อน (ต่ำสุด 120 = ไม่ขยายภาพ)
 #define EYE_CROP_SCALE       0.8f   // ด้าน Eye Region = 0.8 × ระยะระหว่างจุดตา (ให้ใกล้ภาพ MRL · ml/README.md)
 #define EYE_MIN_CROP_PX      10     // Eye Region เล็กกว่านี้ถือว่ามองไม่เห็นตา
-#define P_CLOSED_ON          0.5f   // P(ตาปิด) ≥ ค่านี้ = ปิด · < P_CLOSED_OFF = เปิด · ระหว่างนั้น = ไม่แน่ใจ
+#define P_CLOSED_ON          0.3f   // P(ตาปิด) ≥ ค่านี้ = ปิด · < P_CLOSED_OFF = เปิด · ผู้ใช้ตั้ง 4 พ.ย.: ตัดช่วงไม่แน่ใจ (0.3–0.5 นับเป็นปิด)
 #define P_CLOSED_OFF         0.3f   //   ค่าชั่วคราวจาก ml/output/threshold_note.md (วัดบน MRL) ต้องปรับใหม่ด้วยภาพกล้องเรา
 
 // ---- task: Core 1 = ภาพ/ML/Alert/เซนเซอร์ · Core 0 = WiFi stack, เว็บ, log, Sync ----
