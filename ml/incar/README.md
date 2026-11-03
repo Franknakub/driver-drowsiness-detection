@@ -8,6 +8,9 @@
 | `cartest.py` | พูดบอกท่าทีละช่วง อ่าน `/api/status` ~5 ครั้ง/วิ เก็บภาพตาจาก `/eyes.raw` ถ้ามี แล้วให้คะแนน |
 | `score.py` | ให้คะแนนรอบที่เก็บไว้ซ้ำ: `python score.py <ชื่อรอบ>` (ไม่ใส่ชื่อ = ทุกรอบ) |
 | `fake_board.py` | บอร์ดจำลองไว้ลองสคริปต์บน PC (ผลไม่มีความหมาย) |
+| `review.py` | หน้าตรวจป้ายภาพตา (เบราว์เซอร์บนเครื่อง) ก่อน fine-tune |
+| `finetune.py` | train MRL + ภาพในรถ แบ่งตามรอบ → INT8 → `model_data.h` + รายงานเทียบโมเดลบนบอร์ดทีละตา |
+| `replay.py` | เล่นรอบที่เก็บไว้ผ่าน `DrowsinessJudge` จริงบน PC (`firmware/tests/replay.cpp`) ด้วย P จากบอร์ด / โมเดลเดิม / โมเดลใหม่ |
 | `common.py` | ท่าทาง (protocol), รูปแบบ `/eyes.raw`, อ่านข้อมูลรอบ |
 
 ข้อมูลอยู่ที่ `ml/data/incar/<ชื่อรอบ>/` ซึ่งอยู่ใน `.gitignore` · **ภาพหน้า/ตาห้ามขึ้น git**
@@ -62,3 +65,28 @@ cd ml/incar
 ../.venv/Scripts/python.exe fake_board.py 8795        # หน้าต่างหนึ่ง
 ../.venv/Scripts/python.exe cartest.py --host 127.0.0.1:8795 --name dryrun --yes --no-voice
 ```
+
+## ถ้าผลไม่ผ่านเพราะโมเดลตา: fine-tune
+
+ต้องใช้รอบที่เก็บด้วย firmware 0.3.13-raw ขึ้นไป (มีภาพตาใน `eyes.npy`) · ทุกคำสั่งรันใน `ml/incar` ด้วย `../.venv/Scripts/python.exe`
+
+1. **ตรวจป้าย** `review.py` → <http://127.0.0.1:8797/> เลือกรอบ เปิด "เฉพาะที่น่าสงสัย" แล้วกดภาพที่ป้ายผิด (ตามท่า → เปิด → ปิด → ทิ้ง) บันทึกเองทันที
+   ป้ายที่ train ได้มีแค่ เปิด/ปิด · เหลือบมอง หรี่ตา กะพริบ ขับจริง ไม่เข้า train เว้นแต่แก้เป็นเปิด/ปิดเอง
+2. **แบ่งรอบ** อย่างน้อย train 2 รอบ · val 1 รอบ · test 1 รอบที่ไม่เคยใช้ (คนละวัน/แสง หรือคนละคน) · ห้ามรอบเดียวกันอยู่สองชุด
+3. **train**
+   ```bash
+   ../.venv/Scripts/python.exe finetune.py --train รอบ1 รอบ2 --val รอบ3 --test รอบ4 --run 2026-11-06_a
+   ```
+   CPU ราว 5–15 นาที · ได้ `ml/output/incar/<run>/report.md` เทียบ recall ตาปิด / ตาเปิดที่ทายเป็นปิด ของโมเดลใหม่กับโมเดลบนบอร์ด ทีละตา ที่เกณฑ์ 0.3 และ 0.5 พร้อม MRL test (ต้องไม่ตกมาก)
+4. **เล่นซ้ำก่อนแฟลช**
+   ```bash
+   ../.venv/Scripts/python.exe replay.py รอบ4 --run 2026-11-06_a           # เกณฑ์จาก config.h
+   ../.venv/Scripts/python.exe replay.py รอบ4 --run 2026-11-06_a --on 0.5 --off 0.3   # ลองเกณฑ์อื่น
+   ```
+   ดูบรรทัด `new` เทียบ `board_actual` (ผลจริงของบอร์ด): ต้องเตือนครบมากขึ้น และเตือนผิดไม่เพิ่ม
+   แถว `board` ควรใกล้ `board_actual` ถ้าห่างกันมาก replay เห็นเฟรมไม่พอ (ดึง /eyes.raw ไม่ทัน) อย่าเชื่อตัวเลขมาก
+5. **ใส่บอร์ด** คัดลอก `ml/output/incar/<run>/model_data.h` ไปทับ `~/Documents/Arduino/DrowsyFW/eye_model_data.h` → เปลี่ยน `FW_VERSION` → compile → แฟลช → ทดสอบในรถอีกรอบด้วย `cartest.py`
+   (ถ้าเปลี่ยนเกณฑ์ ให้แก้ `P_CLOSED_ON` / `P_CLOSED_OFF` ใน `config.h` ด้วย)
+
+ลองทั้งชุดบน PC ได้ด้วยรอบจาก `fake_board.py` และ `--quick` (1 epoch ผลไม่มีความหมาย)
+
