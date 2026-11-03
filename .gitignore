@@ -27,3 +27,6 @@ cloud/test/node_modules/
 cloud/test/package-lock.json
 firmware/tests/trip_record_test
 firmware/tests/trip_fixture.json
+
+# design tool output (taste-skill)
+.taste-skill/
