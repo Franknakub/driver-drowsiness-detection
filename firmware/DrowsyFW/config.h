@@ -3,7 +3,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "0.3.7-oled"     // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
+#define FW_VERSION "0.3.10-dash" // ไม่เกิน 15 ตัว (เก็บในหัวไฟล์ Trip)
 
 // ---- GPIO (GPIO map ใน CLAUDE.md · ห้ามใช้ 26–37) ----
 #define PIN_LED_GREEN 47
@@ -36,6 +36,8 @@
 #define CAM_ROTATE_CW        270    // ภาพจากกล้องตะแคง 90° · หมุนรวมกับการย่อตอนหยิบพิกเซลเข้าโมเดลหาหน้า ไม่หมุนทั้งเฟรม
 #define FACE_TILT_COMP       1      // หมุนภาพชดเชยหน้าเอียงตามมุมเส้นตา
 #define FACE_MSR_SCORE_THR   0.30f  // ค่าเดิม 0.5 ตัดหน้าในภาพที่หมุนชดเชยทิ้ง
+#define FACE_ROI             1      // ส่งแค่ส่วน 4:3 รอบหน้า/แถบค้นหาเข้า MSR แทนทั้งเฟรม (หน้าไกลใหญ่ขึ้น 2–4 เท่า) · 0 = ทั้งเฟรมแบบเดิม
+#define FACE_ROI_SCALE       2.5f   // ความสูง ROI = 2.5 × ด้านยาวกรอบหน้าเฟรมก่อน (ต่ำสุด 120 = ไม่ขยายภาพ)
 #define EYE_CROP_SCALE       0.8f   // ด้าน Eye Region = 0.8 × ระยะระหว่างจุดตา (ให้ใกล้ภาพ MRL · ml/README.md)
 #define EYE_MIN_CROP_PX      10     // Eye Region เล็กกว่านี้ถือว่ามองไม่เห็นตา
 #define P_CLOSED_ON          0.5f   // P(ตาปิด) ≥ ค่านี้ = ปิด · < P_CLOSED_OFF = เปิด · ระหว่างนั้น = ไม่แน่ใจ
@@ -54,8 +56,6 @@
 
 // ---- OLED SSD1306 128x64 (I2C ขา 42/1) · ปุ่ม · ทดสอบฮาร์ดแวร์ ----
 #define OLED_PERIOD_MS         200    // วาดจอใหม่ทุกเท่านี้ (ส่งทั้งจอ ~25 ms ที่ 400 kHz)
-#define OLED_WIFI_SHOW_MS      3000   // ตอนบูต: ค้างหน้า WIFI OK / NO WIFI เท่านี้ แล้วเข้าหน้าสถานะตา
-#define OLED_NOTICE_MS         2000   // ข้อความแทรกสั้น (MUTED, WIFI LOST/OK ระหว่างใช้งาน)
 #define OLED_CONTRAST_DAY      0xCF
 #define OLED_CONTRAST_DARK     1      // มืด (เกณฑ์ LDR เดียวกับ IR): หรี่จอไม่ให้แยงตาคนขับ
 #define OLED_RETRY_MS          5000   // หาจอไม่เจอ: ลองใหม่ทุกเท่านี้ (สาย dupont หลุด/เสียบใหม่)

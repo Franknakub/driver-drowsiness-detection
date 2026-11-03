@@ -31,6 +31,7 @@ struct SharedState {
   float    pLeft, pRight;      // P(ตาปิด) ของตาซ้าย/ขวาในภาพ · -1 = ใช้ไม่ได้
   int16_t  eyeDistPx;          // ระยะระหว่างจุดตาในภาพที่หมุนแล้ว
   int16_t  tiltCompDeg;        // มุมที่หมุนชดเชยหน้าเอียงในเฟรมล่าสุด
+  int16_t  roi[4];             // บริเวณที่ส่งเข้า MSR ในเฟรมล่าสุด (x0,y0,x1,y1) · ทั้งเฟรม = 0,0,320,480
   float    rotateMs, detectMs, classifyMs;
   float    preMs;              // ส่วนของ detectMs ที่ esp-dl หยิบพิกเซล (หมุน + ย่อ) เข้าโมเดล
   bool     abOn, abReset;      // web ตั้ง · vision อ่าน
@@ -46,7 +47,7 @@ struct SharedState {
   DrowsinessLevel level;
   bool            distraction;
   bool            unmonitored;
-  bool            driverPresent; // false = ยังไม่เคยเห็นตา หรือ Driver ลงจากรถ · สำหรับหน้า WAITING บนจอ (ยังไม่ได้ใส่ใน oled.cpp)
+  bool            driverPresent; // false = ยังไม่เคยเห็นตา หรือ Driver ลงจากรถ · จอแสดง WAITING
 
   // alert
   uint32_t mutedUntilMs;       // millis() ที่การปิดเสียงหมดอายุ · 0 = ไม่ได้ปิด
@@ -72,7 +73,7 @@ struct SharedState {
   // net
   bool     staConnected;
   char     staTrying[33];      // WiFi ที่กำลังลองต่อ · "" = ไม่ได้ลอง
-  bool     staTried;           // ลองต่อรอบแรกหลังบูตเสร็จแล้ว (จอใช้จบเฟส WiFi)
+  bool     staTried;           // ลองต่อรอบแรกหลังบูตเสร็จแล้ว (จอแยก LAN starting / no wifi)
   char     staSsid[33];
   char     staIp[16];
   char     apSsid[33];

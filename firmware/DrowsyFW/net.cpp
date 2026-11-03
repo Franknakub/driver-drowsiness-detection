@@ -145,12 +145,24 @@ static void doScan() {
   s_scanning = false;
 }
 
+// เหตุผลที่ STA หลุด/ต่อไม่ได้ระหว่างลองแต่ละครั้ง (wifi_err_reason_t) เก็บทุกตัวตามลำดับ
+// 201 = ไม่เจอ SSID, 202/15 = รหัสผิด, 210-212 = security ไม่ตรง · 36/8 = ฝั่งเราสั่งตัดเอง (ไม่ใช่สาเหตุ)
+static volatile uint16_t s_reasons[6];
+static volatile uint8_t s_nReasons = 0;
+
 static bool tryOne(const char* ssid, const char* pass) {
   Serial.printf("[net] trying %s\n", ssid);
   { StateGuard g; strlcpy(g_state.staTrying, ssid, sizeof(g_state.staTrying)); }
+  s_nReasons = 0;
   WiFi.begin(ssid, pass[0] ? pass : nullptr);
   for (int i = 0; i < 20 && WiFi.status() != WL_CONNECTED; i++) vTaskDelay(pdMS_TO_TICKS(500));
   if (WiFi.status() == WL_CONNECTED) return true;
+  Serial.printf("[net] %s failed: status %d, reasons:", ssid, (int)WiFi.status());
+  int n = s_nReasons;
+  if (!n) Serial.print(" (none: timed out)");
+  for (int i = 0; i < n && i < 6; i++)
+    Serial.printf(" %u %s", s_reasons[i], WiFi.disconnectReasonName((wifi_err_reason_t)s_reasons[i]));
+  Serial.println();
   WiFi.disconnect(false, false);
   return false;
 }
@@ -171,6 +183,9 @@ static bool tryNetworks() {
 static void netTask(void*) {
   WiFi.mode(WIFI_AP_STA);
   WiFi.setSleep(false);
+  WiFi.onEvent([](arduino_event_id_t, arduino_event_info_t info) {
+    if (s_nReasons < 6) s_reasons[s_nReasons++] = info.wifi_sta_disconnected.reason;
+  }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
   uint8_t mac[6];
   WiFi.macAddress(mac);
