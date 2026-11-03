@@ -147,6 +147,7 @@ static void doScan() {
 
 static bool tryOne(const char* ssid, const char* pass) {
   Serial.printf("[net] trying %s\n", ssid);
+  { StateGuard g; strlcpy(g_state.staTrying, ssid, sizeof(g_state.staTrying)); }
   WiFi.begin(ssid, pass[0] ? pass : nullptr);
   for (int i = 0; i < 20 && WiFi.status() != WL_CONNECTED; i++) vTaskDelay(pdMS_TO_TICKS(500));
   if (WiFi.status() == WL_CONNECTED) return true;
@@ -203,6 +204,8 @@ static void netTask(void*) {
     {
       StateGuard g;
       g_state.staConnected = up;
+      g_state.staTrying[0] = 0;          // ล้างพร้อมกับตั้ง staConnected จอจะไม่เห็นช่วงที่ลองจบแต่ยังไม่รู้ผล
+      g_state.staTried = true;
       strlcpy(g_state.staSsid, up ? WiFi.SSID().c_str() : "", sizeof(g_state.staSsid));
       strlcpy(g_state.staIp, up ? WiFi.localIP().toString().c_str() : "", sizeof(g_state.staIp));
     }

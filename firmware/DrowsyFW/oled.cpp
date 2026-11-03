@@ -1,12 +1,14 @@
-// oled_task: จอ SSD1306 128x64 แสดงสถานะ (เขียน driver เอง ไม่ใช้ไลบรารี เหมือน BenchTest)
-//   แถว 0–1 = หัวข้อตัวใหญ่ (ระดับความง่วง / Distraction) กลับสีเมื่อมีการเตือน
-//   แถว 2–7 = ตา + P(ตาปิด) · PERCLOS + fps · IR + LDR · เครือข่าย · Sync · ปิดเสียง/Trip
+// oled_task: จอ SSD1306 128x64 สำหรับคนขับ (driver เขียนเอง ไม่ใช้ไลบรารี เหมือน BenchTest)
+//   แสดงทีละหน้า ตัวใหญ่ 1 คำ + บรรทัดเล็ก 1 บรรทัด · ไม่กะพริบ · หรี่จอเมื่อมืด (เกณฑ์ LDR เดียวกับ IR)
+//   เฟส 1 (บูต): CONNECTING -> WIFI OK + ชื่อ WiFi / NO WIFI + ชื่อ AP ค้าง OLED_WIFI_SHOW_MS
+//   เฟส 2 (ใช้งาน): ลำดับ WAKE UP! > DROWSY > EYES ON THE ROAD > ข้อความแทรก > NO READ > TIRED > WAITING > AWAKE
+//   ข้อความแทรก OLED_NOTICE_MS: MUTED (กด BOOT / ปิดเสียงจากเว็บ) · WIFI LOST / WIFI OK ระหว่างใช้งาน
+//   ค่าดีบัก (P ตาปิด, fps, LDR, IP, Sync) ดูที่หน้าเว็บของ Device แทน
 // อยู่ Core 0 priority ต่ำ: I2C ส่งทั้งจอ ~25 ms ไม่แย่งเวลา vision
 #include <Wire.h>
 #include "config.h"
 #include "shared_state.h"
 #include "tasks.h"
-#include "sync.h"
 
 static const uint8_t FONT5X7[95][5] = {   // ASCII 0x20..0x7E · คอลัมน์ละไบต์ บิต 0 = บนสุด
   {0x00,0x00,0x00,0x00,0x00},{0x00,0x00,0x5F,0x00,0x00},{0x00,0x07,0x00,0x07,0x00},{0x14,0x7F,0x14,0x7F,0x14},
@@ -79,76 +81,58 @@ static const uint8_t* glyph(char ch) {
   return FONT5X7[ch - 0x20];
 }
 
-// ตัวเล็ก 6x8 (21 ตัวต่อแถว) ที่ page p
-static void text(int x, int p, const char* s) {
-  for (; *s && x <= 122; s++, x += 6) {
+static void pixel(int x, int y) {
+  if (x >= 0 && x < 128 && y >= 0 && y < 64) s_fb[y >> 3][x] |= 1 << (y & 7);
+}
+
+// ตัว 5x7 ขยาย scale เท่า มุมซ้ายบนที่ (x, y) · ช่องไฟ 1 คอลัมน์ (x scale) ระหว่างตัว
+static void textScaled(int x, int y, const char* s, int scale) {
+  for (; *s; s++, x += 6 * scale) {
     const uint8_t* g = glyph(*s);
-    for (int i = 0; i < 5; i++) s_fb[p][x + i] = g[i];
-    s_fb[p][x + 5] = 0;
+    for (int i = 0; i < 5; i++)
+      for (int b = 0; b < 7; b++)
+        if (g[i] & (1 << b))
+          for (int dx = 0; dx < scale; dx++)
+            for (int dy = 0; dy < scale; dy++) pixel(x + i * scale + dx, y + b * scale + dy);
   }
 }
 
-// ตัวใหญ่ 12x16 (10 ตัวต่อแถว) ที่ page p และ p+1 · ขยายแต่ละพิกเซลเป็น 2x2
-static void textBig(int x, int p, const char* s) {
-  for (; *s && x <= 116; s++, x += 12) {
-    const uint8_t* g = glyph(*s);
-    for (int i = 0; i < 5; i++) {
-      uint16_t v = 0;
-      for (int b = 0; b < 8; b++) if (g[i] & (1 << b)) v |= 3u << (2 * b);
-      for (int d = 0; d < 2; d++) { s_fb[p][x + 2 * i + d] = v & 0xFF; s_fb[p + 1][x + 2 * i + d] = v >> 8; }
-    }
-  }
+static int textWidth(const char* s, int scale) {
+  int n = strlen(s);
+  return n ? (6 * n - 1) * scale : 0;
 }
 
-static const char* eyeShort(EyeState e) {
-  switch (e) {
-    case EyeState::Open:       return "open";
-    case EyeState::Closed:     return "CLOSED";
-    case EyeState::Uncertain:  return "unsure";
-    case EyeState::NotVisible: return "no eyes";
-    default:                   return "--";
+// scale ใหญ่สุดไม่เกิน maxScale ที่ทุกบรรทัดกว้างไม่เกินจอ
+static int fitScale(const char* const* lines, int n, int maxScale) {
+  for (int sc = maxScale; sc > 1; sc--) {
+    bool ok = true;
+    for (int i = 0; i < n; i++) if (textWidth(lines[i], sc) > 128) ok = false;
+    if (ok) return sc;
   }
+  return 1;
 }
 
-static void render(const SharedState& s, const SyncStatus& ss, uint32_t now) {
-  memset(s_fb, 0, sizeof(s_fb));
-  char line[24];
+struct Screen {
+  const char* big1;
+  const char* big2;    // บรรทัดที่สองของตัวใหญ่ · nullptr = ไม่มี (ใช้กับ WAKE / UP! ให้ตัวใหญ่สุด)
+  const char* small;   // nullptr = ไม่มี
+};
 
-  // หัวข้อ: เรียงตามความสำคัญเดียวกับเสียงเตือนใน alert.cpp
-  const char* head = "NORMAL";
-  if (s.level == DrowsinessLevel::Microsleep)  head = "MICROSLEEP";
-  else if (s.level == DrowsinessLevel::Drowsy) head = "DROWSY";
-  else if (s.distraction)                      head = "DISTRACTED";
-  else if (s.level == DrowsinessLevel::Fatigue) head = "FATIGUE";
-  else if (s.unmonitored)                      head = "NO SIGNAL";
-  int w = strlen(head) * 12;
-  textBig((128 - w) / 2, 0, head);
-  bool alarm = s.level != DrowsinessLevel::Normal || s.distraction;
-  if (alarm && (now / 500) % 2) for (int p = 0; p < 2; p++) for (int c = 0; c < 128; c++) s_fb[p][c] ^= 0xFF;
-
-  bool seen = s.eyeState == EyeState::Open || s.eyeState == EyeState::Closed || s.eyeState == EyeState::Uncertain;
-  if (seen) snprintf(line, sizeof(line), "Eye %-7s P %.2f", eyeShort(s.eyeState), s.pClosed);
-  else      snprintf(line, sizeof(line), "Eye %-7s P  --", eyeShort(s.eyeState));
-  text(0, 2, line);
-  if (s.perclosReady) snprintf(line, sizeof(line), "PERCLOS %3d%% %4.1ffps", (int)(s.perclos * 100 + 0.5f), s.fps);
-  else                snprintf(line, sizeof(line), "PERCLOS --   %4.1ffps", s.fps);
-  text(0, 3, line);
-  const char* mode = s.irMode == IrMode::On ? "ON" : s.irMode == IrMode::Off ? "OFF" : "AUTO";
-  snprintf(line, sizeof(line), "IR %-3s %-4s LDR %4u", s.irOn ? "on" : "off", mode, s.ldrRaw);
-  text(0, 4, line);
-  if (s.staConnected) snprintf(line, sizeof(line), "WiFi %s", s.staIp);
-  else                snprintf(line, sizeof(line), "AP %s", s.apSsid);
-  text(0, 5, line);
-  if (!ss.configured)  snprintf(line, sizeof(line), "Sync off");
-  else if (ss.lastOkMs && ss.lastHttp >= 200 && ss.lastHttp < 300)
-                       snprintf(line, sizeof(line), "Sync ok %lus ago", (unsigned long)((now - ss.lastOkMs) / 1000));
-  else if (ss.failCalls) snprintf(line, sizeof(line), "Sync err %d", ss.lastHttp);
-  else                 snprintf(line, sizeof(line), "Sync waiting");
-  text(0, 6, line);
-  long muteLeft = s.mutedUntilMs ? (long)(int32_t)(s.mutedUntilMs - now) / 1000 : 0;
-  if (muteLeft > 0) snprintf(line, sizeof(line), "MUTED %ld:%02ld", muteLeft / 60, muteLeft % 60);
-  else              snprintf(line, sizeof(line), "Trip %u  %s", (unsigned)s.bootCount, FW_VERSION);
-  text(0, 7, line);
+// ตัวใหญ่สูงสุด x4 (24x28 ต่อตัว) · ตัวเล็ก x2 ถ้าพอ ไม่งั้น x1 · จัดกลางทั้งแนวตั้งและแนวนอน
+static void drawScreen(const Screen& sc) {
+  const char* big[2] = {sc.big1, sc.big2};
+  int nBig = sc.big2 ? 2 : 1;
+  int ss = sc.small ? fitScale(&sc.small, 1, 2) : 0;
+  int smallH = ss ? 6 + 7 * ss : 0;               // ช่องว่าง 6 + ความสูงตัวเล็ก
+  int bs = fitScale(big, nBig, 4);
+  while (bs > 1 && nBig * 7 * bs + (nBig - 1) * 2 * bs + smallH > 64) bs--;
+  int y = (64 - (nBig * 7 * bs + (nBig - 1) * 2 * bs + smallH)) / 2;
+  for (int i = 0; i < nBig; i++) {
+    textScaled((128 - textWidth(big[i], bs)) / 2, y, big[i], bs);
+    y += 9 * bs;                                    // สูง 7 + ช่องว่างระหว่างบรรทัด 2
+  }
+  y -= 2 * bs;
+  if (ss) textScaled((128 - textWidth(sc.small, ss)) / 2, y + 6, sc.small, ss);
 }
 
 // ทดสอบจากหน้าเว็บ: สลับทั้งจอขาว / ตาราง ให้เห็นว่าทุกพิกเซลติดและขอบครบ
@@ -158,21 +142,97 @@ static void renderTest(uint32_t now) {
     for (int c = 0; c < 128; c++) s_fb[p][c] = white ? 0xFF : ((c & 1) ? 0xAA : 0x55);
 }
 
+// เลือกหน้าที่จะแสดง · เก็บสถานะเฟสบูตและข้อความแทรกข้ามเฟรม
+class ScreenPicker {
+ public:
+  Screen pick(const SharedState& s, uint32_t now) {
+    // ข้อความแทรก: ปิดเสียง (กด BOOT ซ้ำก็แสดงใหม่) · WiFi หลุด/กลับมาหลังจบเฟสบูต
+    bool muted = s.mutedUntilMs && (int32_t)(s.mutedUntilMs - now) > 0;
+    if (muted && s.mutedUntilMs != prevMuteUntil_) {
+      snprintf(noticeLine_, sizeof(noticeLine_), "%lu MIN",
+               (unsigned long)((s.mutedUntilMs - now + 59999) / 60000));
+      notice_ = {"MUTED", nullptr, noticeLine_};
+      noticeEndMs_ = now + OLED_NOTICE_MS;
+    }
+    prevMuteUntil_ = s.mutedUntilMs;
+    if (!boot_ && s.staConnected != prevConnected_) {
+      if (s.staConnected) {
+        snprintf(noticeLine_, sizeof(noticeLine_), "%.21s", s.staSsid);
+        notice_ = {"WIFI OK", nullptr, noticeLine_};
+      } else {
+        notice_ = {"WIFI LOST", nullptr, "TRYING AGAIN"};
+      }
+      noticeEndMs_ = now + OLED_NOTICE_MS;
+    }
+    prevConnected_ = s.staConnected;
+
+    // เฟสบูต: รอลอง WiFi รอบแรกจบ แล้วค้างผลไว้ OLED_WIFI_SHOW_MS
+    Screen bootScreen = {};
+    if (boot_) {
+      if (!s.staTried || s.staTrying[0]) {
+        snprintf(bootLine_, sizeof(bootLine_), "%.21s", s.staTrying[0] ? s.staTrying : "WIFI");
+        bootScreen = {"CONNECTING", nullptr, bootLine_};
+      } else {
+        if (!bootEndMs_) bootEndMs_ = now + OLED_WIFI_SHOW_MS;
+        if (s.staConnected) {
+          snprintf(bootLine_, sizeof(bootLine_), "%.21s", s.staSsid);
+          bootScreen = {"WIFI OK", nullptr, bootLine_};
+        } else {
+          snprintf(bootLine_, sizeof(bootLine_), "AP %.18s", s.apSsid);
+          bootScreen = {"NO WIFI", nullptr, bootLine_};
+        }
+        if ((int32_t)(now - bootEndMs_) >= 0) boot_ = false;
+      }
+    }
+
+    if (s.level == DrowsinessLevel::Microsleep)  return {"WAKE", "UP!", nullptr};
+    if (s.level == DrowsinessLevel::Drowsy)      return {"DROWSY", nullptr, "PULL OVER"};
+    if (s.distraction)                           return {"EYES ON", nullptr, "THE ROAD"};
+    if (noticeEndMs_ && (int32_t)(noticeEndMs_ - now) > 0) return notice_;
+    if (boot_ && bootScreen.big1)                return bootScreen;
+    if (s.unmonitored)                           return {"NO READ", nullptr, "CHECK CAMERA"};
+    if (s.level == DrowsinessLevel::Fatigue)     return {"TIRED", nullptr, "TAKE A BREAK"};
+    if (!s.driverPresent)                        return {"WAITING", nullptr, "LOOK AT CAMERA"};
+    return {"AWAKE", nullptr, nullptr};
+  }
+
+ private:
+  bool     boot_ = true;
+  uint32_t bootEndMs_ = 0;
+  char     bootLine_[24];
+  bool     prevConnected_ = false;
+  uint32_t prevMuteUntil_ = 0;
+  Screen   notice_ = {};
+  uint32_t noticeEndMs_ = 0;
+  char     noticeLine_[24];
+};
+
 static void oledTask(void*) {
   Wire.begin(PIN_OLED_SDA, PIN_OLED_SCL);
   Wire.setClock(400000);
   bool ok = false;
+  bool dark = false;
+  int contrast = -1;
+  ScreenPicker picker;
   for (;;) {
     uint32_t now = millis();
     if (!ok) {
       ok = probe();
-      if (ok) { initDisplay(); Serial.printf("[oled] SSD1306 at 0x%02X\n", s_addr); }
+      if (ok) { initDisplay(); contrast = -1; Serial.printf("[oled] SSD1306 at 0x%02X\n", s_addr); }
       { StateGuard g; g_state.oledOk = ok; }
       if (!ok) { vTaskDelay(pdMS_TO_TICKS(OLED_RETRY_MS)); continue; }
     }
     SharedState s = stateSnapshot();
+
+    if (!dark && s.ldrRaw >= LDR_DARK_ON_RAW)  dark = true;
+    if (dark  && s.ldrRaw <= LDR_DARK_OFF_RAW) dark = false;
+    int want = dark ? OLED_CONTRAST_DARK : OLED_CONTRAST_DAY;
+    if (want != contrast) { cmd(0x81); cmd(want); contrast = want; }
+
+    Screen sc = picker.pick(s, now);   // เรียกทุกเฟรมแม้กำลังทดสอบ ให้เฟสบูต/ข้อความแทรกเดินตามเวลา
+    memset(s_fb, 0, sizeof(s_fb));
     if (s.hwTest == HwTest::Oled && s.hwTestUntilMs && (int32_t)(s.hwTestUntilMs - now) > 0) renderTest(now);
-    else render(s, syncStatus(), now);
+    else drawScreen(sc);
     if (!flush()) {
       ok = false;
       StateGuard g; g_state.oledOk = false;
