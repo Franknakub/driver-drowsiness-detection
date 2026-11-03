@@ -6,7 +6,7 @@
 #define PERCLOS_LEVEL1         0.15f
 #define PERCLOS_LEVEL2         0.25f
 #define PERCLOS_HYST           0.02f  // ลดระดับเมื่อ PERCLOS ต่ำกว่าเกณฑ์ลงไปเท่านี้ กันสลับไปมา
-#define CLOSED_LEVEL2_MS       1500
+#define CLOSED_LEVEL2_MS       2000
 #define MICROSLEEP_MS          3000
 #define DISTRACTION_MS         3000
 #define DRIVER_ABSENT_MS       60000  // มองไม่เห็นตานานเกินนี้ = Driver ลงจากรถ เลิกเตือน Distraction จนกว่าจะเห็นตาอีกครั้ง + ปลดระดับ 2 ที่ค้าง

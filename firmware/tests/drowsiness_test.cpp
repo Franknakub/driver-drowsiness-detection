@@ -73,11 +73,11 @@ static void testOpenOnly() {
 }
 
 static void testClosed2s() {
-  puts("closed 2 s");
+  puts("closed 2.4 s");
   Sim s;
   s.run(S::Open, 5000);
   int levelAt1200 = -1;
-  s.run(S::Closed, 2000, [&](const DrowsyResult& r, uint32_t el) { if (el == 1200) levelAt1200 = (int)r.level; });
+  s.run(S::Closed, 2400, [&](const DrowsyResult& r, uint32_t el) { if (el == 1200) levelAt1200 = (int)r.level; });
   CHECK(levelAt1200 == 0, "ระดับที่ 1.2 s = %d (ต้องยังไม่ถึง 2)", levelAt1200);
   CHECK(s.r().level == L::Drowsy, "level=%d", (int)s.r().level);
   CHECK(s.maxLevel == 2, "maxLevel=%d", s.maxLevel);
@@ -170,7 +170,7 @@ static void testOpenConfirm() {
   puts("Open must last 0.3 s to break a closed run");
   {
     Sim s;  // ลืมตาเฟรมเดียว (0.15 s) = โมเดลตอบผิด ไม่ตัดช่วง
-    s.run(S::Open, 3000); s.run(S::Closed, 1050); s.frame(S::Open); s.run(S::Closed, 600);
+    s.run(S::Open, 3000); s.run(S::Closed, 1050); s.frame(S::Open); s.run(S::Closed, 900);
     CHECK(s.r().level == L::Drowsy, "level=%d closed=%u", (int)s.r().level, s.r().closedMs);
   }
   {
@@ -349,7 +349,7 @@ static void testAbsentClearsLevel2() {
   puts("level 2 latched, then no eyes 70 s: clears after 60 s (driver left)");
   Sim s;
   s.run(S::Open, 5000);
-  s.run(S::Closed, 2000);
+  s.run(S::Closed, 2400);
   CHECK(s.r().level == L::Drowsy, "level=%d", (int)s.r().level);
   int changes = s.levelChanges, at59 = -1, at61 = -1;
   s.run(S::NotVisible, 70000, [&](const DrowsyResult& r, uint32_t el) {
@@ -421,7 +421,7 @@ static void testStallKeepsLatch() {
   puts("vision stall 3 s then open: latch must not clear on one frame");
   Sim s;   // เจอบนบอร์ด 0.2.6: vision ค้าง ~3 s เฟรมแรกหลังค้างได้ dt ใหญ่จนปลดระดับทันที
   s.run(S::Open, 3000);
-  s.run(S::Closed, 2000);
+  s.run(S::Closed, 2400);
   CHECK(s.r().level == L::Drowsy, "level=%d", (int)s.r().level);
   s.t += 3000; s.frame(S::Open);
   CHECK(s.r().level == L::Drowsy, "หลังค้าง level=%d", (int)s.r().level);
