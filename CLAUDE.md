@@ -6,13 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > - ต้นฉบับ PCB อยู่ใน **EasyEDA Pro cloud** — `.epro2` และ Gerber ในนี้เป็นแค่ export
 > - ต้นฉบับสเก็ตช์อยู่ที่ `~/Documents/Arduino/<ชื่อสเก็ตช์>/` — แก้และ build ที่นั่น แล้ว copy เข้า `firmware/` (ยกเว้น `secrets.h` และ `build/`)
 > - `../CLAUDE.md` ละเอียดกว่า (การต่อ EasyEDA API, สถานะล่าสุด, ประเด็นค้าง, กับดัก USB) อ่านคู่กันเสมอ
-> - **`main` = งานของเพื่อน (PR #6, 0.3.6-wifi) เป็นฐาน** ตั้งแต่ 2 พ.ย. · งานใหม่แตก branch จาก `main` แล้วเปิด PR (0.3.7-oled merge แล้วใน PR #7 · 0.3.8-oled-info, 0.3.9-face-roi, 0.3.10-dash merge เข้า `main` แล้วผ่าน branch `face-roi` 3 พ.ย.) · branch `firmware` = งานเก่าของเรา (OLED แบบ U8g2 + camtest 0.3.5) ที่ revert ออกจาก `main` ใน PR #5 เก็บไว้อ้างอิง ห้าม merge ตรง · คำศัพท์ใช้ตาม [GLOSSARY.md](GLOSSARY.md) · การตัดสินใจหลักอยู่ใน [docs/adr/](docs/adr/) · แผนและผลทดลองอยู่ใน [docs/firmware-plan.html](docs/firmware-plan.html)
+> - **`main` = งานของเพื่อน (PR #6, 0.3.6-wifi) เป็นฐาน** ตั้งแต่ 2 พ.ย. · งานใหม่แตก branch จาก `main` แล้วเปิด PR (0.3.7-oled merge แล้วใน PR #7 · 0.3.8-oled-info, 0.3.9-face-roi, 0.3.10-dash merge เข้า `main` แล้วผ่าน branch `face-roi` 3 พ.ย. · 0.3.11-toon + Cloud Dashboard หน้าตาการ์ตูน merge ผ่าน PR #9 4 พ.ย. — **firmware ยังไม่ได้แฟลชลงบอร์ด**) · branch `firmware` = งานเก่าของเรา (OLED แบบ U8g2 + camtest 0.3.5) ที่ revert ออกจาก `main` ใน PR #5 เก็บไว้อ้างอิง ห้าม merge ตรง · คำศัพท์ใช้ตาม [GLOSSARY.md](GLOSSARY.md) · การตัดสินใจหลักอยู่ใน [docs/adr/](docs/adr/) · แผนและผลทดลองอยู่ใน [docs/firmware-plan.html](docs/firmware-plan.html)
 
 ## ก่อน commit
 
 - ใช้ noreply email ที่ตั้งไว้เฉพาะ repo นี้แล้ว (`git config user.email`) อย่าเปลี่ยน
 - **ห้ามใส่:** `EasyEDALisenceFree.txt`, ชื่อ/รหัสนักศึกษา, `secrets.h` (WiFi/รหัส OTA — อยู่ใน `.gitignore`), ภาพหน้าคนที่เก็บมาทำ dataset
-- `ml/data/`, `ml/output/`, `build/`, `*.bin`/`*.elf` อยู่ใน `.gitignore`
+- `ml/data/`, `ml/output/`, `build/`, `*.bin`/`*.elf`, `.taste-skill/` (ผลจาก skill ออกแบบ) อยู่ใน `.gitignore`
+- repo ตั้ง `core.autocrlf=true` แต่สเก็ตช์ใน `~/Documents/Arduino/` เป็น LF · `diff` ธรรมดาจะฟ้องว่าต่างทุกบรรทัด → เทียบด้วย `diff --strip-trailing-cr`
 - ไฟล์ผลิตชุดใหม่ใส่ `hardware/fabrication/<YYYY-MM-DD>_vN/` แล้วย้ายชุดเดิมเข้า `archive/`
 
 ## Firmware — build / flash
@@ -26,10 +27,6 @@ cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I.
 cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW trip_record_test.cpp ../DrowsyFW/trip_record.cpp -o trip_record_test && ./trip_record_test   # สร้าง trip_fixture.json ด้วย
 cd cloud/test && npm install && node sql_test.mjs   # รัน cloud/sql บน PGlite (Postgres จำลอง ไม่ต้องใช้ Supabase): RLS, ส่งซ้ำ, Trip Summary ตรงกับ Device
 ```
-
-Cloud Dashboard เปิดในเครื่อง: `cd docs && python -m http.server 8765 --bind 127.0.0.1` → `http://127.0.0.1:8765/dashboard/` · บนเว็บจริง GitHub Pages สร้างจาก branch **`main`** โฟลเดอร์ `/docs` (งานใน `docs/` ต้อง merge เข้า main ก่อนจึงขึ้นเว็บ)
-
-Cloud Dashboard หน้าตาแบบการ์ตูน (ผู้ใช้เลือกแบบ D จาก mockup 6 แบบ, 4 พ.ย.): มาสคอตรถที่ไฟหน้าเป็นตา ตาปรือตามคะแนน (`openOf`) · ฉากถนนกลางวัน/กลางคืนตามธีมเครื่อง · ฟอนต์ Mali (หัวข้อ) + IBM Plex Sans Thai · ไอคอนวาดเอง ไม่ใช้ emoji · การเคลื่อนไหว (ถนนเลื่อน ล้อหมุน ตากะพริบ การ์ดลอยขึ้นครั้งแรกหลัง login) ปิดตาม `prefers-reduced-motion` — **เครื่องผู้ใช้ปิด Animation effects ของ Windows อยู่ จึงเห็นแค่ fade** · logic ข้อมูล/คะแนน/การลบเหมือนเดิมทุกบรรทัด · ทดสอบหน้า login แล้วด้วย stub แทน supabase-js (ยังไม่เคยลองกับบัญชีจริง)
 
 ```bash
 CLI="$LOCALAPPDATA/Programs/Arduino IDE/resources/app/lib/backend/resources/arduino-cli.exe"
@@ -83,6 +80,20 @@ S=~/Documents/Arduino/DrowsyFW
   - `EYE:` `OPEN` / `CLOSED x.xs` / `UNSURE` / `NOT FOUND` (เจอหน้าไม่เจอตา) / `NO FACE` · `SOUND:` คิดจากกฎเดียวกับ buzzer ใน `alert.cpp` (`ALARM` / `TEST` / `MUTED m:ss` / `BEEPING` / `ON`) แก้กฎเสียงต้องแก้ทั้งสองที่
   - ภาพจำลองทุกสถานะ (เรนเดอร์จาก `drawInfo` จริงบน PC) อยู่ที่ `../oled_info_preview.png` นอก repo · ปุ่มทดสอบ OLED บนเว็บแสดงภาพทดสอบทั้งจอ
 
+## Cloud Dashboard (`docs/dashboard/`)
+
+```bash
+cd docs && python -m http.server 8765 --bind 127.0.0.1   # http://127.0.0.1:8765/dashboard/  ต่อ Supabase จริง (ต้อง login)
+python cloud/test/dashboard_preview.py                    # http://127.0.0.1:8766/  ข้อมูลจำลอง ไม่ต้องมีบัญชี (?out=1 ?nodev=1 ?empty=1 ?delok=1)
+```
+
+- ไฟล์เดียว `index.html` (HTML/CSS/JS ไม่มี build) · supabase-js แบบ UMD จาก CDN · URL + publishable key ในไฟล์เป็นค่าสาธารณะโดยออกแบบ สิทธิ์อ่าน/ลบคุมด้วย RLS ใน `cloud/sql/`
+- ข้อมูลที่อ่าน: `devices` · `trip_summary` (view) · `trips.updated_at` (ทริปที่อัปเดตภายใน `LIVE_MS` 3 นาที = กำลังบันทึก ห้ามลบ ไม่งั้น Device ส่งต่อแล้วได้ทริปครึ่งๆ) · `rpc trip_series(p_trip_id, p_bucket_s)` สำหรับกราฟ (API คืนได้ครั้งละ 1000 แถว) · `events` · เพิ่ม Device ด้วย `rpc claim_device`
+- **คะแนนความปลอดภัยคิดฝั่งหน้าเว็บ** (`score()` / `grade()` เกณฑ์ 85/70/50) ไม่ได้เก็บในฐานข้อมูล
+- `dashboard_preview.py` แทนแท็ก `<script>` ของ supabase-js ด้วย `cloud/test/dashboard_stub.js` ตอนเสิร์ฟ (ไฟล์ใน `docs/` ไม่ถูกแก้) · ถ้าหน้าใช้ตาราง/RPC ใหม่ต้องเพิ่มใน stub ด้วย
+- **หน้าตาการ์ตูน** (ผู้ใช้เลือกแบบ D จาก mockup 6 แบบ, 4 พ.ย.): มาสคอตรถที่ไฟหน้าเป็นตา ตาปรือตามคะแนน (`openOf`) · ฉากถนนกลางวัน/กลางคืนตามธีมเครื่อง · ฟอนต์ Mali (หัวข้อ) + IBM Plex Sans Thai · ไอคอนวาดเอง ไม่ใช้ emoji · การเคลื่อนไหว (ถนนเลื่อน ล้อหมุน ตากะพริบ การ์ดลอยขึ้นครั้งแรกหลัง login) ปิดตาม `prefers-reduced-motion` — **เครื่องผู้ใช้ปิด Animation effects ของ Windows อยู่ จึงเห็นแค่ fade** · ทดสอบหน้าหลัง login แล้วแค่กับข้อมูลจำลอง ยังไม่เคยลองกับบัญชีจริง
+- **Deploy 2 ที่:** GitHub Pages ของ repo นี้ (`main` โฟลเดอร์ `/docs`) build เองภายใน ~1 นาทีหลัง merge · **Render** ของเพื่อน <https://drowsy-dashboard.onrender.com/dashboard> (บัญชีเพื่อน · ไฟล์ที่เสิร์ฟตรงกับ `docs/` ของ `main` ณ วันที่ deploy) **ไม่ deploy เองหลัง merge** (4 พ.ย. รอ 9 นาทีหน้ายังเป็นตัวเก่า) → ต้องให้เพื่อนกด Manual Deploy หรือเปิด Auto-Deploy ของ `main`
+
 ## ML (`ml/`)
 
 ```bash
@@ -109,7 +120,8 @@ PYTHONIOENCODING=utf-8 "$LOCALAPPDATA/ddd-enclosure-venv/Scripts/python.exe" ass
 - พิกัด: x จากขอบซ้าย PCB, y จากขอบบน (ฝั่ง `MODULE USB`), z จากใต้พื้นกล่อง · ใน CAD แกน Y กลับทิศ (CAD Y = −y) · ยึดกับขาดูดกระจกด้วยน็อต 1/4"-20
 - ตัวจริงต้อง PETG/ASA (ในรถร้อน 70–80°C) · ข้อกำหนดอยู่ใน `enclosure/README.md` และ `DESIGN_INPUTS.md`
 - **ชุดส่งร้านเป็นสำเนาคงที่** ไม่เปลี่ยนตาม `cad/out/`: `print_2026-10-18/` = ฝา + ฐาน (ปริ้นแล้ว) · `print_2026-10-26/` = ชิ้น SW1 (ด้ามโยก + ขาแขวน + หมุด) · ด้ามต่อ SW1 ในชุด 18 ต.ค. ใช้ไม่ได้
-- **SW1 ขับด้วยด้ามโยก** (`make_sw_rocker` / `make_sw_bracket` / `make_sw_pin`): ก้าน SW1 งอ/เอียงได้มาก ดันปลายก้านสวิตช์ไม่เลื่อน ต้องดันโคนก้านชิดตัวสวิตช์เท่านั้น → ง่ามแตะก้านเฉพาะแถบล่าง 1 มม. · ด้ามหมุนรอบหมุดในขาแขวนที่ติดกาวใต้ฝา **หัวด้ามขยับกลับทิศกับก้าน** · ด้ามต่อแบบเลื่อนทุกแบบ (สวมปลายก้าน) ล้มเหลวเพราะแรงงัด/แรงเสียดทาน · `check.py` ตรวจด้ามโยกที่ OFF/กลาง/ON กับฝา ขาแขวน หมุด ก้าน และหุ่นชิ้นส่วน · รายละเอียดและตัวเลขอยู่ใน `enclosure/README.md`
+- **SW1 ตอนนี้ไม่มีด้ามต่อ:** **4 พ.ย. (ผู้ใช้): ชิ้น SW1 ที่ปริ้น 3D พัง และสวิตช์ใหม่ที่ซื้อมาใช้ไม่ได้ → ใช้ SW1 เดิมบนบอร์ด เลื่อนด้วยไม้จิ้มฟันแหย่ผ่านร่องฝา ดันที่โคนก้าน** · ชุดด้ามโยกด้านล่างเก็บไว้เป็นประวัติ
+- **ด้ามโยกที่ลองไว้** (`make_sw_rocker` / `make_sw_bracket` / `make_sw_pin`, ปริ้นแล้วพัง): ก้าน SW1 งอ/เอียงได้มาก ดันปลายก้านสวิตช์ไม่เลื่อน ต้องดันโคนก้านชิดตัวสวิตช์เท่านั้น → ง่ามแตะก้านเฉพาะแถบล่าง 1 มม. · ด้ามหมุนรอบหมุดในขาแขวนที่ติดกาวใต้ฝา **หัวด้ามขยับกลับทิศกับก้าน** · ด้ามต่อแบบเลื่อนทุกแบบ (สวมปลายก้าน) ล้มเหลวเพราะแรงงัด/แรงเสียดทาน · `check.py` ตรวจด้ามโยกที่ OFF/กลาง/ON กับฝา ขาแขวน หมุด ก้าน และหุ่นชิ้นส่วน · รายละเอียดและตัวเลขอยู่ใน `enclosure/README.md`
 - รัน `enclosure.py` แล้ว `cad/out/lid.step` / `base.step` เปลี่ยนแค่วันเวลาในหัวไฟล์ → `git checkout` คืนก่อน commit ถ้ารูปทรงไม่ได้แก้
 
 ## ฮาร์ดแวร์ที่ต้องระวังเวลาเขียนโค้ด
