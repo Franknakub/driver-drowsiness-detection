@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > - ต้นฉบับ PCB อยู่ใน **EasyEDA Pro cloud** — `.epro2` และ Gerber ในนี้เป็นแค่ export
 > - ต้นฉบับสเก็ตช์อยู่ที่ `~/Documents/Arduino/<ชื่อสเก็ตช์>/` — แก้และ build ที่นั่น แล้ว copy เข้า `firmware/` (ยกเว้น `secrets.h` และ `build/`)
 > - `../CLAUDE.md` ละเอียดกว่า (การต่อ EasyEDA API, สถานะล่าสุด, ประเด็นค้าง, กับดัก USB) อ่านคู่กันเสมอ
-> - **`main` = งานของเพื่อน (PR #6, 0.3.6-wifi) เป็นฐาน** ตั้งแต่ 2 พ.ย. · งานใหม่แตก branch จาก `main` แล้วเปิด PR (0.3.7-oled merge แล้วใน PR #7 · `oled-info` = 0.3.8 ยังไม่ push · `face-roi` แตกจาก `oled-info` = 0.3.9-face-roi + 0.3.10-dash ยังไม่ push ณ 3 พ.ย.) · branch `firmware` = งานเก่าของเรา (OLED แบบ U8g2 + camtest 0.3.5) ที่ revert ออกจาก `main` ใน PR #5 เก็บไว้อ้างอิง ห้าม merge ตรง · คำศัพท์ใช้ตาม [GLOSSARY.md](GLOSSARY.md) · การตัดสินใจหลักอยู่ใน [docs/adr/](docs/adr/) · แผนและผลทดลองอยู่ใน [docs/firmware-plan.html](docs/firmware-plan.html)
+> - **`main` = งานของเพื่อน (PR #6, 0.3.6-wifi) เป็นฐาน** ตั้งแต่ 2 พ.ย. · งานใหม่แตก branch จาก `main` แล้วเปิด PR (0.3.7-oled merge แล้วใน PR #7 · 0.3.8-oled-info, 0.3.9-face-roi, 0.3.10-dash merge เข้า `main` แล้วผ่าน branch `face-roi` 3 พ.ย.) · branch `firmware` = งานเก่าของเรา (OLED แบบ U8g2 + camtest 0.3.5) ที่ revert ออกจาก `main` ใน PR #5 เก็บไว้อ้างอิง ห้าม merge ตรง · คำศัพท์ใช้ตาม [GLOSSARY.md](GLOSSARY.md) · การตัดสินใจหลักอยู่ใน [docs/adr/](docs/adr/) · แผนและผลทดลองอยู่ใน [docs/firmware-plan.html](docs/firmware-plan.html)
 
 ## ก่อน commit
 
