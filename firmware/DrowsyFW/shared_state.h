@@ -31,6 +31,7 @@ struct SharedState {
   float    pLeft, pRight;      // P(ตาปิด) ของตาซ้าย/ขวาในภาพ · -1 = ใช้ไม่ได้
   int16_t  eyeDistPx;          // ระยะระหว่างจุดตาในภาพที่หมุนแล้ว
   int16_t  tiltCompDeg;        // มุมที่หมุนชดเชยหน้าเอียงในเฟรมล่าสุด
+  int16_t  roi[4];             // บริเวณที่ส่งเข้า MSR ในเฟรมล่าสุด (x0,y0,x1,y1) · ทั้งเฟรม = 0,0,320,480
   float    rotateMs, detectMs, classifyMs;
   float    preMs;              // ส่วนของ detectMs ที่ esp-dl หยิบพิกเซล (หมุน + ย่อ) เข้าโมเดล
   bool     abOn, abReset;      // web ตั้ง · vision อ่าน

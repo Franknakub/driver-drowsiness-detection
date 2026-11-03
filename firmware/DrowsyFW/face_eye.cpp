@@ -15,24 +15,86 @@ struct RotBuf {
 };
 static RotBuf s_rb;
 
-// ---- ชดเชยหน้าเอียง: โมเดลทน roll ได้ราว ±10–15° ----
-// เจอหน้า: ปรับมุมตามเส้นตา · หลุดเกิน COMP_KEEP เฟรม: ไล่ลองมุมใน COMP_SEARCH ทีละเฟรม
-static int s_comp = 0, s_compMiss = 0, s_compIdx = 0;
-static const int COMP_SEARCH[] = {0, 20, -20, 40, -40};
+// ---- ชดเชยหน้าเอียง (โมเดลทน roll ได้ราว ±10–15°) + บริเวณที่ส่งเข้า MSR (ROI) ----
+// ภาพตั้งตรง 320x480 ย่อทั้งเฟรมลง input MSR 160x120 = กว้างเหลือ 1/2 สูงเหลือ 1/4 -> หน้าไกลเล็กกว่า anchor
+// เล็กสุด (16 px) และถูกบีบเตี้ย · 0.3.9: ส่งแค่ส่วน 4:3 เข้า MSR (ย่อเท่ากันสองแกน)
+// เจอหน้า: ปรับมุมตามเส้นตา + ROI ตามหน้า (หน้าใหญ่ใช้แถบ 4:3 ใหญ่สุดรอบหน้า)
+// หลุดเกิน COMP_KEEP เฟรม: ลองรอบตำแหน่งเดิมด้วย ROI กว้างขึ้น 2 เท่า 1 เฟรม แล้วไล่ SEARCH ทีละเฟรม
+// SEARCH: ทั้งเฟรม -> แถบ 4:3 (ย่อ 2 เท่า) -> ช่อง 160x120 (ไม่ย่อ สำหรับหน้าไกล ครึ่งกลางของภาพ) -> มุมเอียง
+// fx,fy = จุดกลางเป็นสัดส่วนของภาพ (ถูกเลื่อนให้อยู่ในภาพ)
+enum Region : uint8_t { R_FULL, R_BAND, R_TILE };
+struct SearchStep { Region region; float fx, fy; int8_t ang; };
+static const SearchStep SEARCH[] = {
+  {R_FULL, .5f, .5f, 0}, {R_BAND, .5f, .5f, 0},
+  {R_TILE, .25f, .375f, 0}, {R_TILE, .5f, .375f, 0}, {R_TILE, .75f, .375f, 0},
+  {R_TILE, .25f, .625f, 0}, {R_TILE, .5f, .625f, 0}, {R_TILE, .75f, .625f, 0},
+  {R_BAND, .5f, 0, 0}, {R_BAND, .5f, 1, 0},
+  {R_FULL, .5f, .5f, 20}, {R_FULL, .5f, .5f, -20}, {R_BAND, .5f, .5f, 20}, {R_BAND, .5f, .5f, -20},
+  {R_FULL, .5f, .5f, 40}, {R_FULL, .5f, .5f, -40},
+};
 static const int COMP_KEEP = 2;
+static const int MSR_IN_W = 160, MSR_IN_H = 120;   // input MSR (esp-dl human_face_detect README) · ROI ไม่เล็กกว่านี้ (ไม่ขยายภาพ)
+static int s_comp = 0, s_compMiss = 0, s_searchIdx = 0;
+static bool s_retry = false;                // เฟรมถัดไปลองรอบตำแหน่งหน้าเดิมด้วย ROI กว้างขึ้น
+static bool s_track = false;                // มี ROI ตามหน้าล่าสุด
+static float s_trackX = 0, s_trackY = 0;    // จุดกลางหน้าในภาพตั้งตรง (ไม่รวมมุมชดเชย)
+static int s_trackSide = 0;                 // ด้านยาวของกรอบหน้า (px)
 
-static void compUpdate(const FaceEyes& f) {
-#if FACE_TILT_COMP
-  if (f.found) {
-    s_compMiss = 0; s_compIdx = 0;
-    float e = atan2f((float)(f.eye[1][1] - f.eye[0][1]), (float)(f.eye[1][0] - f.eye[0][0])) * 180 / (float)M_PI;
-    if (fabsf(e) > 4) s_comp = constrain(s_comp - (int)lroundf(e * 0.7f), -60, 60);
+static void fullRoi(const FaceView& v, int roi[4]) { roi[0] = 0; roi[1] = 0; roi[2] = v.width; roi[3] = v.height; }
+
+// สี่เหลี่ยม bw x bh ที่มีจุดกลาง (cx,cy) เลื่อนให้อยู่ในภาพ
+static void placeRoi(const FaceView& v, float cx, float cy, int bw, int bh, int roi[4]) {
+  bw = min(bw, v.width); bh = min(bh, v.height);
+  int x0 = constrain((int)lroundf(cx - bw / 2.0f), 0, v.width - bw);
+  int y0 = constrain((int)lroundf(cy - bh / 2.0f), 0, v.height - bh);
+  roi[0] = x0; roi[1] = y0; roi[2] = x0 + bw; roi[3] = y0 + bh;
+}
+
+static void pickRoi(const FaceView& v, int roi[4]) {
+#if FACE_ROI
+  const int bw = min(v.width, v.height * 4 / 3), bh = bw * 3 / 4;   // แถบ 4:3 ใหญ่สุดในภาพ
+  if (s_track || s_retry) {
+    int h = max(MSR_IN_H, (int)lroundf(s_trackSide * FACE_ROI_SCALE));
+    if (s_retry) h *= 2;
+    float cx, cy;
+    faceEyesToUpright(-s_comp, v.width, v.height, s_trackX, s_trackY, cx, cy);   // ตั้งตรง -> มุมชดเชยปัจจุบัน
+    // หน้าใหญ่ (อยู่ใกล้): แถบ 4:3 ใหญ่สุดรอบหน้า · ห้ามใช้ทั้งเฟรม (บีบเตี้ย A/B วัดได้ 0% แม้ที่ 50 ซม.)
+    if (h > bh) placeRoi(v, cx, cy, bw, bh, roi);
+    else placeRoi(v, cx, cy, h * 4 / 3, h, roi);
     return;
   }
-  if (++s_compMiss <= COMP_KEEP) return;     // หลุดแป๊บเดียว (กะพริบ/เบลอ) ใช้มุมเดิมต่อ
-  s_compIdx = (s_compIdx + 1) % (int)(sizeof COMP_SEARCH / sizeof COMP_SEARCH[0]);
-  s_comp = COMP_SEARCH[s_compIdx];
+  const SearchStep& s = SEARCH[s_searchIdx];
+  if (s.region == R_BAND) { placeRoi(v, s.fx * v.width, s.fy * v.height, bw, bh, roi); return; }
+  if (s.region == R_TILE) { placeRoi(v, s.fx * v.width, s.fy * v.height, MSR_IN_W, MSR_IN_H, roi); return; }
 #endif
+  fullRoi(v, roi);
+}
+
+static void searchStep(int step) {
+  s_searchIdx = step % (int)(sizeof SEARCH / sizeof SEARCH[0]);
+#if !FACE_TILT_COMP
+  while (SEARCH[s_searchIdx].ang) s_searchIdx = (s_searchIdx + 1) % (int)(sizeof SEARCH / sizeof SEARCH[0]);
+#endif
+  s_comp = SEARCH[s_searchIdx].ang;
+}
+
+static void compUpdate(const FaceEyes& f) {
+  if (f.found) {
+    s_compMiss = 0; s_searchIdx = 0;
+    s_track = true; s_retry = false;
+    s_trackSide = max(f.box[2] - f.box[0], f.box[3] - f.box[1]);
+    faceEyesToUpright(f.compDeg, f.view.width, f.view.height,
+                      (f.box[0] + f.box[2]) / 2.0f, (f.box[1] + f.box[3]) / 2.0f, s_trackX, s_trackY);
+#if FACE_TILT_COMP
+    float e = atan2f((float)(f.eye[1][1] - f.eye[0][1]), (float)(f.eye[1][0] - f.eye[0][0])) * 180 / (float)M_PI;
+    if (fabsf(e) > 4) s_comp = constrain(s_comp - (int)lroundf(e * 0.7f), -60, 60);
+#endif
+    return;
+  }
+  if (++s_compMiss <= COMP_KEEP) return;     // หลุดแป๊บเดียว (กะพริบ/เบลอ) ใช้มุมและ ROI เดิมต่อ
+  if (s_track) { s_track = false; s_retry = FACE_ROI; if (!s_retry) searchStep(0); return; }
+  if (s_retry) { s_retry = false; searchStep(0); return; }
+  searchStep(s_searchIdx + 1);
 }
 
 // จุดเริ่มแถว y (fixed-point 16.16) ของการหมุนชดเชยรอบจุดกลาง · FaceView::row_start ต้องเป็นนิพจน์เดียวกันนี้
@@ -189,10 +251,11 @@ void faceEyesRun(camera_fb_t* raw, FaceEyes& out) {
   out.compDeg = s_comp;
   uint32_t t0 = micros();
   makeView(raw, s_comp, out.view);
+  pickRoi(out.view, out.roi);
   uint32_t t1 = micros();
   out.rotateMs = (t1 - t0) / 1000.0f;
   out.preMs = 0;
-  std::list<dl::detect::result_t>& res = s_detector->run_view(imgOf(raw), out.view, &out.preMs);
+  std::list<dl::detect::result_t>& res = s_detector->run_view(imgOf(raw), out.view, out.roi, &out.preMs);
   out.detectMs = (micros() - t1) / 1000.0f;
   pickBest(res, out);
   compUpdate(out);
@@ -210,6 +273,7 @@ void faceEyesRunLegacy(camera_fb_t* raw, int compDeg, FaceEyes& out) {
   out.detectMs = (micros() - t1) / 1000.0f;
   makeView(fb, 0, out.view);         // ภาพที่หมุนแล้ว อ่านตรงๆ ไม่ต้องแปลง
   static_cast<FaceView&>(out.view) = FaceView::make(fb->width, fb->height, 0, 0);
+  fullRoi(out.view, out.roi);
   pickBest(res, out);
 }
 

@@ -27,10 +27,12 @@ namespace human_face_detect {
 class ViewMSRPostprocessor : public dl::detect::AnchorBoxDetectPostprocessor {
 public:
     using AnchorBoxDetectPostprocessor::AnchorBoxDetectPostprocessor;
-    void set_map(float inv_sx, float inv_sy)
+    void set_map(float inv_sx, float inv_sy, int top_left_x, int top_left_y)
     {
         m_inv_sx = inv_sx;
         m_inv_sy = inv_sy;
+        m_tlx = top_left_x;
+        m_tly = top_left_y;
     }
     void postprocess() override;
 
@@ -38,6 +40,7 @@ private:
     template <typename T>
     void parse_stage(dl::TensorBase *score, dl::TensorBase *box, const int stage_index);
     float m_inv_sx = 1, m_inv_sy = 1;
+    int m_tlx = 0, m_tly = 0;
 };
 
 class ViewMNPPostprocessor : public dl::detect::AnchorBoxDetectPostprocessor {
@@ -67,7 +70,8 @@ public:
     ~MSR();
     dl::detect::Detect &set_score_thr(float score_thr, int idx = 0) override;
     dl::detect::Detect &set_nms_thr(float nms_thr, int idx = 0) override;
-    std::list<dl::detect::result_t> &run_view(const dl::image::img_t &raw, const FaceView &view, float *pre_ms);
+    // roi = x0,y0,x1,y1 in virtual-image coordinates: only this area is resized into the model input
+    std::list<dl::detect::result_t> &run_view(const dl::image::img_t &raw, const FaceView &view, const int roi[4], float *pre_ms);
     // A/B check: number of model input bytes that differ between the stock resize of an already rotated
     // image and sampling from the raw image. -1 if the buffer could not be allocated.
     // ms[0] / ms[1] = time of the old preprocess (resize + colour) / the new one (sample + colour).
@@ -120,7 +124,7 @@ public:
     }
 
     std::list<dl::detect::result_t> &run(const dl::image::img_t &img) override;
-    std::list<dl::detect::result_t> &run_view(const dl::image::img_t &raw, const FaceView &view, float *pre_ms);
+    std::list<dl::detect::result_t> &run_view(const dl::image::img_t &raw, const FaceView &view, const int roi[4], float *pre_ms);
     int compare_msr_input(const dl::image::img_t &rotated, const dl::image::img_t &raw, const FaceView &view, float ms[2])
     {
         return m_msr.compare_input(rotated, raw, view, ms);
@@ -150,8 +154,9 @@ public:
     HumanFaceDetect(model_type_t model_type = static_cast<model_type_t>(CONFIG_DEFAULT_HUMAN_FACE_DETECT_MODEL),
                     bool lazy_load = true);
 
-    // MSRMNP_S8_V1 only. pre_ms (optional) = time spent sampling + converting pixels for both stages.
-    std::list<dl::detect::result_t> &run_view(const dl::image::img_t &raw, const FaceView &view, float *pre_ms = nullptr);
+    // MSRMNP_S8_V1 only. roi = MSR search area x0,y0,x1,y1 in view coordinates (MNP still crops from the whole view).
+    // pre_ms (optional) = time spent sampling + converting pixels for both stages.
+    std::list<dl::detect::result_t> &run_view(const dl::image::img_t &raw, const FaceView &view, const int roi[4], float *pre_ms = nullptr);
     int compare_msr_input(const dl::image::img_t &rotated, const dl::image::img_t &raw, const FaceView &view, float ms[2]);
 
 private:

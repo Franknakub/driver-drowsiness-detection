@@ -158,9 +158,9 @@ std::list<dl::detect::result_t> &MSRMNP::run(const dl::image::img_t &img)
     return m_mnp.run(img, candidates);
 }
 
-std::list<dl::detect::result_t> &MSRMNP::run_view(const dl::image::img_t &raw, const FaceView &view, float *pre_ms)
+std::list<dl::detect::result_t> &MSRMNP::run_view(const dl::image::img_t &raw, const FaceView &view, const int roi[4], float *pre_ms)
 {
-    std::list<dl::detect::result_t> &candidates = m_msr.run_view(raw, view, pre_ms);
+    std::list<dl::detect::result_t> &candidates = m_msr.run_view(raw, view, roi, pre_ms);
     return m_mnp.run_view(raw, view, candidates, pre_ms);
 }
 
@@ -271,16 +271,17 @@ static void view_preprocess(dl::image::ImagePreprocessor *pre,
     }
 }
 
-std::list<dl::detect::result_t> &MSR::run_view(const dl::image::img_t &raw, const FaceView &view, float *pre_ms)
+std::list<dl::detect::result_t> &MSR::run_view(const dl::image::img_t &raw, const FaceView &view, const int roi[4], float *pre_ms)
 {
     dl::TensorBase *in = m_view_preprocessor->get_model_input();
-    float sx = (float)view.width / in->shape[2], sy = (float)view.height / in->shape[1];
+    const int x0 = roi[0], y0 = roi[1], x1 = roi[2], y1 = roi[3];
+    float sx = (float)(x1 - x0) / in->shape[2], sy = (float)(y1 - y0) / in->shape[1];
     int64_t t = esp_timer_get_time();
-    view_preprocess(m_view_preprocessor, m_view_nq, raw, view, 0, 0, view.width, view.height);
+    view_preprocess(m_view_preprocessor, m_view_nq, raw, view, x0, y0, x1, y1);
     if (pre_ms) *pre_ms = (esp_timer_get_time() - t) / 1000.0f;
     m_model->run();
     m_view_postprocessor->clear_result();
-    m_view_postprocessor->set_map(sx, sy);
+    m_view_postprocessor->set_map(sx, sy, x0, y0);
     m_view_postprocessor->postprocess();
     return m_view_postprocessor->get_result(view.width, view.height);
 }
@@ -363,6 +364,7 @@ void ViewMSRPostprocessor::parse_stage(dl::TensorBase *score, dl::TensorBase *bo
     T score_thr_quant = dl::quantize<T>(dl::math::inverse_sigmoid(m_score_thr), 1.f / score_exp);
     float inv_resize_scale_x = m_inv_sx;
     float inv_resize_scale_y = m_inv_sy;
+    int tlx = m_tlx, tly = m_tly;
 
     for (size_t y = 0; y < H; y++) {
         for (size_t x = 0; x < W; x++) {
@@ -377,15 +379,15 @@ void ViewMSRPostprocessor::parse_stage(dl::TensorBase *score, dl::TensorBase *bo
                             (int)c,
                             dl::math::sigmoid(dl::dequantize(*score_ptr, score_exp)),
                             {(int)((center_x - (anchor_w >> 1) + anchor_w * dl::dequantize(box_ptr[0], box_exp)) *
-                                   inv_resize_scale_x),
+                                   inv_resize_scale_x) + tlx,
                              (int)((center_y - (anchor_h >> 1) + anchor_h * dl::dequantize(box_ptr[1], box_exp)) *
-                                   inv_resize_scale_y),
+                                   inv_resize_scale_y) + tly,
                              (int)((center_x + anchor_w - (anchor_w >> 1) +
                                     anchor_w * dl::dequantize(box_ptr[2], box_exp)) *
-                                   inv_resize_scale_x),
+                                   inv_resize_scale_x) + tlx,
                              (int)((center_y + anchor_h - (anchor_h >> 1) +
                                     anchor_h * dl::dequantize(box_ptr[3], box_exp)) *
-                                   inv_resize_scale_y)},
+                                   inv_resize_scale_y) + tly},
                             {}};
                         m_box_list.insert(
                             std::upper_bound(m_box_list.begin(), m_box_list.end(), new_box, dl::detect::greater_box),
@@ -500,9 +502,9 @@ human_face_detect::MSRMNP *HumanFaceDetect::msrmnp()
     return static_cast<human_face_detect::MSRMNP *>(m_model);
 }
 
-std::list<dl::detect::result_t> &HumanFaceDetect::run_view(const dl::image::img_t &raw, const FaceView &view, float *pre_ms)
+std::list<dl::detect::result_t> &HumanFaceDetect::run_view(const dl::image::img_t &raw, const FaceView &view, const int roi[4], float *pre_ms)
 {
-    return msrmnp()->run_view(raw, view, pre_ms);
+    return msrmnp()->run_view(raw, view, roi, pre_ms);
 }
 
 int HumanFaceDetect::compare_msr_input(const dl::image::img_t &rotated, const dl::image::img_t &raw, const FaceView &view, float ms[2])

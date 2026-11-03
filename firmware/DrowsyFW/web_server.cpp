@@ -6,12 +6,14 @@
 //   POST /api/ir      mode=auto|on|off  โหมด IR (จำใน NVS)
 //   POST /api/test    what=buzzer|green|red|ir|oled  ทดสอบฮาร์ดแวร์ HW_TEST_MS
 //   GET/POST /update  อัปโหลด .bin (ต้องใส่รหัส admin / OTA_PASSWORD)
-//   GET  /wifi        หน้าตั้งค่า WiFi (admin / OTA_PASSWORD) · GET /api/wifi[?scan=1] · POST /api/wifi/save ssid,pass · POST /api/wifi/forget ssid
+//   GET  /wifi        หน้าตั้งค่า WiFi (ผ่าน AP ของ Device ไม่ต้อง login · ทางอื่น admin / OTA_PASSWORD) · GET /api/wifi[?scan=1] · POST /api/wifi/save ssid,pass · POST /api/wifi/forget ssid
 //   GET  /trips       ประวัติ Trip บน Device (รายการ + Trip Summary + กราฟ)
 //   GET  /api/trips   JSON รายการ Trip ทั้งหมดบน FFat พร้อม Trip Summary
 //   GET  /api/trips/<n>?from=0&count=600&step=1   Sample ช่วงหนึ่ง + Event ทั้งหมด + Trip Summary ของ Trip n
 #include <ESPAsyncWebServer.h>
 #include <Update.h>
+#include <WiFi.h>
+#include <memory>
 #include "config.h"
 #include "secrets.h"
 #include "shared_state.h"
@@ -125,7 +127,7 @@ const ei=$('e');function nextE(){ei.src='/eyes.jpg?'+Date.now();}
 ei.onload=()=>setTimeout(nextE,300);ei.onerror=()=>setTimeout(nextE,1000);nextE();
 </script></body></html>)HTML";
 
-// หน้าตั้งค่า WiFi (ต้องใส่ admin / OTA_PASSWORD) · ข้อมูลจาก /api/wifi · บันทึกใน NVS ผ่าน net.cpp
+// หน้าตั้งค่า WiFi (ผ่าน AP ของ Device ไม่ต้อง login · ทางอื่น admin / OTA_PASSWORD) · ข้อมูลจาก /api/wifi · บันทึกใน NVS ผ่าน net.cpp
 static const char WIFI_HTML[] PROGMEM = R"HTML(<!doctype html>
 <html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ตั้งค่า WiFi</title>
@@ -249,13 +251,13 @@ static void handleStatus(AsyncWebServerRequest* req) {
   uint32_t now = millis();
   long muteLeft = s.mutedUntilMs ? (long)(int32_t)(s.mutedUntilMs - now) / 1000 : 0;
   bool testing = s.hwTestUntilMs && (int32_t)(s.hwTestUntilMs - now) > 0;
-  static char buf[1800];          // handler ทุกตัวรันบน task ของ AsyncTCP ตัวเดียว ใช้ static ได้
+  static char buf[2048];          // handler ทุกตัวรันบน task ของ AsyncTCP ตัวเดียว ใช้ static ได้
   LogStatus ls = logStatus();
   SyncStatus ss = syncStatus();
   int n = snprintf(buf, sizeof(buf),
     "{\"fw\":\"%s\",\"device_id\":\"%s\",\"trip\":%u,\"uptime_s\":%u,\"time_known\":%s,\"trip_start_epoch\":%lu,"
     "\"fps\":%.1f,\"face\":%s,\"face_score\":%.2f,\"eye_state\":\"%s\",\"p_closed\":%.2f,"
-    "\"p_left\":%.2f,\"p_right\":%.2f,\"eye_dist_px\":%d,\"tilt_comp_deg\":%d,"
+    "\"p_left\":%.2f,\"p_right\":%.2f,\"eye_dist_px\":%d,\"tilt_comp_deg\":%d,\"face_roi\":[%d,%d,%d,%d],"
     "\"rotate_ms\":%.2f,\"detect_ms\":%.1f,\"pre_ms\":%.1f,\"classify_ms\":%.1f,\"perclos\":%.2f,\"perclos_ready\":%s,\"closed_ms\":%lu,\"frame_age_ms\":%lu,\"level\":\"%s\","
     "\"distraction\":%s,\"unmonitored\":%s,\"mute_left_s\":%ld,"
     "\"ldr_raw\":%u,\"ir_on\":%s,\"ir_mode\":\"%s\",\"oled_ok\":%s,\"hw_test\":\"%s\",\"ap\":\"%s\",\"sta\":\"%s\",\"sta_ip\":\"%s\",\"free_psram_kb\":%u,"
@@ -266,6 +268,7 @@ static void handleStatus(AsyncWebServerRequest* req) {
     FW_VERSION, deviceId(), s.bootCount, (unsigned)((now - s.tripStartMs) / 1000), s.timeKnown ? "true" : "false",
     (unsigned long)s.tripStartEpoch, s.fps, s.faceFound ? "true" : "false", s.faceScore,
     eyeStateName(s.eyeState), s.pClosed, s.pLeft, s.pRight, s.eyeDistPx, s.tiltCompDeg,
+    s.roi[0], s.roi[1], s.roi[2], s.roi[3],
     s.rotateMs, s.detectMs, s.preMs, s.classifyMs, s.perclos, s.perclosReady ? "true" : "false", (unsigned long)s.closedMs, (unsigned long)(now - s.lastFrameMs),
     levelName(s.level), s.distraction ? "true" : "false", s.unmonitored ? "true" : "false",
     muteLeft > 0 ? muteLeft : 0L, s.ldrRaw, s.irOn ? "true" : "false", irModeName(s.irMode),
@@ -307,15 +310,18 @@ static void handleAb(AsyncWebServerRequest* req) {
   req->send(200, "application/json", buf);
 }
 
-// ใช้ buffer JPEG ก้อนเดียวต่อ endpoint ปล่อยของเก่าตอนขอภาพถัดไป (หน้าเว็บขอภาพใหม่หลังภาพเดิมโหลดเสร็จ)
-// รองรับผู้ดูทีละคน ซึ่งพอสำหรับดีบัก
-static void sendJpeg(AsyncWebServerRequest* r, bool (*make)(uint8_t**, size_t*), uint8_t*& keep) {
-  uint8_t* jpg = nullptr;
+// buffer JPEG เป็นของ response แต่ละตัว ปล่อยเมื่อ response ถูกลบ (ส่งเสร็จหรือหลุด)
+// เดิมใช้ก้อนเดียวต่อ endpoint แล้วปล่อยของเก่าตอนมีคำขอถัดไป -> เปิดดูพร้อมกันสองเครื่องจะส่งหน่วยความจำที่ปล่อยแล้ว
+static void sendJpeg(AsyncWebServerRequest* r, bool (*make)(uint8_t**, size_t*)) {
+  uint8_t* raw = nullptr;
   size_t len = 0;
-  if (!make(&jpg, &len)) { r->send(503, "text/plain", "no frame yet"); return; }
-  if (keep) free(keep);
-  keep = jpg;
-  AsyncWebServerResponse* res = r->beginResponse(200, "image/jpeg", keep, len);
+  if (!make(&raw, &len)) { r->send(503, "text/plain", "no frame yet"); return; }
+  std::shared_ptr<uint8_t> jpg(raw, free);
+  AsyncWebServerResponse* res = r->beginResponse("image/jpeg", len, [jpg, len](uint8_t* buf, size_t maxLen, size_t index) -> size_t {
+    size_t n = min(maxLen, len - index);
+    memcpy(buf, jpg.get() + index, n);
+    return n;
+  });
   res->addHeader("Cache-Control", "no-store");
   r->send(res);
 }
@@ -491,7 +497,13 @@ static void handleUpload(AsyncWebServerRequest* req, const String& filename, siz
   }
 }
 
-// ---- ตั้งค่า WiFi (ต้อง login เหมือน /update) ----
+// ---- ตั้งค่า WiFi ----
+// เข้าผ่าน AP ของ Device (Drowsy-XXXX ที่มี AP_PASSWORD อยู่แล้ว) ไม่ต้อง login · เข้าผ่าน WiFi อื่นต้อง login เหมือน /update
+static bool wifiAuthorized(AsyncWebServerRequest* req) {
+  if (req->client() && req->client()->localIP() == WiFi.softAPIP()) return true;
+  return otaAuthorized(req);
+}
+
 static void jsonStr(String& out, const char* s) {
   out += '"';
   for (; *s; s++) {
@@ -503,7 +515,7 @@ static void jsonStr(String& out, const char* s) {
 }
 
 static void handleWifiGet(AsyncWebServerRequest* r) {
-  if (!otaAuthorized(r)) return r->requestAuthentication();
+  if (!wifiAuthorized(r)) return r->requestAuthentication();
   if (r->hasParam("scan")) wifiScanRequest();
   SharedState s = stateSnapshot();
   WifiNet saved[WIFI_SAVED_MAX], near[WIFI_SCAN_MAX];
@@ -531,18 +543,18 @@ static void handleWifiGet(AsyncWebServerRequest* r) {
 void startWebServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "text/html", INDEX_HTML); });
   server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest* r) {
-    if (!otaAuthorized(r)) return r->requestAuthentication();
+    if (!wifiAuthorized(r)) return r->requestAuthentication();
     r->send(200, "text/html", WIFI_HTML);
   });
   server.on("/api/wifi/save", HTTP_POST, [](AsyncWebServerRequest* r) {
-    if (!otaAuthorized(r)) return r->requestAuthentication();
+    if (!wifiAuthorized(r)) return r->requestAuthentication();
     if (!r->hasParam("ssid", true)) { r->send(400, "text/plain", "missing ssid"); return; }
     String ssid = r->getParam("ssid", true)->value(), pass = r->hasParam("pass", true) ? r->getParam("pass", true)->value() : "";
     if (!wifiSave(ssid.c_str(), pass.c_str())) { r->send(400, "text/plain", "ชื่อ 1-32 ตัว · รหัสผ่านเว้นว่าง หรือ 8-63 ตัว"); return; }
     r->send(200, "application/json", "{\"saved\":true}");
   });
   server.on("/api/wifi/forget", HTTP_POST, [](AsyncWebServerRequest* r) {
-    if (!otaAuthorized(r)) return r->requestAuthentication();
+    if (!wifiAuthorized(r)) return r->requestAuthentication();
     if (!r->hasParam("ssid", true)) { r->send(400, "text/plain", "missing ssid"); return; }
     bool ok = wifiForget(r->getParam("ssid", true)->value().c_str());
     r->send(ok ? 200 : 404, "application/json", ok ? "{\"forgotten\":true}" : "{\"forgotten\":false}");
@@ -554,14 +566,8 @@ void startWebServer() {
   server.on("/trips", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "text/html", TRIPS_HTML); });
 
   // ภาพที่โมเดลเห็นล่าสุด (หมุนแล้ว) พร้อมกรอบหน้า/ตา · vision เริ่มคัดลอกภาพเมื่อมีคนขอ จึงอาจว่างในครั้งแรก
-  server.on("/snapshot.jpg", HTTP_GET, [](AsyncWebServerRequest* r) {
-    static uint8_t* buf = nullptr;
-    sendJpeg(r, snapshotJpeg, buf);
-  });
-  server.on("/eyes.jpg", HTTP_GET, [](AsyncWebServerRequest* r) {
-    static uint8_t* buf = nullptr;
-    sendJpeg(r, eyesJpeg, buf);
-  });
+  server.on("/snapshot.jpg", HTTP_GET, [](AsyncWebServerRequest* r) { sendJpeg(r, snapshotJpeg); });
+  server.on("/eyes.jpg", HTTP_GET, [](AsyncWebServerRequest* r) { sendJpeg(r, eyesJpeg); });
 
   server.on("/api/time", HTTP_POST, [](AsyncWebServerRequest* r) {
     if (!r->hasParam("epoch", true)) { r->send(400, "text/plain", "missing epoch"); return; }

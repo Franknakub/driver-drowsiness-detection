@@ -94,31 +94,35 @@ bool eyesJpeg(uint8_t** out, size_t* outLen) {
 }
 
 // JPEG ของภาพที่โมเดลเห็นล่าสุด: กรอบเขียว = หน้า · กรอบตา แดง = ปิด, น้ำเงิน = เปิด, เหลือง = ไม่แน่ใจ/ใช้ไม่ได้
+// กรอบเทา = ROI ที่ส่งเข้า MSR (ไม่วาดเมื่อใช้ทั้งเฟรม)
+// ถือ mutex แค่ตอนคัดลอก · วาดกรอบ + เข้ารหัส JPEG (~150–200 ms) หลังปล่อย ไม่งั้น vision (ไม่รอ mutex) ข้ามเฟรมใหม่
+// จนหน้าเว็บที่ขอภาพต่อกันได้ภาพเดิมซ้ำ (ภาพค้าง)
 bool snapshotJpeg(uint8_t** out, size_t* outLen) {
   s_snapWantedMs = millis();
   if (!s_snapMutex || xSemaphoreTake(s_snapMutex, pdMS_TO_TICKS(500)) != pdTRUE) return false;
-  bool ok = false;
-  if (s_snap.valid) {
-    size_t n = (size_t)s_snap.w * s_snap.h * 2;
-    uint8_t* img = (uint8_t*)heap_caps_malloc(n, MALLOC_CAP_SPIRAM);
-    if (img) {
-      memcpy(img, s_snap.buf, n);
-      const FaceEyes& f = s_snap.face;
-      if (f.found) {
-        const int W = s_snap.w, H = s_snap.h, a = f.compDeg;
-        rbox565(img, W, H, a, f.box[0], f.box[1], f.box[2], f.box[3], 0x07E0);
-        float ps[2] = {s_snap.pL, s_snap.pR};
-        float hs = s_snap.eyeSide / 2.0f;
-        for (int e = 0; e < 2; e++) {
-          uint16_t c = ps[e] < 0 ? 0xFFE0 : ps[e] >= P_CLOSED_ON ? 0xF800 : ps[e] <= P_CLOSED_OFF ? 0x001F : 0xFFE0;
-          rbox565(img, W, H, a, f.eye[e][0] - hs, f.eye[e][1] - hs, f.eye[e][0] + hs, f.eye[e][1] + hs, c);
-        }
-      }
-      ok = fmt2jpg(img, n, s_snap.w, s_snap.h, PIXFORMAT_RGB565, 80, out, outLen);
-      heap_caps_free(img);
+  if (!s_snap.valid) { xSemaphoreGive(s_snapMutex); return false; }
+  const int W = s_snap.w, H = s_snap.h;
+  const size_t n = (size_t)W * H * 2;
+  uint8_t* img = (uint8_t*)heap_caps_malloc(n, MALLOC_CAP_SPIRAM);
+  if (img) memcpy(img, s_snap.buf, n);
+  const FaceEyes f = s_snap.face;
+  const float ps[2] = {s_snap.pL, s_snap.pR};
+  const float hs = s_snap.eyeSide / 2.0f;
+  xSemaphoreGive(s_snapMutex);
+  if (!img) return false;
+
+  if (f.roi[0] || f.roi[1] || f.roi[2] != W || f.roi[3] != H)
+    rbox565(img, W, H, f.compDeg, f.roi[0], f.roi[1], f.roi[2] - 1, f.roi[3] - 1, 0x8410);
+  if (f.found) {
+    const int a = f.compDeg;
+    rbox565(img, W, H, a, f.box[0], f.box[1], f.box[2], f.box[3], 0x07E0);
+    for (int e = 0; e < 2; e++) {
+      uint16_t c = ps[e] < 0 ? 0xFFE0 : ps[e] >= P_CLOSED_ON ? 0xF800 : ps[e] <= P_CLOSED_OFF ? 0x001F : 0xFFE0;
+      rbox565(img, W, H, a, f.eye[e][0] - hs, f.eye[e][1] - hs, f.eye[e][0] + hs, f.eye[e][1] + hs, c);
     }
   }
-  xSemaphoreGive(s_snapMutex);
+  bool ok = fmt2jpg(img, n, W, H, PIXFORMAT_RGB565, 80, out, outLen);
+  heap_caps_free(img);
   return ok;
 }
 
@@ -305,6 +309,7 @@ static void visionTask(void*) {
       g_state.lastFrameMs = now;
       g_state.eyeDistPx = eyeDist;
       g_state.tiltCompDeg = f.compDeg;
+      for (int i = 0; i < 4; i++) g_state.roi[i] = f.roi[i];
       g_state.rotateMs = f.rotateMs;
       g_state.detectMs = f.detectMs;
       g_state.classifyMs = classifyMs;
