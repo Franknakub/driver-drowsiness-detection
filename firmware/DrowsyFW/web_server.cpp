@@ -7,6 +7,7 @@
 //   POST /api/test    what=buzzer|green|red|ir|oled  ทดสอบฮาร์ดแวร์ HW_TEST_MS
 //   GET/POST /update  อัปโหลด .bin (ต้องใส่รหัส admin / OTA_PASSWORD)
 //   GET  /wifi        หน้าตั้งค่า WiFi (ผ่าน AP ของ Device ไม่ต้อง login · ทางอื่น admin / OTA_PASSWORD) · GET /api/wifi[?scan=1] · POST /api/wifi/save ssid,pass · POST /api/wifi/forget ssid
+//   GET  /eyes.raw    ภาพตา 32x32 ดิบสองข้าง + P ของเฟรมเดียวกัน (2072 ไบต์ · เก็บข้อมูล fine-tune ด้วย ml/incar/capture.py)
 //   GET  /trips       ประวัติ Trip บน Device (รายการ + Trip Summary + กราฟ)
 //   GET  /api/trips   JSON รายการ Trip ทั้งหมดบน FFat พร้อม Trip Summary
 //   GET  /api/trips/<n>?from=0&count=600&step=1   Sample ช่วงหนึ่ง + Event ทั้งหมด + Trip Summary ของ Trip n
@@ -409,12 +410,12 @@ static void handleAb(AsyncWebServerRequest* req) {
 
 // buffer JPEG เป็นของ response แต่ละตัว ปล่อยเมื่อ response ถูกลบ (ส่งเสร็จหรือหลุด)
 // เดิมใช้ก้อนเดียวต่อ endpoint แล้วปล่อยของเก่าตอนมีคำขอถัดไป -> เปิดดูพร้อมกันสองเครื่องจะส่งหน่วยความจำที่ปล่อยแล้ว
-static void sendJpeg(AsyncWebServerRequest* r, bool (*make)(uint8_t**, size_t*)) {
+static void sendJpeg(AsyncWebServerRequest* r, bool (*make)(uint8_t**, size_t*), const char* type = "image/jpeg") {
   uint8_t* raw = nullptr;
   size_t len = 0;
   if (!make(&raw, &len)) { r->send(503, "text/plain", "no frame yet"); return; }
   std::shared_ptr<uint8_t> jpg(raw, free);
-  AsyncWebServerResponse* res = r->beginResponse("image/jpeg", len, [jpg, len](uint8_t* buf, size_t maxLen, size_t index) -> size_t {
+  AsyncWebServerResponse* res = r->beginResponse(type, len, [jpg, len](uint8_t* buf, size_t maxLen, size_t index) -> size_t {
     size_t n = min(maxLen, len - index);
     memcpy(buf, jpg.get() + index, n);
     return n;
@@ -665,6 +666,7 @@ void startWebServer() {
   // ภาพที่โมเดลเห็นล่าสุด (หมุนแล้ว) พร้อมกรอบหน้า/ตา · vision เริ่มคัดลอกภาพเมื่อมีคนขอ จึงอาจว่างในครั้งแรก
   server.on("/snapshot.jpg", HTTP_GET, [](AsyncWebServerRequest* r) { sendJpeg(r, snapshotJpeg); });
   server.on("/eyes.jpg", HTTP_GET, [](AsyncWebServerRequest* r) { sendJpeg(r, eyesJpeg); });
+  server.on("/eyes.raw", HTTP_GET, [](AsyncWebServerRequest* r) { sendJpeg(r, eyesRaw, "application/octet-stream"); });
 
   server.on("/api/time", HTTP_POST, [](AsyncWebServerRequest* r) {
     if (!r->hasParam("epoch", true)) { r->send(400, "text/plain", "missing epoch"); return; }
