@@ -66,7 +66,7 @@ def main():
     for s in a.sessions:
         meta, frames, _, _ = common.load(s)
         if not frames:
-            print(f"{s}: ไม่มีภาพจาก /eyes.raw (firmware เก่ากว่า 0.3.13) replay ไม่ได้"); continue
+            print(f"{s}: ไม่มีภาพจาก /eyes.raw (firmware รอบนี้ไม่มี endpoint นี้) replay ไม่ได้"); continue
         meta = dict(meta, fw=f"{meta['fw']} · replay เกณฑ์ {on}/{off}")
         sources = {"board": [(f["pL"], f["pR"]) for f in frames]}
         if a.run:
