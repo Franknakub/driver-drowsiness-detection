@@ -163,11 +163,12 @@ dialog::backdrop{background:rgba(10,12,18,.5)}
    มาสคอตบนฉาก: ถนนเลื่อน ล้อหมุน ตัวรถโยก ตากะพริบ (ตาปรือ = กะพริบช้า หลับนาน + z z ลอย)
    เปิดหน้า: การ์ดลอยขึ้นทีละใบ · สติกเกอร์เกรดประทับ · แท่งกราฟโตจากฐาน (ครั้งแรกหลัง login เท่านั้น ไม่เล่นซ้ำตอนรีเฟรช)
    transform/opacity เท่านั้น · ลดการเคลื่อนไหว = เหลือแค่ค่อยๆ ปรากฏ */
-.eyeb,.wheel,.carbody,.zz{transform-box:fill-box;transform-origin:center}
-#sceneCar .eyeb,#face .eyeb,#authFace .eyeb,#dFace .eyeb{animation:blink 5s infinite}
-.sleepy .eyeb{animation-name:slowblink!important;animation-duration:4s!important}
-@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
-@keyframes slowblink{0%,62%,100%{transform:scaleY(1)}72%,86%{transform:scaleY(.1)}}
+.wheel,.carbody,.zz{transform-box:fill-box;transform-origin:center}
+/* กะพริบ = เปลือกตาเลื่อนในวงตา (--shut = ระยะถึงตาปิด ตั้งใน eye()) · ห้าม scale ทั้งดวง วงกลมจะแบน */
+#sceneCar .lid,#face .lid,#authFace .lid,#dFace .lid{animation:blink 5s infinite}
+.sleepy .lid{animation-name:slowblink!important;animation-duration:4s!important}
+@keyframes blink{0%,93%,100%{transform:none}96%{transform:translateY(var(--shut))}}
+@keyframes slowblink{0%,62%,100%{transform:none}72%,86%{transform:translateY(var(--shut))}}
 #sceneCar .wheel{animation:spin .9s linear infinite}
 #sceneCar .carbody{animation:bob 1.8s var(--ease-in-out) infinite}
 .road-dash{animation:road .9s linear infinite}
@@ -193,7 +194,7 @@ dialog[open]::backdrop{animation:fade .2s ease-out}
 .chip .dot{width:7px;height:7px;border-radius:50%;background:#1f8f55;animation:pulse 1.6s var(--ease-in-out) infinite}
 @keyframes pulse{50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){
-  .road-dash,.wheel,.carbody,.eyeb,.zz,.chip .dot{animation:none!important}
+  .road-dash,.wheel,.carbody,.lid,.sleepy .lid,.zz,.chip .dot{animation:none!important}
   #auth,#claim,#detail,.hero>.card,.grid2>.card,.trip.enter,.stick,.bar.grow,dialog[open]{animation-name:fade!important}
   button,.trip{transition:none}
 }
@@ -373,11 +374,15 @@ function grade(s) {
 let uid = 0;
 function eye(cx, cy, r, open) {
   const lid = cy - r + 2 * r * (1 - open) * .92, id = 'eyeclip' + (++uid);
-  return `<g class="eyeb"><clipPath id="${id}"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff" stroke="#1d2433" stroke-width="3"/>
+  // กะพริบ: เปลือกบนลง เปลือกล่างขึ้น มาชนกันที่ seam เหลือเส้นขนตาในวงตา · เปลือกบนสูงเผื่อระยะเลื่อน ไม่ให้ขอบบนโผล่
+  const seam = cy + r * .7, shut = seam - lid, rise = r * .3 + 2, top = cy - r - 2 - shut;
+  return `<g><clipPath id="${id}"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff"/>
     <g clip-path="url(#${id})"><circle cx="${cx + r * .12}" cy="${cy + r * .1}" r="${r * .5}" fill="#1d2433"/><circle cx="${cx + r * .3}" cy="${cy - r * .12}" r="${r * .16}" fill="#fff"/>
-    <rect x="${cx - r}" y="${cy - r - 2}" width="${2 * r}" height="${lid - (cy - r) + 2}" fill="#ffd9a8"/></g>
-    <path d="M${cx - r} ${lid} Q${cx} ${lid + (open < .4 ? 5 : 2)} ${cx + r} ${lid}" fill="none" stroke="#1d2433" stroke-width="3" stroke-linecap="round"/></g>`;
+    <rect class="lid" style="--shut:${-rise}px" x="${cx - r}" y="${cy + r + 2}" width="${2 * r}" height="${r}" fill="#ffd9a8"/>
+    <g class="lid" style="--shut:${shut}px"><rect x="${cx - r}" y="${top}" width="${2 * r}" height="${lid - top}" fill="#ffd9a8"/>
+    <path d="M${cx - r} ${lid} Q${cx} ${lid + (open < .4 ? 5 : 2)} ${cx + r} ${lid}" fill="none" stroke="#1d2433" stroke-width="3" stroke-linecap="round"/></g></g>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1d2433" stroke-width="3"/></g>`;
 }
 const openOf = s => s == null ? .85 : Math.max(.08, Math.min(1, (s - 30) / 60));
 const faceSvg = open => eye(36, 44, 30, open) + eye(92, 44, 25, open);
