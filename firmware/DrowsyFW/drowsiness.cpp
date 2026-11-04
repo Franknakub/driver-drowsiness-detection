@@ -103,7 +103,6 @@ const DrowsyResult& DrowsinessJudge::update(uint32_t nowMs, EyeState raw) {
   if (r_.perclos >= 0) {
     float p = r_.perclos;
     if (p >= PERCLOS_LEVEL2 || (perclosLevel_ == 2 && p >= PERCLOS_LEVEL2 - PERCLOS_HYST)) pl = 2;
-    else if (p >= PERCLOS_LEVEL1 || (perclosLevel_ >= 1 && p >= PERCLOS_LEVEL1 - PERCLOS_HYST)) pl = 1;
   }
   perclosLevel_ = pl;
 

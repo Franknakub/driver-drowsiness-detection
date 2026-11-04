@@ -1,10 +1,10 @@
-"""ทดสอบในรถ: พูดบอกท่าทีละช่วง → อ่าน /api/status ราว 5 ครั้ง/วิ → ให้คะแนนว่าเตือนครบไหม เตือนผิดไหม
+"""ทดสอบในรถ: พูดบอกท่าทีละช่วง → อ่าน /api/status 2 ครั้ง/วิ → ให้คะแนนว่าเตือนครบไหม เตือนผิดไหม
 
     python ml/incar/cartest.py --name 2026-11-05_day_noglasses --person frank --light day --glasses none
     python ml/incar/cartest.py --protocol drive --name 2026-11-05_drive1 ...      (ขับจริง ไม่มีเสียงบอก Ctrl+C หยุด)
 
 ต่อคอมเข้า WiFi AP ของบอร์ด (Drowsy-XXXX) ก่อน · บอร์ดอยู่ที่ 192.168.4.1
-ถ้า firmware มี /eyes.raw (0.3.13-raw มี · 0.3.15-p15 ของเพื่อนไม่มี) จะเก็บภาพตา 32x32 ที่เข้าโมเดลไว้ด้วย ใช้ fine-tune ต่อได้
+ถ้า firmware มี /eyes.raw (ตั้งแต่ 0.3.13-raw) จะเก็บภาพตา 32x32 ที่เข้าโมเดลไว้ด้วย ใช้ fine-tune ต่อได้
 ผลอยู่ใน ml/data/incar/<name>/ (ไม่ขึ้น git) · ให้คะแนนซ้ำได้ด้วย score.py
 ⚠️ ท่าหลับตา: ทำตอนรถจอดเท่านั้น
 """
@@ -65,6 +65,7 @@ def main():
     ap.add_argument("--glasses", default="", help="none / glasses / sunglasses")
     ap.add_argument("--notes", default="")
     ap.add_argument("--no-voice", action="store_true")
+    ap.add_argument("--poll", type=float, default=0.5, help="อ่าน /api/status ทุกกี่วินาที (5 ครั้ง/วิ เคยทำเว็บบอร์ดค้างตอน RAM ตึง)")
     ap.add_argument("--yes", action="store_true", help="ข้ามคำถามยืนยันว่ารถจอดอยู่ (ใช้ตอนทดสอบสคริปต์)")
     a = ap.parse_args()
 
@@ -85,6 +86,12 @@ def main():
     print(f"บอร์ด fw {st['fw']} · fps {st['fps']} · เจอหน้า {st['face']} · /eyes.raw {'มี (เก็บภาพตาด้วย)' if has_raw else 'ไม่มี (วัดผลอย่างเดียว)'}")
     if not st["face"]:
         print("⚠️ ตอนนี้บอร์ดยังหาหน้าไม่เจอ นั่งท่าขับแล้วดูภาพสดที่ http://192.168.4.1 ก่อน")
+    plan = common.segments(a.protocol)
+    if a.protocol != "drive":
+        print("\nลำดับท่าในรอบนี้ (เสียงจะบอกเป็นภาษาอังกฤษ ดูภาษาไทยบนจอนี้ได้ตลอด):")
+        for k, (t0, t1, _, _, say, thai) in enumerate(plan, 1):
+            print(f"  {k:>2}. {int(t0) // 60}:{int(t0) % 60:02d}  {thai}  ({t1 - t0:.0f} วิ)  เสียง: {say}")
+        print("เสียงบี๊บ: สูง 2 ครั้ง = หลับตา · ต่ำ 1 ครั้ง = ท่าอื่น\n")
     if common.SAFETY[a.protocol] and not a.yes:
         if input("รอบนี้มีการหลับตา ต้องทำตอนรถจอดเท่านั้น รถจอดอยู่ใช่ไหม? พิมพ์ y: ").strip().lower() != "y":
             sys.exit("ยกเลิก")
@@ -107,9 +114,9 @@ def main():
                                         eye_state=s["eye_state"], p=s["p_closed"], pL=s["p_left"], pR=s["p_right"], face=s["face"],
                                         distraction=s["distraction"], unmonitored=s["unmonitored"], perclos=s["perclos"], fps=s["fps"],
                                         mute_left_s=s["mute_left_s"], free_internal_kb=s["free_internal_kb"]))
-            except (OSError, ValueError, KeyError):
+            except Exception:
                 errors["status"] += 1
-            time.sleep(max(0.0, 0.2 - (time.perf_counter() - state["t0"] - t)))
+            time.sleep(max(0.0, a.poll - (time.perf_counter() - state["t0"] - t)))
 
     def poll_raw():
         last = None
@@ -122,7 +129,7 @@ def main():
             if f["seq"] != last:
                 last = f["seq"]
                 frames.append(dict(i=len(frames), t=round(t, 3), seg=state["seg"], cue=state["cue"], **f)); eyes.append(e)
-            time.sleep(0.03)
+            time.sleep(0.12)
 
     voice = Voice(not a.no_voice and a.protocol != "drive")
     print("\nเริ่มใน 5 วิ · นั่งท่าขับ มองถนน\n")
@@ -134,13 +141,14 @@ def main():
         th.start()
     stopped_early = False
     try:
-        for t0, t1, name, label, say, thai in segs:
+        for k, (t0, t1, name, label, say, thai) in enumerate(segs):
             while time.perf_counter() - state["t0"] < t0:
                 time.sleep(0.01)
             # ติดป้ายท่าใหม่ทันทีที่เริ่มพูด · ช่วงตอบสนองของคนถูกตัดทิ้งตอนให้คะแนน (common.MARGIN_START)
             state["seg"], state["cue"] = name, label
             voice.say(say, label)
-            print(f"[{t0:6.1f}s] {thai}   ({t1 - t0:.0f} วิ)")
+            nxt = f"   · ถัดไป: {segs[k + 1][5]}" if k + 1 < len(segs) else ""
+            print(f"[{k + 1:>2}/{len(segs)}  {t0:5.0f} วิ] >>> {thai}  ({t1 - t0:.0f} วิ){nxt}", flush=True)
         while time.perf_counter() - state["t0"] < segs[-1][1]:
             time.sleep(0.05)
     except KeyboardInterrupt:
@@ -151,7 +159,22 @@ def main():
         th.join(timeout=3)
     voice.close()
 
-    meta.update(duration_s=round(time.perf_counter() - state["t0"], 1), stopped_early=stopped_early,
+    # บันทึกในบอร์ดใช้นับการเตือนจริง (เว็บค้างแล้ว status หายได้ แต่ Trip log ไม่หาย)
+    board_ms0 = None
+    if len(frames) > 10:
+        board_ms0 = round(sorted(f["ms"] - f["t"] * 1000 for f in frames[5:])[(len(frames) - 5) // 2])
+    for _ in range(5):
+        try:
+            # count=1: เอาแค่ events · ขอ samples ทั้ง Trip แล้ว String บนบอร์ดจองไม่พอ JSON ขาดกลางทาง (RAM ภายในตึง)
+            body = get(f"{base}/api/trips/{st['trip']}?count=1", 10, "open")
+            json.loads(body)
+            (out / "board_trip.json").write_bytes(body); break
+        except (OSError, KeyError, ValueError):
+            time.sleep(2)
+    else:
+        print("⚠️ ดึงบันทึกในบอร์ดไม่ได้ คะแนนจะใช้ status อย่างเดียว")
+
+    meta.update(duration_s=round(time.perf_counter() - state["t0"], 1), stopped_early=stopped_early, board_ms0=board_ms0,
                 errors=errors, status_rows=len(status_rows), raw_frames=len(frames))
     (out / "session.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     (out / "status.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in status_rows), encoding="utf-8")

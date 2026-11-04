@@ -205,7 +205,7 @@ static void testNotVisibleBridge() {
 }
 
 static void testPerclos() {
-  puts("PERCLOS 20% / 30% + hysteresis");
+  puts("PERCLOS: only level 2 at 40% + hysteresis (no level 1)");
   Sim s;
   int lo = 9, hi = -1;
   uint32_t from = PERCLOS_MIN_VALID_MS + 1000;  // ช่วงแรก: PERCLOS ยังไม่พร้อม · ช่วงต่อไป: เผื่อหน้าต่างเลื่อน
@@ -214,26 +214,23 @@ static void testPerclos() {
   };
   auto reset = [&] { lo = 9; hi = -1; };
 
-  s.perclos(0.20, 70000, track);
-  CHECK(lo == 1 && hi == 1, "20%%: level %d..%d perclos=%.3f", lo, hi, s.r().perclos);
-  CHECK(std::fabs(s.r().perclos - 0.20f) < 0.01f, "perclos=%.3f", s.r().perclos);
+  s.perclos(0.30, 70000, track);
+  CHECK(lo == 0 && hi == 0, "30%%: level %d..%d perclos=%.3f", lo, hi, s.r().perclos);
+  CHECK(std::fabs(s.r().perclos - 0.30f) < 0.01f, "perclos=%.3f", s.r().perclos);
   CHECK(s.r().closedMs < CLOSED_LEVEL2_MS, "ตาปิดต่อเนื่องต้องสั้น");
 
   from = 15000;
-  reset(); s.perclos(0.30, 70000, track);
-  CHECK(hi == 2 && s.r().level == L::Drowsy, "30%%: level %d..%d perclos=%.3f", lo, hi, s.r().perclos);
+  reset(); s.perclos(0.45, 70000, track);
+  CHECK(hi == 2 && s.r().level == L::Drowsy, "45%%: level %d..%d perclos=%.3f", lo, hi, s.r().perclos);
 
-  reset(); s.perclos(0.24, 70000, track);   // ต่ำกว่า 25% แต่ไม่ต่ำกว่า 23%: ค้างที่ 2
-  CHECK(lo == 2 && hi == 2, "24%%: level %d..%d perclos=%.3f", lo, hi, s.r().perclos);
+  reset(); s.perclos(0.39, 70000, track);   // ต่ำกว่า 40% แต่ไม่ต่ำกว่า 38%: ค้างที่ 2
+  CHECK(lo == 2 && hi == 2, "39%%: level %d..%d perclos=%.3f", lo, hi, s.r().perclos);
 
-  reset(); s.perclos(0.21, 70000, track);   // ต่ำกว่า 23%: ลงเป็น 1
-  CHECK(s.r().level == L::Fatigue && hi <= 2, "21%%: level=%d perclos=%.3f", (int)s.r().level, s.r().perclos);
+  reset(); s.perclos(0.36, 70000, track);   // ต่ำกว่า 38%: ลงเป็น 0 (ไม่มีระดับ 1 แล้ว)
+  CHECK(s.r().level == L::Normal && hi <= 2, "36%%: level=%d perclos=%.3f", (int)s.r().level, s.r().perclos);
 
-  reset(); s.perclos(0.14, 70000, track);   // ต่ำกว่า 15% แต่ไม่ต่ำกว่า 13%: ค้างที่ 1
-  CHECK(lo == 1 && hi == 1, "14%%: level %d..%d perclos=%.3f", lo, hi, s.r().perclos);
-
-  reset(); s.perclos(0.11, 70000, track);   // ต่ำกว่า 13%: ลงเป็น 0
-  CHECK(s.r().level == L::Normal, "11%%: level=%d perclos=%.3f", (int)s.r().level, s.r().perclos);
+  reset(); s.perclos(0.24, 70000, track);   // ค่าเดิมของระดับ 1: ต้องปกติ
+  CHECK(s.r().level == L::Normal, "24%%: level=%d perclos=%.3f", (int)s.r().level, s.r().perclos);
   CHECK(s.microsleeps == 0, "microsleep=%d", s.microsleeps);
 }
 
