@@ -13,6 +13,7 @@ import common
 
 sys.stdout.reconfigure(encoding="utf-8")
 ALARM = ("drowsy", "microsleep")
+LEVELS = ("normal", "fatigue", "drowsy", "microsleep")
 LATE = 1.5
 
 
@@ -45,9 +46,23 @@ def mean(xs):
     return round(sum(xs) / len(xs), 3) if xs else None
 
 
+def merge_board_log(name, meta, rows):
+    """เติมการเปลี่ยนระดับจากบันทึกในบอร์ดลงใน rows · เว็บบอร์ดค้างเป็นช่วงๆ ได้ แต่ Trip log ยังครบ (เจอ 4 พ.ย.: status บอก 1/6 จริง 6/6)"""
+    path = common.DATA / name / "board_trip.json"
+    if not rows or meta.get("board_ms0") is None or not path.exists():
+        return rows
+    out = list(rows)
+    for e in json.loads(path.read_text(encoding="utf-8"))["events"]:   # [i, ms, type, from, to, value] · type 0 = LevelChange
+        t = (e[1] - meta["board_ms0"]) / 1000
+        if e[2] == 0 and rows[0]["t"] <= t <= rows[-1]["t"]:
+            prev = max((r for r in rows if r["t"] <= t), key=lambda r: r["t"])
+            out.append(dict(prev, t=round(t, 3), level=LEVELS[e[4]], closed_ms=e[5]))
+    return sorted(out, key=lambda r: r["t"])
+
+
 def score(name):
     meta, rows = load_status(name)
-    return score_rows(name, meta, rows)
+    return score_rows(name, meta, merge_board_log(name, meta, rows))
 
 
 def score_rows(name, meta, rows):

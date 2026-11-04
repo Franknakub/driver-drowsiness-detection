@@ -3,8 +3,7 @@
 
 #define PERCLOS_WINDOW_MS      60000
 #define PERCLOS_MIN_VALID_MS   30000  // ต้องเห็นตา (เปิด/ปิด) รวมเท่านี้ในหน้าต่างก่อนจะใช้ PERCLOS
-#define PERCLOS_LEVEL1         0.15f
-#define PERCLOS_LEVEL2         0.25f
+#define PERCLOS_LEVEL2         0.40f  // 4 พ.ย.: เลิกใช้ระดับ 1 (TIRED) ตามผู้ใช้ · PERCLOS เหลือระดับเดียวคือ 2 · ค่าเดิม 0.25 ไวเกิน ลืมตาใส่แว่นแล้วขึ้น SLEEPY ค้าง
 #define PERCLOS_HYST           0.02f  // ลดระดับเมื่อ PERCLOS ต่ำกว่าเกณฑ์ลงไปเท่านี้ กันสลับไปมา
 #define CLOSED_LEVEL2_MS       2000
 #define MICROSLEEP_MS          3000

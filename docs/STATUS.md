@@ -128,7 +128,7 @@ OV5640 → ESP-DL หาหน้า → ตัดตา 32×32 → CNN INT8 →
 
 | # | งาน | สถานะ | อธิบาย | ใครทำ |
 |---|---|---|---|---|
-| 3.1 | จอ OLED | ✅ | 0.3.8-oled-info (branch `oled-info`): แถบสถานะ `AWAKE` / `TIRED` / `SLEEPY` / `WAKE UP!` / `LOOK AHEAD` / `UNCLEAR` / `NO DRIVER` + บรรทัดตา, เสียง, ชื่อ AP, URL ผ่าน AP และผ่าน WiFi · ทดสอบบนบอร์ดผ่าน 3 พ.ย. | Claude |
+| 3.1 | จอ OLED | ✅ | 0.3.8-oled-info (branch `oled-info`): แถบสถานะ `AWAKE` / `SLEEPY` / `WAKE UP!` / `LOOK AHEAD` / `UNCLEAR` / `NO DRIVER` + บรรทัดตา, เสียง, ชื่อ AP, URL ผ่าน AP และผ่าน WiFi · ทดสอบบนบอร์ดผ่าน 3 พ.ย. | Claude |
 | 3.2 | ทดสอบ buzzer/LED กับ DrowsyFW | 🔴 | ที่ผ่านเมื่อ 23 ต.ค. คือ BenchTest ยังไม่ได้ดูว่าหลับตาแล้วไฟและเสียงเป็นไปตามระดับไหม · ใช้เวลาไม่ถึง 10 นาทีที่โต๊ะ | ผู้ใช้ + Claude |
 | 3.3 | แจ้งเตือนผ่าน Telegram | 🔴 | อยู่ในแผนเดิม (LINE Notify ปิดบริการแล้ว) · ถ้าเวลาไม่พอตัดออกได้ | Claude |
 | 3.4 | ปุ่มบนบอร์ด | ✅ | (เพื่อน 0.3.5-hw) กดปุ่ม BOOT บนโมดูล = ปิดเสียง 5 นาที | — |

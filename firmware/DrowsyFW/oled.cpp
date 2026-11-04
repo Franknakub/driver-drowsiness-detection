@@ -1,6 +1,6 @@
 // oled_task: จอ SSD1306 128x64 (driver เขียนเอง ไม่ใช้ไลบรารี เหมือน BenchTest)
 //   หน้าเดียวตลอด: บรรทัดบนตัวใหญ่ = สถานะคนขับ · 5 บรรทัดล่าง = ตา / เสียง / ชื่อ AP / URL ผ่าน AP / URL ผ่าน WiFi
-//   สถานะ: WAKE UP! > SLEEPY > LOOK AHEAD (3 อย่างนี้กลับสีแถบบน) > UNCLEAR > TIRED > NO DRIVER > AWAKE
+//   สถานะ: WAKE UP! > SLEEPY > LOOK AHEAD (3 อย่างนี้กลับสีแถบบน) > UNCLEAR > NO DRIVER > AWAKE
 //   ไม่กะพริบ · หรี่จอเมื่อมืด (เกณฑ์ LDR เดียวกับ IR) · ค่าดีบักอื่น (P ตาปิด, fps, Sync) ดูที่หน้าเว็บของ Device
 // อยู่ Core 0 priority ต่ำ: I2C ส่งทั้งจอ ~25 ms ไม่แย่งเวลา vision
 #include <Wire.h>
@@ -130,7 +130,6 @@ static void pickInfo(const SharedState& s, uint32_t now, InfoScreen& sc) {
   else if (s.level == DrowsinessLevel::Drowsy)     { st = "SLEEPY";     sc.alert = true; }
   else if (s.distraction)                          { st = "LOOK AHEAD"; sc.alert = true; }
   else if (s.unmonitored)                          st = "UNCLEAR";
-  else if (s.level == DrowsinessLevel::Fatigue)    st = "TIRED";
   else if (!s.driverPresent)                       st = "NO DRIVER";
   strlcpy(sc.status, st, sizeof(sc.status));
 

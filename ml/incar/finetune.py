@@ -204,7 +204,7 @@ def main():
     ap.add_argument("--test", nargs="*", default=[])
     ap.add_argument("--run", default=datetime.datetime.now().strftime("%Y-%m-%d_%H%M"))
     ap.add_argument("--incar-share", type=float, default=0.25, help="สัดส่วนภาพในรถในแต่ละ epoch (สุ่มซ้ำให้ถึง)")
-    ap.add_argument("--thr", type=float, nargs="+", default=[0.3, 0.5], help="เกณฑ์ที่รายงาน (บอร์ดตอนนี้ P_CLOSED_ON 0.3)")
+    ap.add_argument("--thr", type=float, nargs="+", default=[0.3, 0.5], help="เกณฑ์ที่รายงาน (บอร์ดตอนนี้ P_CLOSED_ON 0.5)")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--quick", action="store_true")
     a = ap.parse_args()
