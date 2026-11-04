@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ไม่มี lint หรือ unit test บนบอร์ด · การตรวจคือ compile ผ่าน แล้วดู serial / `GET /api/status` จากบอร์ดจริง
 
-logic ความง่วง (`drowsiness.cpp`) และรูปแบบไฟล์ Trip (`trip_record.cpp`) ไม่พึ่ง Arduino มีเทสต์บน PC · แก้ไฟล์เหล่านี้แล้วต้องรันผ่านก่อน · แก้ SQL ใน `cloud/sql/` แล้วรันเทสต์ cloud:
+logic ความง่วง (`drowsiness.cpp`) และรูปแบบไฟล์ Trip (`trip_record.cpp`) ไม่พึ่ง Arduino มีเทสต์บน PC · แก้ไฟล์เหล่านี้แล้วต้องรันผ่านก่อน · เทสต์เลือกรันทีละข้อไม่ได้ ต้องรันทั้งไฟล์ (เรียกจาก `main()` ถ้าจะลองข้อเดียวให้คอมเมนต์ข้ออื่นชั่วคราว) · เปลี่ยนเกณฑ์ใน `drowsy_config.h` แล้วค่าในเทสต์ PERCLOS ต้องแก้ตาม · แก้ SQL ใน `cloud/sql/` แล้วรันเทสต์ cloud:
 
 ```bash
 cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW drowsiness_test.cpp ../DrowsyFW/drowsiness.cpp -o drowsiness_test && ./drowsiness_test
@@ -54,24 +54,36 @@ S=~/Documents/Arduino/DrowsyFW
 กล้อง OV5640 (RGB565 HVGA) → หมุนภาพ 270° (+ ชดเชยหน้าเอียงตามมุมเส้นตา)
   → ROI 4:3 (0.3.9) → ESP-DL HumanFaceDetect (MSR 160×120 + MNP 48×48, score thr 0.30) → จุดตา 2 ข้าง
   → Eye Region ด้าน 0.8 × ระยะระหว่างตา → gray → 32×32 → int8 → CNN (TFLite Micro)
-  → P(ตาปิด) เฉลี่ยสองข้าง → Eye State (ปิด ≥ 0.5 · เปิด < 0.3 · ระหว่างนั้น = ไม่แน่ใจ)
+  → P(ตาปิด) เฉลี่ยสองข้าง → Eye State (ปิด ≥ `P_CLOSED_ON` 0.5 · เปิด < `P_CLOSED_OFF` 0.5 · ตั้งเท่ากันจึงไม่มีช่วงไม่แน่ใจ)
 ```
 
 - **แบ่ง task ตาม core:** Core 1 = `vision` / `alert` / `sensor` (LDR→IR) · Core 0 = `net` (AP ตลอด + ลอง WiFi ที่บันทึกไว้ + NTP + mDNS), `log`, `sync`, `oled` (priority 1), เว็บ (AsyncWebServer ทำงานบน task ของ AsyncTCP)
 - task คุยกันผ่าน `SharedState` + mutex (`shared_state.h`) อ่านด้วย `stateSnapshot()` เขียนใน `StateGuard` · **ห้ามส่ง camera `fb` ข้าม core** — ภาพสดใช้การคัดลอกเข้า buffer แยก (`snapshotStore` ใน `vision.cpp`)
-- ค่าคงที่และเกณฑ์ทั้งหมดอยู่ใน `config.h` (เกณฑ์เวลาเป็นมิลลิวินาที ไม่นับเป็นเฟรม)
+- ค่าคงที่ ขา GPIO และเกณฑ์ P(ปิด) อยู่ใน `config.h` · เกณฑ์ความง่วงอยู่ใน `drowsy_config.h` (ไม่พึ่ง Arduino เพื่อให้เทสต์บน PC ได้ · เกณฑ์เวลาเป็นมิลลิวินาที ไม่นับเป็นเฟรม)
 - **ROI ของขั้น MSR** (`pickRoi` / `compUpdate` ใน `face_eye.cpp`, 0.3.9): ภาพตั้งตรง 320×480 ส่งทั้งเฟรมเข้า input 160×120 = กว้าง ½ สูง ¼ หน้าถูกบีบเตี้ย → **A/B 3 พ.ย. ทั้งเฟรมเจอหน้า 0% ทุกระยะ** (50 ซม.–1.5 ม.) ส่วน ROI ได้ 75–100% · จึงส่งแค่ส่วน 4:3 (ย่อเท่ากันสองแกน):
   - เจอหน้า: ROI สูง `FACE_ROI_SCALE` (2.5) × ด้านยาวกรอบหน้า ต่ำสุด 160×120 (ไม่ขยายภาพ) · หน้าใหญ่เกินใช้แถบ 320×240 รอบหน้า — **ห้ามถอยไปใช้ทั้งเฟรม** (เคยทำแล้วหน้าใกล้หลุด 11/13 เฟรม)
   - หลุดเกิน 2 เฟรม: ลองรอบตำแหน่งเดิมด้วย ROI กว้าง 2 เท่า 1 เฟรม แล้วไล่ `SEARCH` ทีละเฟรม (ทั้งเฟรม → แถบ 4:3 → ช่อง 160×120 ครึ่งกลางภาพ 6 ช่อง → มุมเอียง ±20/±40) รอบละ ~16 เฟรม
   - พิกัดกรอบ/จุดตาแปลงกลับเป็นพิกัดเต็มภาพใน `ViewMSRPostprocessor` (offset `set_map`) · `FACE_ROI 0` = ทั้งเฟรมแบบเดิม
 - `face_eye.cpp` = หาหน้า + หมุนภาพ (ย้ายมาจากสเก็ตช์ทดลอง FaceSpike) · `human_face_detect*.{hpp,cpp}` + `human_face_detect_model.cpp` = โค้ดและโมเดลจาก esp-dl v3.3.11 (MIT) · `eye_classifier.cpp` + `eye_preprocess.h` + `eye_model_data.h` = โมเดลตา
-- **Device Dashboard** (`INDEX_HTML` ใน `web_server.cpp`, หน้า `/`, ออกแบบใหม่ 0.3.10 ผู้ใช้เลือก: เน้นสาธิต/คนขับ · สีตามเครื่อง · ภาพกล้องใหญ่ · **0.3.11-toon** คงโครงเดิมแต่หน้าตาการ์ตูนเหมือน Cloud Dashboard: รถมาสคอตในการ์ดสถานะ เปลือกตารถตามระดับ/ตาคนขับ (ตาปิด = รถหลับตา, ละสายตา = ตามองข้าง) สั่นที่ระดับ 3 · ฟอนต์ระบบเท่านั้น · compile ผ่าน 4 พ.ย. **ยังไม่ได้แฟลช/ทดสอบบนบอร์ด** (ไม่มีบอร์ด) · ตัวก่อนแก้ backup ที่ `~/Documents/DrowsyFW-backups/web_server_0.3.10-dash_before_cartoon.cpp`): การ์ดสถานะใหญ่สีตามระดับ (กะพริบที่ระดับ 3 / Distraction) · ปุ่มปิดเสียงนับถอยหลัง · ภาพสดพร้อมป้ายเจอหน้า/ตา · การ์ดตา / PERCLOS / การเชื่อมต่อ · กราฟ 2 นาที · ส่วน "สำหรับนักพัฒนา" พับไว้ (เวลา, ROI, IR/LDR, RAM, ภาพตา 32×32, โหมด IR, ทดสอบฮาร์ดแวร์, JSON) · ภาพตาโหลดเฉพาะตอนเปิดส่วนนั้น และหยุดโหลดภาพเมื่อหน้าถูกซ่อน · ไม่มีไฟล์/ฟอนต์ภายนอก (มือถือที่ต่อ AP ไม่มีเน็ต) · แก้หน้าแล้วพรีวิวบน PC ได้ด้วยเซิร์ฟเวอร์เล็กๆ ที่เสิร์ฟ HTML และส่งต่อ `/api/*` กับภาพไปบอร์ด · ห้ามมี `)HTML"` ในเนื้อหา · `POST /api/ir mode=auto|on|off` (จำใน NVS) · `POST /api/test what=buzzer|green|red|ir|oled` ทดสอบฮาร์ดแวร์ `HW_TEST_MS` · `POST /api/mute` · `/wifi` สแกน/เพิ่ม/ลบ WiFi (เข้าผ่าน AP ของบอร์ดไม่ต้อง login · ผ่าน WiFi อื่นต้อง admin / `OTA_PASSWORD` · `wifiAuthorized` เทียบ `localIP` ของ connection กับ `softAPIP`) เก็บใน NVS สูงสุด `WIFI_SAVED_MAX` ลองตามลำดับแล้วค่อย `WIFI_NETWORKS` ใน `secrets.h` · `/update` OTA
-- **ปุ่ม BOOT (GPIO0) = ปิดเสียง** ระดับ 1–2 และ Distraction `MUTE_DEFAULT_MS` (5 นาที) หลังบูตแล้ว (`alert.cpp`) · ระดับ 3 ปิดเสียงไม่ได้
+- **Device Dashboard** (`INDEX_HTML` ใน `web_server.cpp`, หน้า `/`, ออกแบบใหม่ 0.3.10 ผู้ใช้เลือก: เน้นสาธิต/คนขับ · สีตามเครื่อง · ภาพกล้องใหญ่ · **0.3.11-toon** คงโครงเดิมแต่หน้าตาการ์ตูนเหมือน Cloud Dashboard: รถมาสคอตในการ์ดสถานะ เปลือกตารถตามระดับ/ตาคนขับ (ตาปิด = รถหลับตา, ละสายตา = ตามองข้าง) สั่นที่ระดับ 3 · ฟอนต์ระบบเท่านั้น · อยู่ใน firmware บนบอร์ดแล้ว แต่หลังแฟลช 4 พ.ย. ยังไม่ได้เปิดตรวจหน้าเว็บ · ตัวก่อนแก้ backup ที่ `~/Documents/DrowsyFW-backups/web_server_0.3.10-dash_before_cartoon.cpp`): การ์ดสถานะใหญ่สีตามระดับ (กะพริบที่ระดับ 3 / Distraction) · ปุ่มปิดเสียงนับถอยหลัง · ภาพสดพร้อมป้ายเจอหน้า/ตา · การ์ดตา / PERCLOS / การเชื่อมต่อ · กราฟ 2 นาที · ส่วน "สำหรับนักพัฒนา" พับไว้ (เวลา, ROI, IR/LDR, RAM, ภาพตา 32×32, โหมด IR, ทดสอบฮาร์ดแวร์, JSON) · ภาพตาโหลดเฉพาะตอนเปิดส่วนนั้น และหยุดโหลดภาพเมื่อหน้าถูกซ่อน · ไม่มีไฟล์/ฟอนต์ภายนอก (มือถือที่ต่อ AP ไม่มีเน็ต) · แก้หน้าแล้วพรีวิวบน PC ได้ด้วยเซิร์ฟเวอร์เล็กๆ ที่เสิร์ฟ HTML และส่งต่อ `/api/*` กับภาพไปบอร์ด · ห้ามมี `)HTML"` ในเนื้อหา · `POST /api/ir mode=auto|on|off` (จำใน NVS) · `POST /api/test what=buzzer|green|red|ir|oled` ทดสอบฮาร์ดแวร์ `HW_TEST_MS` · `POST /api/mute` · `/wifi` สแกน/เพิ่ม/ลบ WiFi (เข้าผ่าน AP ของบอร์ดไม่ต้อง login · ผ่าน WiFi อื่นต้อง admin / `OTA_PASSWORD` · `wifiAuthorized` เทียบ `localIP` ของ connection กับ `softAPIP`) เก็บใน NVS สูงสุด `WIFI_SAVED_MAX` ลองตามลำดับแล้วค่อย `WIFI_NETWORKS` ใน `secrets.h` · `/update` OTA
+- **ปุ่ม BOOT (GPIO0) = ปิดเสียง** ระดับ 2 และ Distraction `MUTE_DEFAULT_MS` (5 นาที) หลังบูตแล้ว (`alert.cpp`) · ระดับ 3 ปิดเสียงไม่ได้
 - **endpoint ดีบัก:** `/api/status` (JSON ทุกค่าใน state รวมเวลา rotate/detect/classify และ `face_roi`) · `/snapshot.jpg` (ภาพตั้งตรงพร้อมกรอบหน้าเขียว/ตา · กรอบเทา = ROI ที่ส่งเข้า MSR) · `/eyes.jpg` (ภาพ 32×32 ที่เข้าโมเดลจริง ซ้าย = ตาซ้ายของภาพ) · `/eyes.raw` (0.3.13: ภาพ 32×32 ดิบสองข้าง + P ของเฟรมเดียวกัน 2072 ไบต์ รูปแบบอยู่ที่ `eyeRawStore` ใน `vision.cpp` · buffer อยู่ PSRAM · เก็บเฉพาะตอนมีคนขอภายใน 3 วิ) · `/api/ab?on=1` เทียบทางหาหน้าปัจจุบันกับทางเดิม (`faceEyesRunLegacy`: หมุนทั้งเฟรม + ส่งทั้งเฟรม) บนเฟรมเดียวกัน นับ `found_new` / `found_old` · รีเซ็ตตัวนับ = `on=0` แล้ว `on=1` · ระหว่างเปิด fps ลดราวครึ่ง
 - **ภาพสด:** `snapshotJpeg` ถือ mutex แค่ตอนคัดลอก แล้ววาดกรอบ + เข้ารหัส JPEG (~150–200 ms) หลังปล่อย · vision เก็บภาพแบบไม่รอ mutex ถ้าถือ mutex ตอนเข้ารหัส เฟรมใหม่ถูกข้ามจนหน้าเว็บได้ภาพเดิมซ้ำ (ภาพค้าง แก้ 3 พ.ย.) · `sendJpeg` ให้ buffer เป็นของแต่ละ response (ปล่อยเมื่อ response ถูกลบ) ดูพร้อมกันหลายเครื่องได้
 - RAM ภายในเหลือก้อนใหญ่สุดแค่ ~30 KB หลัง WiFi + esp-dl · arena ของ TFLM จึงตั้ง 28 KB และ fallback ไป PSRAM · **ตอนต่อเน็ตแล้ว Sync ส่ง Trip ค้าง (3 พ.ย.) เหลือ `free_internal_kb` 10–22 / ก้อนใหญ่สุด 7 KB** → JPEG ภาพสดเสียครึ่งล่าง · `cam_hal: FB-OVF` · fps ~3 · Sync `send payload failed` · ยังไม่ได้ไล่ว่าใครกิน
 - **logic ความง่วง** อยู่ใน `drowsiness.{h,cpp}` (class `DrowsinessJudge`, เกณฑ์ใน `drowsy_config.h`) · vision เรียกทุกเฟรมหลังได้ Eye State · นับเป็นเวลา (dt) ไม่นับเฟรม · Event ส่งผ่านคิวให้ log task พิมพ์ — **ห้ามพิมพ์ Serial จาก vision task** (USB CDC ที่ไม่มีใครเปิดพอร์ตทำให้ค้าง ~3 วิ เจอใน 0.2.6)
-- **ประวัติ Trip** (`trip_record.*` = รูปแบบไฟล์ + Trip Summary ไม่พึ่ง Arduino · `trip_log.*` = FFat + log task): 1 Trip = `/trips/<n>.s` (Sample 16 ไบต์/วิ) + `<n>.e` (Event) + `<n>.m` (ตำแหน่ง Sync + Summary + crc) · เวลาใน record = `millis()` แล้วเทียบเวลาจริงจาก Event `TimeKnown` · FFat ถึง 80% ลบ Trip ที่ Sync แล้ว · endpoint `/trips`, `/api/trips`, `/api/trips/<n>?from=&count=&step=`
+- **กฎเตือนปัจจุบัน (0.3.18-p50):**
+
+  | เหตุการณ์ | ผล |
+  |---|---|
+  | ตาปิดต่อเนื่อง 2 วิ (`CLOSED_LEVEL2_MS`) | ระดับ 2 `SLEEPY` + เสียงเป็นจังหวะ |
+  | ตาปิดต่อเนื่อง 3 วิ (`MICROSLEEP_MS`) | ระดับ 3 `WAKE UP!` + เสียงดังค้าง ปิดไม่ได้ |
+  | ลืมตาต่อเนื่อง 1 วิ (`EYES_OPEN_CLEAR_MS`) | ปลดระดับที่เกิดจากตาปิด |
+  | PERCLOS ≥ 0.40 (`PERCLOS_LEVEL2`, ลดเมื่อ < 0.38) | ระดับ 2 แม้ลืมตาอยู่ |
+
+  - ระดับ 1 (TIRED) ถูกตัดออก 0.3.17 ตามผู้ใช้ · ค่า `DrowsinessLevel::Fatigue` และ `level1_s` ยังอยู่เพื่ออ่าน Trip เก่า
+  - 4 พ.ย. ผู้ใช้ลอง `MICROSLEEP_MS` 2 วิแล้วกลับมา 3 วิ เพราะกล้องและโมเดลยังตรวจไม่ดีพอ (ถ้าเท่ากับ `CLOSED_LEVEL2_MS` จะข้ามระดับ 2 และถ้าหน้าหายเสียงจะค้างถึง `MICROSLEEP_ABSENT_CLEAR_MS` 5 นาที)
+  - **ข้อจำกัดที่ผู้ใช้รับแล้ว อย่าเสนอแก้เอง:** หันหัวแล้วเตือนผิดได้ (บอร์ดตัดแก้มเป็นตา ขึ้นกับกล้องและตำแหน่งนั่ง) · PERCLOS สูงทำให้ `SLEEPY` และเสียงค้างหลังลืมตาได้ราว 11 วิ
+- **ประวัติ Trip** (`trip_record.*` = รูปแบบไฟล์ + Trip Summary ไม่พึ่ง Arduino · `trip_log.*` = FFat + log task): 1 Trip = `/trips/<n>.s` (Sample 16 ไบต์/วิ) + `<n>.e` (Event) + `<n>.m` (ตำแหน่ง Sync + Summary + crc) · เวลาใน record = `millis()` แล้วเทียบเวลาจริงจาก Event `TimeKnown` · FFat ถึง 80% ลบ Trip ที่ Sync แล้ว · endpoint `/trips`, `/api/trips`, `/api/trips/<n>?from=&count=&step=` · ขอ samples มากตอน RAM ภายในตึงแล้ว `String` จองไม่พอ ได้ HTTP 200 แต่ JSON ขาดกลางทาง → ถ้าต้องการแค่ events ใช้ `?count=1`
 - **Sync** (`sync.cpp`): POST `/rest/v1/rpc/ingest` ของ Supabase ทีละ ≤ 300 Sample จาก Trip เก่าสุดที่ค้าง · Trip ปัจจุบันส่งทุก 30 วิ · สถานะอยู่ใน `/api/status` ช่อง `sync` · ตั้ง `DEVICE_SECRET` ใน `secrets.h` ให้ตรงกับที่ลงทะเบียนใน Cloud Dashboard ("เพิ่ม Device") · **Supabase โปรเจกต์ `iatzjmxjbxcakotczoko` (ของเพื่อน ใช้ตั้งแต่ 27 ต.ค., ผู้ใช้ยืนยัน 2 พ.ย.)** · Trip ก่อนหน้านั้นอยู่ในโปรเจกต์เก่า `wcuagguhwtprdnguiozn` ซึ่งเลิกใช้แล้ว · SQL/ขั้นติดตั้ง/Cloud Dashboard อยู่ใน [cloud/README.md](cloud/README.md) (ADR 0003)
 - **TLS ต้องใช้ PSRAM:** RAM ภายในเหลือก้อนใหญ่สุด ~13 KB ไม่พอ buffer 16 KB ของ mbedTLS (0.3.0 ได้ `connection refused`) → `sync.cpp` เรียก `mbedtls_platform_set_calloc_free` ให้ก้อน ≥ 1 KB ไปอยู่ PSRAM
 - **จอ OLED** (`oled.cpp`, 0.3.8): SSD1306 driver เขียนเอง (ฟอนต์ 5x7 ขยาย x1–x2) ไม่ใช้ไลบรารี · หาจอไม่เจอ/จอหลุด ลองใหม่ทุก `OLED_RETRY_MS` · ไม่กะพริบ หรี่จอด้วยเกณฑ์ LDR เดียวกับ IR · **ทดสอบบนบอร์ดผ่าน 3 พ.ย.**
@@ -101,11 +113,23 @@ cd ml
 .venv/Scripts/python.exe test_preprocess.py      # ตรวจว่า eye_preprocess.h (C, คอมไพล์ด้วย gcc) กับ preprocess.py ให้ byte เดียวกัน
 ```
 
+ทดสอบในรถ (รันใน `ml/` · คอมต้องอยู่วงเดียวกับบอร์ด · ท่าหลับตาทำตอนรถจอดเท่านั้น):
+
+```bash
+.venv/Scripts/python.exe incar/cartest.py --name <รอบ> --host <ip> --person <ชื่อ> --light day --glasses none   # 3 นาที 43 วิ พิมพ์ท่า พูดบอก เก็บภาพตา + บันทึกในบอร์ด
+.venv/Scripts/python.exe incar/cartest.py --protocol drive --name <รอบ> --host <ip>   # ขับจริง ไม่มีเสียงบอก ต้องกด Ctrl+C ให้จบ ไม่งั้นข้อมูลไม่ลงไฟล์
+.venv/Scripts/python.exe incar/score.py <รอบ>                  # ให้คะแนนซ้ำ ใช้บันทึกในบอร์ดเติมส่วนที่ status หาย
+.venv/Scripts/python.exe incar/replay.py <รอบ> --on 0.5 --off 0.5   # ลองเกณฑ์ P ผ่าน DrowsinessJudge บน PC โดยไม่ต้องแฟลช
+.venv/Scripts/python.exe incar/oled_check.py --host <ip>       # แสดงสิ่งที่จอควรขึ้น ไว้เทียบกับจอจริง
+```
+
+ตัวให้คะแนนนับหลับตาถึงหลังบี๊บลืมตา 1.5 วิ ถ้าคนหลับตาช้า ให้ดูเหตุการณ์ใน `board_trip.json` ด้วย
+
 - `train.ipynb` = pipeline ทั้งหมด (MRL → แบ่ง train/val/test **ตาม subject** → train → INT8 → `model_data.h` + `golden_data.h`) · วิธีตั้ง venv และรันอยู่ใน [ml/README.md](ml/README.md)
 - **preprocess ต้องเหมือนกันทุกบิต** ระหว่าง `preprocess.py` กับ `eye_preprocess.h` · แก้ฝั่งหนึ่งต้องแก้อีกฝั่งและรัน `test_preprocess.py`
 - การทดลองหลายแบบอยู่ใน `ml/output/experiments/` (`exp.py`, `run_queue.py`, `summ.py`, ทางรันต่ออยู่ใน `RESUME.md`) · train บน CPU (TensorFlow บน Windows ไม่ใช้ GPU)
-- **โมเดลบนบอร์ดตอนนี้ train จาก MRL อย่างเดียว → จับตาปิดกับกล้องเราไม่ได้:** 3 พ.ย. ที่ 50–60 ซม. (ระยะตา 36 px) หลับตา 0/13 เฟรม (P(ปิด) เฉลี่ย 0.11) ทั้งที่ภาพ `/eyes.jpg` เห็นเปลือกตาชัด · ที่ 1 ม. (ระยะตา ~22 px → Eye Region ~18 px) ภาพตาเปิด/ปิดเบลอจนคนก็แยกไม่ออก · ทางแก้ = fine-tune ด้วยภาพจากกล้องเรา **ผู้ใช้ให้ใช้เฉพาะภาพที่เก็บในรถ** (ภาพบนโต๊ะห้ามเข้าโมเดลที่ใช้จริง) · ยังไม่ได้เก็บ
-- **ทดสอบในรถก่อนตัดสินใจ fine-tune** (ผู้ใช้ตัดสิน 4 พ.ย. เพราะเวลาเหลือน้อย · ผลรอบรถจอดและข้อจำกัดที่ผู้ใช้ยอมรับอยู่ใน [ml/incar/README.md](ml/incar/README.md) · ยังไม่ fine-tune): `ml/incar/cartest.py` พูดบอกท่า อ่าน `/api/status` แล้วให้คะแนนว่าหลับตาแล้วเตือนครบไหม/ลืมตาแล้วเตือนผิดไหม · เก็บภาพจาก `/eyes.raw` ไว้ fine-tune ไปด้วย · วิธีทำและเกณฑ์ตัดสินอยู่ใน [ml/incar/README.md](ml/incar/README.md) · ลองบน PC ด้วย `fake_board.py` · รันกับบอร์ดจริงแล้ว 4 พ.ย. (รถจอด) · ดึงเหตุการณ์จริงจาก `/api/trips/<n>?count=1` มาให้คะแนน เพราะเว็บบอร์ดค้างแล้ว status หายได้ (ขอ samples ทั้ง Trip แล้ว JSON ขาดเมื่อ RAM ภายในตึง)
+- **โมเดลบนบอร์ด train จาก MRL อย่างเดียว ไม่ได้ fine-tune:** ในรถ 4 พ.ย. (ระยะตา ~37 px) ตาปิดจริงได้ P≈1.0 · ใส่แว่นแล้วตาข้างหนึ่งอาจเหลือ 0.1–0.3 · ปัญหาหลักคือภาพที่ตัดผิดตอนหันหัวและตอนแสงเปลี่ยน · ประวัติ 3 พ.ย. บนโต๊ะที่ 50–60 ซม. หลับตาได้ 0/13 เฟรม ซึ่งไม่ตรงกับผลในรถ และยังไม่รู้สาเหตุ · ถ้าจะ fine-tune **ผู้ใช้ให้ใช้เฉพาะภาพที่เก็บในรถ** (ภาพบนโต๊ะห้ามเข้าโมเดลที่ใช้จริง)
+- **ทดสอบในรถก่อนตัดสินใจ fine-tune** (ผู้ใช้ตัดสิน 4 พ.ย. เพราะเวลาเหลือน้อย · ผลรอบรถจอดและข้อจำกัดที่ผู้ใช้ยอมรับอยู่ใน [ml/incar/README.md](ml/incar/README.md) · ยังไม่ fine-tune): `ml/incar/cartest.py` พูดบอกท่า อ่าน `/api/status` แล้วให้คะแนนว่าหลับตาแล้วเตือนครบไหม/ลืมตาแล้วเตือนผิดไหม · เก็บภาพจาก `/eyes.raw` ไว้ fine-tune ไปด้วย · วิธีทำและเกณฑ์ตัดสินอยู่ใน [ml/incar/README.md](ml/incar/README.md) · ลองบน PC ด้วย `fake_board.py` · รันกับบอร์ดจริงแล้ว 4 พ.ย. (รถจอด + ขับจริง 1 รอบ) · ดึงเหตุการณ์จริงจาก `/api/trips/<n>?count=1` มาให้คะแนน เพราะเว็บบอร์ดค้างแล้ว status หายได้
 - **เครื่องมือ fine-tune เตรียมไว้แล้ว** (ใช้ถ้าทดสอบในรถไม่ผ่านเพราะโมเดลตา): `review.py` ตรวจป้าย → `finetune.py` (MRL + ภาพในรถ แบ่งตามรอบ · deep2_half เดิม · INT8 → `model_data.h` · รายงานเทียบโมเดลบนบอร์ดที่อ่านจาก `eye_model_data.h` ทีละตา) → `replay.py` (ป้อน P ผ่าน `DrowsinessJudge` จริงด้วย `firmware/tests/replay.cpp` ซึ่งต้องแปลง P → Eye State แบบเดียวกับ `combineEyes`/`eyeStateFrom` ใน `vision.cpp`) · ลองทั้งชุดกับข้อมูลจำลองผ่าน 4 พ.ย. (`--quick`) · ผลอยู่ `ml/output/incar/<run>/`
 - เปลี่ยนโมเดลบนบอร์ด = คัดลอก `model_data.h` ไปเป็น `eye_model_data.h` ของสเก็ตช์ · ถ้าโมเดลใหม่ใช้ op นอกเหนือ CONV_2D / MAX_POOL_2D / MEAN / FULLY_CONNECTED / LOGISTIC ต้องเพิ่มใน resolver ของ `eye_classifier.cpp`
 
@@ -143,7 +167,7 @@ GPIO map อยู่ใน [README.md](README.md) · เพิ่มเติ�
 - **SW1: ขวา = ON, ซ้าย = OFF** (มองจากด้านบน โมดูลกล้องหงาย ปลาย USB โมดูลหันขอบบน)
 - **กล้อง OV5640 เห็น IR 940 nm** (ไม่มี IR-cut) · วัดด้วยโหมดความสว่างเฉลี่ยของ `BenchTest`: IR เปิดสว่างขึ้น +12 / +31 ระดับที่ exposure กลาง/สูง · **ต้องมีกระดาษขาวสะท้อนห่าง ~5 ซม. ในห้องมืด** ไม่มีของสะท้อนจะวัดไม่ขึ้นและสรุปผิดได้
 - **`cam_hal: FB-SIZE` เฟรมเสีย ~17%** (~140–150 ครั้ง/2 นาที ที่ ~7 fps) · **ไม่เกี่ยวกับ PCB** (เท่ากันตอนถอดโมดูลออกจากบอร์ด) · เฟรมขาดทีละ 16 แถวพอดี · ลด XCLK เป็น 10 MHz แย่กว่า (fps ตกเหลือ ~3) จึงคง 20 MHz · เฟรมเสียถูกทิ้ง fps ยังได้ ~7 ยังไม่ได้ไล่สาเหตุ (สงสัย PSRAM/WiFi แย่งบัส)
-- **ค่า LDR:** ห้องมืดอ่าน ~2900–3000 (เกินเกณฑ์ `LDR_DARK_ON_RAW` 2800 → IR ติด) · ปิดมือ ~3900–4095 · สว่าง ~500–700 · เกณฑ์ยังไม่ได้คาลิเบรตในรถ
+- **ค่า LDR:** ห้องมืดอ่าน ~2900–3000 (เกินเกณฑ์ `LDR_DARK_ON_RAW` 2800 → IR ติด) · ปิดมือ ~3900–4095 · สว่าง ~500–700 · เกณฑ์ยังไม่ได้คาลิเบรตในรถ · **4 พ.ย. ติดในรถตอนกลางวันอ่าน 4095 ตลอด** IR จึงเปิดตลอด และจอตั้ง contrast โหมดมืด (`OLED_CONTRAST_DARK`) · ยังไม่รู้สาเหตุ
 - hotspot iPhone ต้องเปิด Maximize Compatibility ถึงต่อได้ (ก่อนเปิด บอร์ดวนลองแต่ไม่ติด)
 
 ## เอกสารที่ล้าสมัยบางส่วน
