@@ -1,5 +1,5 @@
 // BenchTest — ทดสอบ LED / LDR / OLED / buzzer / IR บนบอร์ด v1 โดยไม่เสียบโมดูล
-// ผังต่อสาย: driver-drowsiness-detection/docs/bench-wiring-v1.md
+// ผังต่อสาย: driver-drowsiness-detection/docs/hardware/bench-wiring-v1.md
 //
 // พิมพ์คำสั่งใน Serial Monitor (115200) แล้ว Enter:
 //   l = LED   d = LDR   o = OLED   b = buzzer   i = IR + กล้อง   a = ทุกข้อ

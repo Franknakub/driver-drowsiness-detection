@@ -30,7 +30,7 @@ OV5640 → ESP-DL หาหน้า → ตัดตา 32×32 → CNN INT8 →
 | 3 ต.ค. | สั่งผลิต PCB v2 (PCB 5 + ประกอบสำเร็จ 2 แผ่น) · DRC 0 error · แก้ป้าย H2 เป็น 3V3 |
 | 7 ต.ค. | ทำ v3 (ย้าย R3, R11 = 100Ω) ใน EasyEDA · **ตัดสินใจไม่สั่งผลิต** (23 ต.ค.) |
 | 8 ต.ค. | DrowsyFW รุ่นแรก (PlatformIO, MobileNetV2 96×96 ~3 fps) จาก PR #1 · ภายหลังย้ายไป `firmware/archive/DrowsyFW-pio/` |
-| 16 ต.ค. | ออกแบบ firmware: [GLOSSARY.md](../GLOSSARY.md), ADR 0001–0003 · ผังต่อสายบอร์ด v1 + สเก็ตช์ `BenchTest` |
+| 16 ต.ค. | ออกแบบ firmware: [GLOSSARY.md](../../GLOSSARY.md), ADR 0001–0003 · ผังต่อสายบอร์ด v1 + สเก็ตช์ `BenchTest` |
 | 17 ต.ค. | ทดลอง ESP-DL หาหน้าผ่าน · โครง DrowsyFW (partition custom, แบ่ง task ตาม core, OTA ผ่านเว็บ) · 0.2.3 หาหน้า + โมเดลตา + ภาพสด |
 | 18 ต.ค. | 0.2.5 หมุนภาพรวมในขั้นหาหน้า + โมเดล `deep2_half` · ML pipeline + เทสต์ preprocess · CAD กล่อง + ส่งร้านปริ้น · 0.2.8–0.2.9 logic ความง่วง · 0.3.1 ประวัติ Trip + Sync Supabase + Cloud Dashboard · 0.3.2–0.3.3 แก้เตือนผิดจาก Trip #411 / #412 |
 | 19 ต.ค. | 0.3.4 ปลดระดับที่ค้างเมื่อไม่เห็นตานาน (Trip #413) |
@@ -79,7 +79,7 @@ OV5640 → ESP-DL หาหน้า → ตัดตา 32×32 → CNN INT8 →
 
 | รายการ | สถานะ |
 |---|---|
-| Supabase (Singapore) | ✅ ตาราง devices / trips / samples / events · view `trip_summary` · RLS · ดู [cloud/README.md](../cloud/README.md) และ ADR 0003 |
+| Supabase (Singapore) | ✅ ตาราง devices / trips / samples / events · view `trip_summary` · RLS · ดู [cloud/README.md](../../cloud/README.md) และ ADR 0003 |
 | Sync จากบอร์ดจริง | ✅ Trip #410 ขึ้น cloud และ Summary ตรงกับบนบอร์ด |
 | Cloud Dashboard | ✅ login ด้วยอีเมล · รายการ Trip · กราฟราย Trip |
 
@@ -97,7 +97,7 @@ OV5640 → ESP-DL หาหน้า → ตัดตา 32×32 → CNN INT8 →
 |---|---|
 | CAD (build123d) | ✅ ตรวจการชนผ่าน · ค่าทุกตัวมาจากการวัดบอร์ดจริง |
 | การติดตั้ง | ✅ ตัดสินแล้ว: ขาดูดกระจก เกลียว 1/4"-20 · ติดด้านซ้ายคนขับ ใกล้กระจกมองหลัง · กล่องแนวนอน แถว IR อยู่บน |
-| ปริ้น | ✅ ส่งร้านแล้ว (ASA ดำ) · ไฟล์ชุดที่ส่งอยู่ใน `enclosure/print_2026-10-18/` |
+| ปริ้น | ✅ ส่งร้านแล้ว (ASA ดำ) · ไฟล์ชุดที่ส่งอยู่ใน `enclosure/print/2026-10-18/` |
 | อะไหล่ | ✅ ซื้อครบ: insert M3, สกรู, ประแจหกเหลี่ยม, กระดาษทรายน้ำเบอร์ 600 |
 
 ---
@@ -154,8 +154,8 @@ OV5640 → ESP-DL หาหน้า → ตัดตา 32×32 → CNN INT8 →
 
 | # | ไฟล์ | สถานะ | ผิดตรงไหน |
 |---|---|---|---|
-| 6.1 | [firmware-plan.html](firmware-plan.html) | 🔴 | หัวข้อ 1–9 ยังเป็นสถานะ 18 ต.ค. ไม่มีบอร์ด v2 และ 0.3.2–0.3.4 |
-| 6.2 | [firmware/README.md](../firmware/README.md) | 🔴 | หัวข้อกล้องเขียน SVGA และ 96×96 (ของจริงคือ HVGA และ 32×32) |
+| 6.1 | [firmware-plan.html](../firmware-plan.html) | 🔴 | หัวข้อ 1–9 ยังเป็นสถานะ 18 ต.ค. ไม่มีบอร์ด v2 และ 0.3.2–0.3.4 |
+| 6.2 | [firmware/README.md](../../firmware/README.md) | 🔴 | หัวข้อกล้องเขียน SVGA และ 96×96 (ของจริงคือ HVGA และ 32×32) |
 | 6.3 | BOM | 🔴 | เขียนว่า TSAL6200 = 850nm ที่ถูกคือ 940nm |
 | 6.4 | `PCB_REVIEW_PROMPT.md` (นอก repo) | ⚪ | อ้าง uuid โปรเจกต์ EasyEDA ที่เลิกใช้แล้ว |
 
@@ -188,13 +188,13 @@ OV5640 → ESP-DL หาหน้า → ตัดตา 32×32 → CNN INT8 →
 
 | ไฟล์ | เนื้อหา |
 |---|---|
-| [CLAUDE.md](../CLAUDE.md) | คำสั่ง build/flash/test · สถาปัตยกรรม DrowsyFW · ผลทดสอบบอร์ด v2 |
-| [firmware-plan.html](firmware-plan.html) | แผน, ผลทดลอง และการตัดสินใจ (หัวข้อ 0 = ตารางงานที่เหลือชุดเดียวกับไฟล์นี้) |
-| [GLOSSARY.md](../GLOSSARY.md) · [adr/](adr/) | คำศัพท์ · การตัดสินใจหลัก 0001–0003 |
-| [firmware/README.md](../firmware/README.md) | สเก็ตช์แต่ละตัว · ขั้นแฟลชผ่าน USB |
-| [ml/README.md](../ml/README.md) | วิธี train และเทสต์โมเดล |
-| [cloud/README.md](../cloud/README.md) | ตั้งค่า Supabase และ Cloud Dashboard |
-| [enclosure/README.md](../enclosure/README.md) | ข้อกำหนดกล่อง · อะไหล่ · วิธีประกอบ |
-| [bench-wiring-v1.md](bench-wiring-v1.md) | ผังต่อสายทดสอบบนบอร์ด v1 |
+| [CLAUDE.md](../../CLAUDE.md) | คำสั่ง build/flash/test · สถาปัตยกรรม DrowsyFW · ผลทดสอบบอร์ด v2 |
+| [firmware-plan.html](../firmware-plan.html) | แผน, ผลทดลอง และการตัดสินใจ (หัวข้อ 0 = ตารางงานที่เหลือชุดเดียวกับไฟล์นี้) |
+| [GLOSSARY.md](../../GLOSSARY.md) · [adr/](../adr) | คำศัพท์ · การตัดสินใจหลัก 0001–0003 |
+| [firmware/README.md](../../firmware/README.md) | สเก็ตช์แต่ละตัว · ขั้นแฟลชผ่าน USB |
+| [ml/README.md](../../ml/README.md) | วิธี train และเทสต์โมเดล |
+| [cloud/README.md](../../cloud/README.md) | ตั้งค่า Supabase และ Cloud Dashboard |
+| [enclosure/README.md](../../enclosure/README.md) | ข้อกำหนดกล่อง · อะไหล่ · วิธีประกอบ |
+| [bench-wiring-v1.md](../hardware/bench-wiring-v1.md) | ผังต่อสายทดสอบบนบอร์ด v1 |
 | `git log` | ประวัติทุกเวอร์ชัน |
-| [PROJECT_STATUS.md](PROJECT_STATUS.md) | ⚠️ ล้าสมัย (ส.ค.) · ใช้ได้แค่ GPIO map |
+| [PROJECT_STATUS.md](../archive/PROJECT_STATUS.md) | ⚠️ ล้าสมัย (ส.ค.) · ใช้ได้แค่ GPIO map |
