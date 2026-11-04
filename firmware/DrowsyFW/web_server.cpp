@@ -123,7 +123,7 @@ pre{white-space:pre-wrap;word-break:break-all;font-size:11px;margin:10px 0 0;max
 
 <div class="tiles">
 <div class="card tile"><div class="k">ตา</div><div class="v" id="c-eye">--</div><div class="s" id="c-eye2"></div></div>
-<div class="card tile"><div class="k">PERCLOS · 60 วิ</div><div class="v" id="c-pc">--</div><div class="bar"><b id="pcb" style="width:0"></b><i style="left:30%"></i><i style="left:50%"></i></div><div class="s">ขีด = ระดับ 1 (15%) · 2 (25%)</div></div>
+<div class="card tile"><div class="k">PERCLOS · 60 วิ</div><div class="v" id="c-pc">--</div><div class="bar"><b id="pcb" style="width:0"></b><i style="left:80%"></i></div><div class="s">ขีด = ง่วง (40%)</div></div>
 <div class="card tile wide"><div class="k">การเชื่อมต่อ</div><div class="v" id="c-net">--</div><div class="s" id="c-net2"></div></div>
 </div>
 
@@ -185,7 +185,7 @@ const seen=d.eye_state=='open'||d.eye_state=='closed'||d.eye_state=='uncertain';
 $('c-eye').textContent=EYE[d.eye_state]||d.eye_state;$('c-eye').style.color=EC[d.eye_state]||'';
 $('c-eye2').textContent=d.closed_ms>0?'ปิดมา '+(d.closed_ms/1000).toFixed(1)+' วิ':seen?'P(ตาปิด) '+d.p_closed.toFixed(2):'';
 $('c-pc').textContent=d.perclos_ready?Math.round(d.perclos*100)+'%':'กำลังเก็บ';
-$('pcb').style.width=(d.perclos_ready?Math.min(100,d.perclos*100*2):0)+'%';$('pcb').style.background=css(d.perclos>=.25?'--l2':d.perclos>=.15?'--l1':'--pc');
+$('pcb').style.width=(d.perclos_ready?Math.min(100,d.perclos*100*2):0)+'%';$('pcb').style.background=css(d.perclos>=.4?'--l2':'--pc');
 const sy=d.sync;$('c-net').textContent=d.sta?d.sta:'AP '+d.ap;
 $('c-net2').textContent=(d.sta?d.sta_ip+' · ':'192.168.4.1 · ')+(!sy.configured?'Sync ปิด':sy.last_ok_age_s>=0?'Sync '+ago(sy.last_ok_age_s)+'ที่แล้ว'+(sy.pending_samples?' · ค้าง '+sy.pending_samples:''):sy.fail?'Sync ผิดพลาด':'Sync รอส่ง');
 chip('ch-face',d.face?'เจอหน้า':'ไม่เจอหน้า',d.face?'#22c55e':'#9ca3af');
@@ -208,7 +208,7 @@ const L=26,B=22,T=6,ph=H-B-T-4,now=Date.now();
 const X=t=>L+(W-L-4)*(1-(now-t)/120000),Y=v=>T+ph*(1-v);
 x.font='11px system-ui';x.fillStyle=css('--mut');x.strokeStyle=css('--grid');x.lineWidth=1;
 for(const v of [0,.5,1]){x.beginPath();x.moveTo(L,Y(v));x.lineTo(W-4,Y(v));x.stroke();x.fillText(v.toFixed(1),2,Y(v)+4);}
-x.setLineDash([3,4]);x.strokeStyle=css('--mut');for(const v of [.5,.3]){x.beginPath();x.moveTo(L,Y(v));x.lineTo(W-4,Y(v));x.stroke();}x.setLineDash([]);
+x.setLineDash([3,4]);x.strokeStyle=css('--mut');for(const v of [.5,.4]){x.beginPath();x.moveTo(L,Y(v));x.lineTo(W-4,Y(v));x.stroke();}x.setLineDash([]);
 const cols=['--ok','--l1','--l2','--l3'];
 for(let i=0;i<hist.length;i++){const h=hist[i],n=hist[i+1],x1=X(h.t),x2=n?X(n.t):W-4;x.fillStyle=css(h.dis&&h.l<2?'--dis':cols[h.l]);x.fillRect(x1,H-B+3,Math.max(1,x2-x1),7);}
 x.fillStyle=css('--mut');x.fillText('-2 นาที',L,H-1);x.textAlign='right';x.fillText('ตอนนี้',W-4,H-1);x.textAlign='left';
