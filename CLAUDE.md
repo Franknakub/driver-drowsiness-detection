@@ -90,7 +90,7 @@ S=~/Documents/Arduino/DrowsyFW
   - หน้าเดียวตลอด (ผู้ใช้ตัดสิน 3 พ.ย. แทนแบบทีละหน้าของ 0.3.7): แถบบนตัว x2 = สถานะ + 5 บรรทัดตัว x1 = `EYE:` / `SOUND:` / `AP` ชื่อ AP / `URL 192.168.4.1` / `LAN` IP ผ่าน WiFi (`try <ssid>`, `starting`, `no wifi`)
   - สถานะ: `WAKE UP!` (ระดับ 3) > `SLEEPY` (2) > `LOOK AHEAD` (Distraction) — 3 อันนี้กลับสีแถบ > `UNCLEAR` (Unmonitored) > `NO DRIVER` (`driverPresent` = false: ยังไม่เห็นตา หรือหายเกิน `DRIVER_ABSENT_MS`) > `AWAKE`
   - `EYE:` `OPEN` / `CLOSED x.xs` / `UNSURE` / `NOT FOUND` (เจอหน้าไม่เจอตา) / `NO FACE` · `SOUND:` คิดจากกฎเดียวกับ buzzer ใน `alert.cpp` (`ALARM` / `TEST` / `MUTED m:ss` / `BEEPING` / `ON`) แก้กฎเสียงต้องแก้ทั้งสองที่
-  - ภาพจำลองทุกสถานะ (เรนเดอร์จาก `drawInfo` จริงบน PC) อยู่ที่ `../oled_info_preview.png` นอก repo · ปุ่มทดสอบ OLED บนเว็บแสดงภาพทดสอบทั้งจอ
+  - ภาพจำลองทุกสถานะ (เรนเดอร์จาก `drawInfo` จริงบน PC) อยู่ที่ `../docs/images/oled_info_preview.png` นอก repo · ปุ่มทดสอบ OLED บนเว็บแสดงภาพทดสอบทั้งจอ
 
 ## Cloud Dashboard (`docs/dashboard/`)
 
