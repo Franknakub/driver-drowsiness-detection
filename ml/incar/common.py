@@ -51,7 +51,7 @@ SAFETY = {"cartest": True, "drive": False}   # ท่าที่มีการ
 
 
 def parse_raw(b: bytes):
-    """ถอด /eyes.raw (รูปแบบอยู่ที่ firmware/DrowsyFW/vision.cpp eyeRawStore)"""
+    """ถอด /eyes.raw (รูปแบบอยู่ที่ firmware/DrowsyFW/src/vision/vision.cpp eyeRawStore)"""
     if len(b) != RAW_LEN or b[:4] != b"EYR1":
         raise ValueError(f"not an EYR1 frame ({len(b)} bytes)")
     seq, ms, pL, pR, dist, valid, n = struct.unpack_from("<IIffHBB", b, 4)

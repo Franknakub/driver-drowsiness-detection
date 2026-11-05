@@ -1,6 +1,6 @@
 // ทดสอบ trip_record.{h,cpp} บน PC: ขนาด record, การปัด/ตัดค่า, Trip Summary, crc ของ <n>.m, JSON
 // และเขียน trip_fixture.json (Trip จำลอง) ให้ cloud/test ใช้เทียบ Trip Summary ของ SQL กับของ Device
-//   cd firmware/tests && g++ -std=c++17 -Wall -I../DrowsyFW trip_record_test.cpp ../DrowsyFW/trip_record.cpp -o trip_record_test && ./trip_record_test
+//   cd firmware/tests && g++ -std=c++17 -Wall -I../DrowsyFW/src/trip trip_record_test.cpp ../DrowsyFW/src/trip/trip_record.cpp -o trip_record_test && ./trip_record_test
 #include <stdio.h>
 #include <string.h>
 #include <math.h>

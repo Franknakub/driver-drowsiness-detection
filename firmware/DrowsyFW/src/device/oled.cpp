@@ -4,9 +4,9 @@
 //   ไม่กะพริบ · หรี่จอเมื่อมืด (เกณฑ์ LDR เดียวกับ IR) · ค่าดีบักอื่น (P ตาปิด, fps, Sync) ดูที่หน้าเว็บของ Device
 // อยู่ Core 0 priority ต่ำ: I2C ส่งทั้งจอ ~25 ms ไม่แย่งเวลา vision
 #include <Wire.h>
-#include "config.h"
-#include "shared_state.h"
-#include "tasks.h"
+#include "../core/config.h"
+#include "../core/shared_state.h"
+#include "../core/tasks.h"
 
 static const uint8_t FONT5X7[95][5] = {   // ASCII 0x20..0x7E · คอลัมน์ละไบต์ บิต 0 = บนสุด
   {0x00,0x00,0x00,0x00,0x00},{0x00,0x00,0x5F,0x00,0x00},{0x00,0x07,0x00,0x07,0x00},{0x14,0x7F,0x14,0x7F,0x14},

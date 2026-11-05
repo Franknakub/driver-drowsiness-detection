@@ -8,7 +8,7 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include "domain_types.h"
+#include "../core/domain_types.h"
 
 #define TRIP_MAGIC        0x31534444u   // "DDS1"
 #define TRIP_META_MAGIC   0x314D4444u   // "DDM1"

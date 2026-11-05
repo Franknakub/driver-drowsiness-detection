@@ -7,7 +7,7 @@
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "eye_preprocess.h"
 #include "eye_model_data.h"
-#include "config.h"
+#include "../core/config.h"
 
 static constexpr size_t kArenaSize = 29 * 1024 + 256;   // deep2_half ใช้จริง 29,324 B · ให้พอดีก้อนว่างใน RAM ภายใน (ก้อนใหญ่สุด ~30 KB) ไม่พอก็ตกไป PSRAM เอง
 static constexpr int N = EYE_MODEL_INPUT_SIZE;

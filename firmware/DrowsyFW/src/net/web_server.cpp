@@ -15,11 +15,11 @@
 #include <Update.h>
 #include <WiFi.h>
 #include <memory>
-#include "config.h"
-#include "secrets.h"
-#include "shared_state.h"
-#include "tasks.h"
-#include "trip_log.h"
+#include "../core/config.h"
+#include "../../secrets.h"
+#include "../core/shared_state.h"
+#include "../core/tasks.h"
+#include "../trip/trip_log.h"
 #include "sync.h"
 #include <esp_heap_caps.h>
 

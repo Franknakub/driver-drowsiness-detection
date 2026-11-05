@@ -4,7 +4,7 @@
 #include "face_eye.h"
 #include "esp_heap_caps.h"
 #include "human_face_detect.hpp"
-#include "config.h"
+#include "../core/config.h"
 
 static HumanFaceDetect* s_detector = nullptr;
 

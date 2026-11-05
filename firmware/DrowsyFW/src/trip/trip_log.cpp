@@ -5,10 +5,10 @@
 #include <FFat.h>
 #include <esp_heap_caps.h>
 #include <esp_random.h>
-#include "config.h"
-#include "shared_state.h"
-#include "tasks.h"
-#include "drowsiness.h"
+#include "../core/config.h"
+#include "../core/shared_state.h"
+#include "../core/tasks.h"
+#include "../logic/drowsiness.h"
 #include "trip_log.h"
 
 #define TRIP_DIR           "/trips"

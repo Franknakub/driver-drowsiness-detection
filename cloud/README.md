@@ -21,7 +21,7 @@ Cloud Dashboard (docs/dashboard/) --login อีเมล--> trip_summary (view)
 ## ทดสอบ
 
 ```bash
-cd firmware/tests && g++ -std=c++17 -Wall -I../DrowsyFW trip_record_test.cpp ../DrowsyFW/trip_record.cpp -o trip_record_test && ./trip_record_test   # สร้าง trip_fixture.json
+cd firmware/tests && g++ -std=c++17 -Wall -I../DrowsyFW/src/trip trip_record_test.cpp ../DrowsyFW/src/trip/trip_record.cpp -o trip_record_test && ./trip_record_test   # สร้าง trip_fixture.json
 cd cloud/test && npm install && node sql_test.mjs     # รัน SQL บน Postgres จำลอง (PGlite): RLS, ส่งซ้ำ, Trip Summary ตรงกับ Device
 ```
 

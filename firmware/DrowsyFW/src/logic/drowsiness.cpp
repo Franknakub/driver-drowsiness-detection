@@ -1,6 +1,6 @@
 // กติกาอยู่ที่ drowsiness.h · เกณฑ์อยู่ที่ drowsy_config.h
 #include "drowsiness.h"
-#include "drowsy_config.h"
+#include "../core/drowsy_config.h"
 #include <string.h>
 
 static bool isVisible(EyeState e) {
