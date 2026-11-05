@@ -1,8 +1,8 @@
 // Alert: buzzer / LED + ปุ่ม BOOT ปิดเสียง (จอ OLED อยู่ใน oled.cpp)
 // ปิดเสียงได้เฉพาะระดับ 1–2 และ Distraction · ระดับ 3 (Microsleep) ปิดเสียงไม่ได้
-#include "config.h"
-#include "shared_state.h"
-#include "tasks.h"
+#include "../core/config.h"
+#include "../core/shared_state.h"
+#include "../core/tasks.h"
 
 void alertBegin() {
   // buzzer เป็น active-LOW: ดึงขึ้นก่อนเป็นอย่างแรก กันดังตอนบูต

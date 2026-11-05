@@ -1,9 +1,9 @@
 // sensor_task: อ่าน LDR แล้วเปิด/ปิด IR ตามโหมด
 //   Auto = ตาม LDR (hysteresis) · On = เปิดค้าง · Off = ปิด · โหมดตั้งจากหน้าเว็บและจำใน NVS
 #include <Preferences.h>
-#include "config.h"
-#include "shared_state.h"
-#include "tasks.h"
+#include "../core/config.h"
+#include "../core/shared_state.h"
+#include "../core/tasks.h"
 
 static IrMode loadIrMode() {
   Preferences prefs;

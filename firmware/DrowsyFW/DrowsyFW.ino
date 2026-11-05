@@ -5,9 +5,9 @@
 //   FQBN esp32:esp32:esp32s3:PSRAM=opi,CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom
 // ต้องมี secrets.h (คัดลอกจาก secrets.example.h) · ห้าม commit secrets.h
 
-#include "config.h"
-#include "shared_state.h"
-#include "tasks.h"
+#include "src/core/config.h"
+#include "src/core/shared_state.h"
+#include "src/core/tasks.h"
 
 volatile bool g_rebootRequested = false;
 

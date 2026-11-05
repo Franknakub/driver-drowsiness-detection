@@ -5,10 +5,10 @@
 #include <ESPmDNS.h>
 #include <Preferences.h>
 #include <sys/time.h>
-#include "config.h"
-#include "secrets.h"
-#include "shared_state.h"
-#include "tasks.h"
+#include "../core/config.h"
+#include "../../secrets.h"
+#include "../core/shared_state.h"
+#include "../core/tasks.h"
 
 // รับเวลาจริงครั้งแรกจาก NTP หรือ browser แล้วคำนวณเวลาเริ่ม Trip ย้อนกลับ
 bool timeSetFromEpoch(time_t epoch, const char* source) {

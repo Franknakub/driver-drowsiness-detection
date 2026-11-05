@@ -1,6 +1,6 @@
 // เล่นลำดับ P(ตาปิด) ผ่าน DrowsinessJudge ตัวเดียวกับบอร์ด · ใช้กับ ml/incar/replay.py
 //
-//   g++ -std=c++17 -Wall -I../DrowsyFW replay.cpp ../DrowsyFW/drowsiness.cpp -o replay
+//   g++ -std=c++17 -Wall -I../DrowsyFW/src/logic replay.cpp ../DrowsyFW/src/logic/drowsiness.cpp -o replay
 //   replay <P_CLOSED_ON> <P_CLOSED_OFF> < frames.csv > levels.csv
 //
 // เข้า: ทีละบรรทัด "ms,pL,pR" (P < 0 = ตานั้นไม่ได้จำแนกในเฟรมนี้ · ทั้งคู่ < 0 = มองไม่เห็นตา)

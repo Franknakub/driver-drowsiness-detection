@@ -7,8 +7,8 @@
 ใช้เฉพาะป้าย open/closed (ป้ายตามท่า + แก้ด้วยมือจาก review.py) · ภาพบนโต๊ะห้ามใส่ (ผู้ใช้ตัดสิน: ใช้เฉพาะภาพในรถ)
 
 ผล: ml/output/incar/<run>/ (ไม่ขึ้น git)
-  model_int8.tflite · model_data.h (คัดลอกไปเป็น ~/Documents/Arduino/DrowsyFW/eye_model_data.h)
-  report.json · report.md  เทียบกับโมเดลบนบอร์ดตอนนี้ (อ่านจาก firmware/DrowsyFW/eye_model_data.h) ทีละตา
+  model_int8.tflite · model_data.h (คัดลอกไปเป็น ~/Documents/Arduino/DrowsyFW/src/vision/eye_model_data.h)
+  report.json · report.md  เทียบกับโมเดลบนบอร์ดตอนนี้ (อ่านจาก firmware/DrowsyFW/src/vision/eye_model_data.h) ทีละตา
   p_<รอบ>.csv  P ของทุกเฟรมในรอบ val/test ทั้งโมเดลเดิมและใหม่ สำหรับ replay.py
 """
 import argparse
@@ -34,7 +34,7 @@ from keras import layers  # noqa: E402
 
 N = common.N
 REPO = common.ML.parent
-FW_MODEL = REPO / "firmware" / "DrowsyFW" / "eye_model_data.h"
+FW_MODEL = REPO / "firmware" / "DrowsyFW" / "src" / "vision" / "eye_model_data.h"
 # ค่าเดียวกับ deep2_half_p8 ที่อยู่บนบอร์ด (ml/README.md "ทดลองปรับปรุง 32×32") · aug "full" ของ ml/output/experiments/exp.py
 CFG = dict(filters=[8, 16, 32], convs=2, dropout=0.3, batch=128, lr=1e-3, epochs=40, patience=8)
 AUG = dict(tr=0.08, zoom=(-0.15, 0.10), lowres=0.5, blur=2 / 3, gamma=(0.7, 1.4), con=(0.75, 1.3), bri=0.1, noise=0.02)
@@ -278,7 +278,7 @@ def main():
                 b = res[f"incar_{split}"][f"{thr}"]["board"][eye]
                 if v:
                     md.append(f"| ในรถ {split} | {thr} | {eye} | {v['closed_recall']} / {b['closed_recall']} | {v['open_as_closed']} / {b['open_as_closed']} |")
-    md += ["", f"ใส่บอร์ด: คัดลอก `{out / 'model_data.h'}` ไปเป็น `~/Documents/Arduino/DrowsyFW/eye_model_data.h` → เปลี่ยน FW_VERSION → compile → แฟลช",
+    md += ["", f"ใส่บอร์ด: คัดลอก `{out / 'model_data.h'}` ไปเป็น `~/Documents/Arduino/DrowsyFW/src/vision/eye_model_data.h` → เปลี่ยน FW_VERSION → compile → แฟลช",
            f"ก่อนแฟลช: `python ml/incar/replay.py <รอบ test> --run {a.run}` ดูว่าเตือนครบ/ไม่เตือนผิด"]
     (out / "report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print("\n".join(md))

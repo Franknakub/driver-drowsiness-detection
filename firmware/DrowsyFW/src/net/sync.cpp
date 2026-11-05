@@ -8,11 +8,11 @@
 #include <esp_heap_caps.h>
 #include <esp_mac.h>
 #include <mbedtls/platform.h>
-#include "config.h"
-#include "secrets.h"
-#include "shared_state.h"
-#include "tasks.h"
-#include "trip_log.h"
+#include "../core/config.h"
+#include "../../secrets.h"
+#include "../core/shared_state.h"
+#include "../core/tasks.h"
+#include "../trip/trip_log.h"
 #include "sync.h"
 
 #define BODY_CAP (SYNC_BATCH_SAMPLES * 56 + SYNC_BATCH_EVENTS * 40 + 1024)

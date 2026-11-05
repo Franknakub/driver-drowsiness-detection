@@ -6,7 +6,7 @@
   board        P ที่บอร์ดส่งมาจริงใน /eyes.raw (ใช้เช็คว่า replay ใกล้ผลจริงของบอร์ดใน status.jsonl)
   board_model  โมเดลบนบอร์ดตอนนี้ รันบน PC (ต้องมี --run)
   new          โมเดลจาก finetune.py (ต้องมี --run · อ่าน ml/output/incar/<run>/p_<รอบ>.csv)
-เกณฑ์ P_CLOSED_ON / OFF อ่านจาก firmware/DrowsyFW/config.h ถ้าไม่ระบุ · ลองเกณฑ์อื่นได้โดยไม่ต้องแฟลช
+เกณฑ์ P_CLOSED_ON / OFF อ่านจาก firmware/DrowsyFW/src/core/config.h ถ้าไม่ระบุ · ลองเกณฑ์อื่นได้โดยไม่ต้องแฟลช
 ข้อจำกัด: replay เห็นเฉพาะเฟรมที่ cartest.py ดึงทัน (เฟรมห่างกว่าบนบอร์ด) และ "เจอหน้า" ประมาณจากตาที่จำแนกได้
 """
 import argparse
@@ -20,7 +20,7 @@ import score
 
 sys.stdout.reconfigure(encoding="utf-8")
 REPO = common.ML.parent
-FW = REPO / "firmware" / "DrowsyFW"
+FW = REPO / "firmware" / "DrowsyFW" / "src"
 TESTS = REPO / "firmware" / "tests"
 EXE = TESTS / ("replay.exe" if sys.platform == "win32" else "replay")
 GXX = "C:/ProgramData/mingw64/mingw64/bin/g++.exe" if sys.platform == "win32" else "g++"
@@ -28,14 +28,14 @@ LEVEL = ["normal", "fatigue", "drowsy", "microsleep"]
 
 
 def build():
-    srcs = [TESTS / "replay.cpp", FW / "drowsiness.cpp", FW / "drowsiness.h", FW / "drowsy_config.h", FW / "domain_types.h"]
+    srcs = [TESTS / "replay.cpp", FW / "logic" / "drowsiness.cpp", FW / "logic" / "drowsiness.h", FW / "core" / "drowsy_config.h", FW / "core" / "domain_types.h"]
     if EXE.exists() and EXE.stat().st_mtime > max(s.stat().st_mtime for s in srcs):
         return
-    subprocess.run([GXX, "-std=c++17", "-Wall", "-O2", f"-I{FW}", str(TESTS / "replay.cpp"), str(FW / "drowsiness.cpp"), "-o", str(EXE)], check=True)
+    subprocess.run([GXX, "-std=c++17", "-Wall", "-O2", f"-I{FW / 'logic'}", str(TESTS / "replay.cpp"), str(FW / "logic" / "drowsiness.cpp"), "-o", str(EXE)], check=True)
 
 
 def thresholds():
-    cfg = (FW / "config.h").read_text(encoding="utf-8")
+    cfg = (FW / "core" / "config.h").read_text(encoding="utf-8")
     get = lambda k: float(re.search(rf"#define {k}\s+([\d.]+)f", cfg).group(1))
     return get("P_CLOSED_ON"), get("P_CLOSED_OFF")
 

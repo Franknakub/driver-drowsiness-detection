@@ -1,12 +1,12 @@
 // vision_task: กล้อง -> หาหน้า + จุดตา (ESP-DL) -> Eye Region สองข้าง -> โมเดลตา -> Eye State
 //   -> DrowsinessJudge (PERCLOS, Drowsiness Level, Distraction, Unmonitored) -> SharedState ให้ alert อ่าน
 #include "esp_camera.h"
-#include "config.h"
-#include "shared_state.h"
-#include "tasks.h"
+#include "../core/config.h"
+#include "../core/shared_state.h"
+#include "../core/tasks.h"
 #include "face_eye.h"
 #include "eye_classifier.h"
-#include "drowsiness.h"
+#include "../logic/drowsiness.h"
 #include "img_converters.h"
 #include "esp_heap_caps.h"
 #include <new>

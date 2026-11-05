@@ -3,7 +3,7 @@
 // ทุกอย่างนับเป็นเวลา (dt ระหว่างเฟรม) ไม่นับเป็นเฟรม เพราะ fps แกว่ง 5–7 · ใช้จาก task เดียว (vision) ไม่มี lock
 #pragma once
 #include <stdint.h>
-#include "domain_types.h"
+#include "../core/domain_types.h"
 
 struct DrowsyResult {
   float           perclos;      // 0..1 · -1 = ยังไม่พร้อม (เห็นตาเปิด/ปิดรวมไม่ถึง PERCLOS_MIN_VALID_MS)

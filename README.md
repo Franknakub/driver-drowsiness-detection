@@ -27,7 +27,7 @@ PCB ในโปรเจกต์นี้เป็น **carrier board** ไม
 
 ```
 firmware/
-  DrowsyFW/                 firmware ตัวจริง (Arduino sketch)
+  DrowsyFW/                 firmware ตัวจริง (Arduino sketch) · โค้ดอยู่ใน src/ แยกตามหน้าที่
   BenchTest/ DrowsinessDiag/ สเก็ตช์ทดสอบฮาร์ดแวร์
   tests/                    เทสต์ logic และ Trip บน PC
   archive/                  โค้ดรุ่นเก่า

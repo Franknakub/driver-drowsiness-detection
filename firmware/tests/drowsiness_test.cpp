@@ -1,7 +1,7 @@
 // ทดสอบ DrowsinessJudge บน PC ด้วยลำดับเฟรมจำลอง (เฟรมละ 150 ms) · ไม่ต้องมีบอร์ด
 // อยู่นอกโฟลเดอร์สเก็ตช์ เพราะ Arduino compile ทุก .cpp ในโฟลเดอร์นั้น
 //
-//   g++ -std=c++17 -Wall -I../DrowsyFW drowsiness_test.cpp ../DrowsyFW/drowsiness.cpp -o drowsiness_test && ./drowsiness_test
+//   g++ -std=c++17 -Wall -I../DrowsyFW/src/logic -I../DrowsyFW/src/core drowsiness_test.cpp ../DrowsyFW/src/logic/drowsiness.cpp -o drowsiness_test && ./drowsiness_test
 #include <cmath>
 #include <cstdio>
 #include <functional>

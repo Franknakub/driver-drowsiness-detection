@@ -23,8 +23,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 logic ความง่วง (`drowsiness.cpp`) และรูปแบบไฟล์ Trip (`trip_record.cpp`) ไม่พึ่ง Arduino มีเทสต์บน PC · แก้ไฟล์เหล่านี้แล้วต้องรันผ่านก่อน · เทสต์เลือกรันทีละข้อไม่ได้ ต้องรันทั้งไฟล์ (เรียกจาก `main()` ถ้าจะลองข้อเดียวให้คอมเมนต์ข้ออื่นชั่วคราว) · เปลี่ยนเกณฑ์ใน `drowsy_config.h` แล้วค่าในเทสต์ PERCLOS ต้องแก้ตาม · แก้ SQL ใน `cloud/sql/` แล้วรันเทสต์ cloud:
 
 ```bash
-cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW drowsiness_test.cpp ../DrowsyFW/drowsiness.cpp -o drowsiness_test && ./drowsiness_test
-cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW trip_record_test.cpp ../DrowsyFW/trip_record.cpp -o trip_record_test && ./trip_record_test   # สร้าง trip_fixture.json ด้วย
+cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW/src/logic -I../DrowsyFW/src/core drowsiness_test.cpp ../DrowsyFW/src/logic/drowsiness.cpp -o drowsiness_test && ./drowsiness_test
+cd firmware/tests && /c/ProgramData/mingw64/mingw64/bin/g++ -std=c++17 -Wall -I../DrowsyFW/src/trip trip_record_test.cpp ../DrowsyFW/src/trip/trip_record.cpp -o trip_record_test && ./trip_record_test   # สร้าง trip_fixture.json ด้วย
 cd cloud/test && npm install && node sql_test.mjs   # รัน cloud/sql บน PGlite (Postgres จำลอง ไม่ต้องใช้ Supabase): RLS, ส่งซ้ำ, Trip Summary ตรงกับ Device
 ```
 
@@ -41,6 +41,7 @@ S=~/Documents/Arduino/DrowsyFW
 - **ลบ/เปลี่ยนชื่อไฟล์ในสเก็ตช์แล้วต้อง `compile --clean`** แคชของ arduino-cli เก็บไฟล์เก่าไว้ (3 พ.ย. `display.cpp` ของ 0.3.6 ที่ลบไปแล้วยัง build อยู่ ทำให้ 0.3.7 compile ไม่ผ่าน)
 - **`PartitionScheme=custom`** ใช้ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) · arduino-cli จะเช็คขนาดเทียบ 16 MB ไม่ใช่ 6 MB ต้องดูขนาดเอง (ตอนนี้ ~3.66 MB) · สเก็ตช์ทดสอบอื่น (`DrowsinessDiag`, `BenchTest`) ใช้ `PartitionScheme=app3M_fat9M_16MB` · ⚠️ แฟลชด้วยตารางนี้จะทับ partition ของ DrowsyFW (FFat/Trip หายได้) · ถ้าจะแฟลชสเก็ตช์ทดสอบแล้วกลับมา DrowsyFW ให้ build ด้วย `PartitionScheme=custom` และคัดลอก `partitions.csv` ของ DrowsyFW ไปไว้ข้างสเก็ตช์ (ทำแบบนี้เมื่อ 23 ต.ค. เลข trip ต่อเนื่องไม่รีเซ็ต)
 - **`PSRAM=opi` บังคับ** (N16R8 = Octal PSRAM)
+- **โครงสเก็ตช์:** ระดับบนมี `DrowsyFW.ino` `partitions.csv` `secrets.h` · โค้ดอยู่ใน `src/{core,vision,logic,device,trip,net}/` เพราะ Arduino compile เฉพาะระดับบนและ `src/` · `#include` ข้ามโฟลเดอร์ใช้ path สัมพัทธ์ · โครงเต็มอยู่ใน [firmware/README.md](firmware/README.md)
 - ต้องมี `secrets.h` (คัดลอกจาก `secrets.example.h`) · **อย่าเปิดอ่าน `secrets.h` ของผู้ใช้** ให้แก้เฉพาะบรรทัดที่สั่ง · **build ใช้ตัวในโฟลเดอร์สเก็ตช์** ไม่ใช่ `firmware/DrowsyFW/secrets.h` ใน repo (3 พ.ย. ผู้ใช้แก้ตัวใน repo แล้วแฟลชไม่เปลี่ยน) · เทียบสองตัวได้โดยไม่เห็นค่า: hash ทีละบรรทัดแล้ว diff เฉพาะชื่อ `#define`
 - แฟลชผ่าน **USB ของโมดูล** เท่านั้น (USB-C บน PCB มีแค่ไฟ) · ลำดับเข้า download mode, VID:PID และ error ที่เจอบ่อยอยู่ใน [firmware/README.md](firmware/README.md)
 - **OTA:** อัปโหลด `build/.../DrowsyFW.ino.bin` ที่ `http://<ip>/update` (user `admin`, รหัส `OTA_PASSWORD`) · ผู้ใช้ต้องใส่รหัสเอง · ห้ามเลือก `DrowsyFW.ino.merged.bin` (16 MB) · ขณะ DrowsyFW รันอยู่และเสียบ USB (`303A:1001`) `upload -p COM6` รีเซ็ตเข้า download mode ได้เอง ไม่ต้องกดปุ่ม (ยืนยัน 18 ต.ค.) · 0.2.9 OTA ค้างถ้าอัปโหลดหลุดกลางทาง (แก้ใน 0.3.0: abort ของเก่าก่อน begin)
@@ -131,7 +132,7 @@ cd ml
 - **โมเดลบนบอร์ด train จาก MRL อย่างเดียว ไม่ได้ fine-tune:** ในรถ 4 พ.ย. (ระยะตา ~37 px) ตาปิดจริงได้ P≈1.0 · ใส่แว่นแล้วตาข้างหนึ่งอาจเหลือ 0.1–0.3 · ปัญหาหลักคือภาพที่ตัดผิดตอนหันหัวและตอนแสงเปลี่ยน · ประวัติ 3 พ.ย. บนโต๊ะที่ 50–60 ซม. หลับตาได้ 0/13 เฟรม ซึ่งไม่ตรงกับผลในรถ และยังไม่รู้สาเหตุ · ถ้าจะ fine-tune **ผู้ใช้ให้ใช้เฉพาะภาพที่เก็บในรถ** (ภาพบนโต๊ะห้ามเข้าโมเดลที่ใช้จริง)
 - **ทดสอบในรถก่อนตัดสินใจ fine-tune** (ผู้ใช้ตัดสิน 4 พ.ย. เพราะเวลาเหลือน้อย · ผลรอบรถจอด รอบขับ ผลวัดความช้า และข้อจำกัดที่ผู้ใช้ยอมรับอยู่ใน [ml/incar/README.md](ml/incar/README.md) · ไม่พบว่าบอร์ดตามหลังหลายวินาที · ยังไม่ fine-tune): `ml/incar/cartest.py` พูดบอกท่า อ่าน `/api/status` แล้วให้คะแนนว่าหลับตาแล้วเตือนครบไหม/ลืมตาแล้วเตือนผิดไหม · เก็บภาพจาก `/eyes.raw` ไว้ fine-tune ไปด้วย · วิธีทำและเกณฑ์ตัดสินอยู่ใน [ml/incar/README.md](ml/incar/README.md) · ลองบน PC ด้วย `fake_board.py` · รันกับบอร์ดจริงแล้ว 4 พ.ย. (รถจอด + ขับจริง 1 รอบ) · ดึงเหตุการณ์จริงจาก `/api/trips/<n>?count=1` มาให้คะแนน เพราะเว็บบอร์ดค้างแล้ว status หายได้
 - **เครื่องมือ fine-tune เตรียมไว้แล้ว** (ใช้ถ้าทดสอบในรถไม่ผ่านเพราะโมเดลตา): `review.py` ตรวจป้าย → `finetune.py` (MRL + ภาพในรถ แบ่งตามรอบ · deep2_half เดิม · INT8 → `model_data.h` · รายงานเทียบโมเดลบนบอร์ดที่อ่านจาก `eye_model_data.h` ทีละตา) → `replay.py` (ป้อน P ผ่าน `DrowsinessJudge` จริงด้วย `firmware/tests/replay.cpp` ซึ่งต้องแปลง P → Eye State แบบเดียวกับ `combineEyes`/`eyeStateFrom` ใน `vision.cpp`) · ลองทั้งชุดกับข้อมูลจำลองผ่าน 4 พ.ย. (`--quick`) · ผลอยู่ `ml/output/incar/<run>/`
-- เปลี่ยนโมเดลบนบอร์ด = คัดลอก `model_data.h` ไปเป็น `eye_model_data.h` ของสเก็ตช์ · ถ้าโมเดลใหม่ใช้ op นอกเหนือ CONV_2D / MAX_POOL_2D / MEAN / FULLY_CONNECTED / LOGISTIC ต้องเพิ่มใน resolver ของ `eye_classifier.cpp`
+- เปลี่ยนโมเดลบนบอร์ด = คัดลอก `model_data.h` ไปเป็น `src/vision/eye_model_data.h` ของสเก็ตช์ · ถ้าโมเดลใหม่ใช้ op นอกเหนือ CONV_2D / MAX_POOL_2D / MEAN / FULLY_CONNECTED / LOGISTIC ต้องเพิ่มใน resolver ของ `eye_classifier.cpp`
 
 ## กล่อง 3D (`enclosure/`)
 

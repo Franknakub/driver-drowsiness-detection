@@ -96,7 +96,7 @@ cd ml/incar
    ```
    ดูบรรทัด `new` เทียบ `board_actual` (ผลจริงของบอร์ด): ต้องเตือนครบมากขึ้น และเตือนผิดไม่เพิ่ม
    แถว `board` ควรใกล้ `board_actual` ถ้าห่างกันมาก replay เห็นเฟรมไม่พอ (ดึง /eyes.raw ไม่ทัน) อย่าเชื่อตัวเลขมาก
-5. **ใส่บอร์ด** คัดลอก `ml/output/incar/<run>/model_data.h` ไปทับ `~/Documents/Arduino/DrowsyFW/eye_model_data.h` → เปลี่ยน `FW_VERSION` → compile → แฟลช → ทดสอบในรถอีกรอบด้วย `cartest.py`
+5. **ใส่บอร์ด** คัดลอก `ml/output/incar/<run>/model_data.h` ไปทับ `~/Documents/Arduino/DrowsyFW/src/vision/eye_model_data.h` → เปลี่ยน `FW_VERSION` → compile → แฟลช → ทดสอบในรถอีกรอบด้วย `cartest.py`
    (ถ้าเปลี่ยนเกณฑ์ ให้แก้ `P_CLOSED_ON` / `P_CLOSED_OFF` ใน `config.h` ด้วย)
 
 ลองทั้งชุดบน PC ได้ด้วยรอบจาก `fake_board.py` และ `--quick` (1 epoch ผลไม่มีความหมาย)

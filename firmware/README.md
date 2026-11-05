@@ -22,6 +22,24 @@ arduino-cli upload -p COM6 --fqbn "$FQBN" firmware/DrowsinessDiag
 - **`upload` ไม่ compile ให้** แก้โค้ดแล้วต้อง compile ก่อน ไม่งั้นจะแฟลชไบนารีเก่า (สังเกตจาก `No changed sectors found`)
 - Partition `app3M_fat9M_16MB` ใช้กับสเก็ตช์ทดสอบได้ แต่ **DrowsyFW ใช้ `PartitionScheme=custom`** กับ `partitions.csv` ในโฟลเดอร์สเก็ตช์ (app 6 MB × 2 + FFat ~3.9 MB) เพราะ face detect + WiFi ใหญ่ 3.18 MB แล้ว
 
+### โครงสร้างโค้ด DrowsyFW
+
+```
+DrowsyFW/
+  DrowsyFW.ino              setup() สร้าง task
+  partitions.csv            ตารางพาร์ทิชัน ต้องอยู่ระดับบนของสเก็ตช์
+  secrets.example.h         ต้นแบบ secrets.h
+  src/
+    core/                   ค่าตั้ง, ชนิดข้อมูล, สถานะกลาง, ประกาศ task
+    vision/                 กล้อง, หาหน้า, ตัดตา, โมเดลตา
+    logic/                  logic ความง่วง
+    device/                 buzzer, LED, LDR, IR, OLED
+    trip/                   รูปแบบไฟล์ Trip และบันทึกลง FFat
+    net/                    WiFi, Sync, Device Dashboard
+```
+
+Arduino compile เฉพาะไฟล์ระดับบนและโฟลเดอร์ `src/` จึงต้องวางโค้ดไว้ใต้ `src/` · `#include` ข้ามโฟลเดอร์ใช้ path สัมพัทธ์
+
 ### DrowsyFW
 
 ```bash
